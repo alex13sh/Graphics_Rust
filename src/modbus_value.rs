@@ -19,7 +19,7 @@ enum Type {
 //     
 // }
 
-pub type BuilderModbusValue = Builder<ModbusValue>;
+pub type ModbusValueBuilder = Builder<ModbusValue>;
 impl Builder<ModbusValue> {
     pub fn address(mut self, value: u16) -> Self {
         self.obj.address = value;

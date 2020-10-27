@@ -1,14 +1,22 @@
 mod modbus_value;
-// pub mod builder;
+mod modbus_device;
 
+mod builder;
 // use builder::Builder;
-use modbus_value::{ModbusValue, Builder};
-
+use modbus_value::*;
+use modbus_device::*;
 fn main() {
     println!("Hello, world!");
-    let v = Builder::<ModbusValue>::new()
-        .address(12)
-        .read_only(true)
+    
+    let d = BuilderModbusDevice::new()
+        .name("MyName Divece".into())
+        .push_value(
+            BuilderModbusValue::new()
+            .address(12)
+            .read_only(true)
+            .complete()
+        )
         .complete();
-    dbg!(v);
+        
+    dbg!(d);
 }

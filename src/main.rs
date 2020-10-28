@@ -1,5 +1,6 @@
 mod modbus_value;
 mod modbus_device;
+mod modbus_sensor;
 
 // mod builder;
 // use builder::Builder;

@@ -1,10 +1,8 @@
-#[path = "./builder.rs"]
-mod builder;
-use builder::Builder;
+use super::Builder;
 use std::hash::{Hash, Hasher};
 
-#[derive(Default, Debug)]
-pub struct ModbusValue {
+#[derive(Default, Debug, Clone)]
+pub struct Value {
     address: u16,
 //     hash: String,
 //     type: Type,
@@ -19,8 +17,8 @@ enum Type {
 //     
 // }
 
-pub type ModbusValueBuilder = Builder<ModbusValue>;
-impl Builder<ModbusValue> {
+pub type ValueBuilder = Builder<Value>;
+impl Builder<Value> {
     pub fn address(mut self, value: u16) -> Self {
         self.obj.address = value;
         self
@@ -31,7 +29,7 @@ impl Builder<ModbusValue> {
     }
 }
 
-impl Hash for ModbusValue {
+impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.address.hash(state);
 //         self..hash(state);

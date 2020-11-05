@@ -1,4 +1,4 @@
-#[path = "modbus_3/mod.rs"]
+#[path = "modbus_2/mod.rs"]
 mod modbus;
 
 // mod builder;

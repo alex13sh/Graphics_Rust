@@ -30,7 +30,7 @@ impl Application for GraphicsApp {
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (
         Self {
-            graph_state: graphic::State::default()
+            graph_state: graphic::State::series(&["ser_1", "ser_2"])
         },
         Command::none()
         )
@@ -45,7 +45,15 @@ impl Application for GraphicsApp {
     }
 
     
-    fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        use GraphicsAppMessage::*;
+        use graphic::Message::*;
+        match message {
+        Tick(_) => {
+            self.graph_state.update(AppendValues(vec![1_f32, 2_f32]))
+        },
+        _ => {}
+        };
         Command::none()
     }
     fn view(&mut self) -> Element<Self::Message> {

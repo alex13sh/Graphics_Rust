@@ -16,9 +16,36 @@ pub struct State {
     series: Vec<LineSeries>
 }
 
+impl State {
+    pub fn series(names: &[&str]) -> Self {
+        let mut series = Vec::new();
+        for name in names {
+            series.push(LineSeries{
+                name: (*name).into(),
+                color: iced_native::Color::default(),
+                points: Vec::new()
+            });
+        };
+        Self {
+            series: series
+        }
+    }
+    
+    pub fn update(&mut self, message: Message) {
+        match message {
+        Message::AppendValues(/*dt,*/ values) => {
+            for (s, v) in self.series.iter_mut().zip(values.into_iter()) {
+                s.points.append_value(v);
+            }
+        },
+        _ => {}
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppendValues(DateTime, Vec<f32> ),
+    AppendValues(/*DateTime,*/ Vec<f32> ),
     LoadLog()
 }
 
@@ -61,15 +88,32 @@ impl<'a> canvas::Program<Message> for Graphic <'a> {
 //     values: Vec<f32>
 // }
 
+#[derive(Default)]
 struct LineSeries {
+    name: String,
+    color: iced_native::Color,
     points: Vec<DatePoint>,
-    color: iced_native::Color
 }
 
 struct DatePoint {
     dt: DateTime,
     value: f32
 }
+
+trait VecDatePoint {
+    fn append_value(&mut self, value: f32);
+}
+impl VecDatePoint for Vec<DatePoint> {
+    fn append_value(&mut self, value: f32) {
+        self.push(
+            DatePoint {
+                dt: chrono::Local::now(),
+                value: value
+            }
+        );
+    }
+}
+
 
 // LineSeries iter into 
 // impl Iterator for LineSeriesIter;

@@ -8,7 +8,7 @@ pub struct Value {
 //     hash: String,
 //     type: Type,
     read_only: bool,
-    sensor_name: Option<Box<dyn Name>>
+//     sensor_name: Option<Box<dyn Name>>
 }
 
 enum Type {

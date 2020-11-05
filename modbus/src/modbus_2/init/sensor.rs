@@ -4,9 +4,9 @@
 pub struct Sensor {
     pub name: String,
     pub pin: u8,
-    pub interval: u16,
+    pub interval: Option<u16>,
 //     pub range: std::Range, 
-    pub value_error: ValueError,
+    pub value_error: Option<ValueError>,
     pub sensor_type: SensorType,
 }
 
@@ -26,6 +26,7 @@ impl From<(i32, i32)> for ValueError {
         Self {yellow: y as f32, red: r as f32}
     }
 }
+
 
 #[derive(Debug)]
 #[allow(dead_code, snake_case)]
@@ -66,7 +67,7 @@ pub enum SensorType {
     Vibra (SensorAnalogType),
     Davl (SensorAnalogType),
     
-    DigitalOutput,
+    DigitalOutput(bool),
     Counter (u32),
 }
 

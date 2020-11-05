@@ -3,7 +3,8 @@ use super::Sensor;
 #[derive(Debug)]
 pub struct Device {
     pub name: String,
-    pub sensors: Vec<Sensor>,
+    pub sensors: Option<Vec<Sensor>>,
+//     pub values: Option<Vec<Value>>
     pub device_type: DeviceType
 }
 

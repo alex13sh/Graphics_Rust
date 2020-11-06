@@ -1,13 +1,25 @@
 // use super::Device;
+use super::Value;
 
-#[derive(Default, Debug)]
-pub struct Sensor {
-    pub name: String,
-    pub pin: u8,
-    pub interval: Option<u16>,
-//     pub range: std::Range, 
-    pub value_error: Option<ValueError>,
-    pub sensor_type: SensorType,
+#[derive(Debug)]
+pub enum ValueGroup {
+    Sensor {
+        name: String,
+        pin: u8,
+        interval: u16,
+    //     pub range: std::Range, 
+        value_error: ValueError,
+        sensor_type: SensorType,
+    },
+    GroupPin {
+        name: String,
+        pin: u8,
+        group_type: GroupValueType
+    },
+    Group {
+        name: String,
+        values: Vec<Value>,
+    }
 }
 
 #[derive(Default, Debug)]
@@ -67,7 +79,6 @@ pub enum SensorType {
     Vibra (SensorAnalogType),
     Davl (SensorAnalogType),
     
-    DigitalOutput(bool),
     Counter (u32),
 }
 
@@ -76,4 +87,16 @@ impl Default for SensorType {
         SensorType::Analog(SensorAnalogType::Amper_4_20)
     }
 }
+
+#[derive(Debug)]
+pub enum GroupValueType {
+    DigitalOutput(bool),
+}
+
+impl Default for GroupValueType {
+    fn default() -> GroupValueType {
+        GroupValueType::DigitalOutput(false)
+    }
+}
+
 

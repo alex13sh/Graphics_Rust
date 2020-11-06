@@ -2,7 +2,7 @@ use super::Value;
 // use super::Device;
 
 use super::init::{ValueError, SensorType, SensorAnalogType};
-use super::init::Sensor as SensorInit;
+use super::init::ValueGroup as SensorInit;
 
 use std::sync::Arc;
 
@@ -17,17 +17,55 @@ pub struct Sensor {
     value_error: ValueError,
     sensor_type: SensorType,
 }
+struct GroupPin {
+    name: String,
+    pin: u8,
+    values: Vec<Arc<Value>>,
+    value: Arc<Value>,
+}
+struct GroupValue {
+    name: String,
+    values: Vec<Arc<Value>>,
+}
+enum ValueGroup {
+    Sensor(Sensor),
+    GroupPin(GroupPin),
+    Group(GroupValue),
+}
 
-impl From<SensorInit> for Sensor {
-    fn from(s: SensorInit) -> Sensor {
-        Sensor {
-            name: s.name,
-            pin: s.pin,
-            value_error: s.value_error.unwrap_or(Default::default()),
-            sensor_type: s.sensor_type,
-            interval: s.interval.unwrap_or(1000),
-            .. Sensor::default()
+impl Sensor {
+    pub fn new(s: SensorInit, values: Vec<Arc<Value>>, value: Arc<Value>) -> Self {
+        match s {
+        SensorInit::Sensor {name, pin, value_error, sensor_type, interval} => {
+            Sensor {
+                name: name,
+                pin: pin,
+                value_error: value_error,
+                sensor_type: sensor_type,
+                interval: interval,
+                values: values,
+                value: value
+            }
+        },
+        SensorInit::GroupPin {name, pin, group_type:typ}=> {
+            Sensor {
+                name: name,
+                pin: pin,
+                values: values,
+                value: value,
+                interval: 1000,
+                .. Sensor::default()
+            }
+        },
+        _ => Sensor::default()
         }
+    }
+}
+
+impl Into<f32> for Sensor {
+    fn into(self) -> f32 {
+//         self.value_float()
+        0_f32
     }
 }
 

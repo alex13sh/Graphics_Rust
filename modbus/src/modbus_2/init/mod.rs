@@ -1,6 +1,8 @@
+mod value;
 mod sensor;
 mod device;
 
+pub use value::*;
 pub use sensor::*;
 pub use device::*;
 
@@ -8,6 +10,7 @@ pub use device::*;
 // #[test]
 pub fn tst() {
     use SensorAnalogType::*;
+    use ValueGroup::*;
 
     let d = vec![
     Device {
@@ -18,45 +21,46 @@ pub fn tst() {
                 name: "Температура Ротора".into(),
                 sensor_type: SensorType::Analog(Amper_4_20),
                 pin: 1,
-                interval: Some(800),
-                value_error: Some((60, 90).into()),
+                interval: 800,
+                value_error: (60, 90).into(),
             },
             Sensor {
                 name: "Давление -1_1 V".into(),
                 sensor_type: SensorType::Davl(Volt_1),
                 pin: 2,
-                interval: Some(800),
-                value_error: Some((0.1, 0.5).into()),
+                interval: 800,
+                value_error: (0.1, 0.5).into(),
             },
             Sensor {
                 name: "Вибрация 4_20 A".into(),
                 sensor_type: SensorType::Vibra(Amper_4_20),
                 pin: 3,
-                interval: Some(600),
-                value_error: Some((3, 5).into()),
+                interval: 600,
+                value_error: (3, 5).into(),
             },
             Sensor {
                 name: "Температура Статора".into(),
                 sensor_type: SensorType::Analog(Pt_100),
                 pin: 4,
-                interval: Some(800),
-                value_error: Some((60, 85).into()),
+                interval: 800,
+                value_error: (60, 85).into(),
             },
             Sensor {
                 name: "Температура Пер.Под.".into(),
                 sensor_type: SensorType::Analog(Pt_100),
                 pin: 5,
-                interval: Some(800),
-                value_error: Some((60, 80).into()),
+                interval: 800,
+                value_error: (60, 80).into(),
             },
             Sensor {
                 name: "Температура Зад.Под.".into(),
                 sensor_type: SensorType::Analog(Pt_100),
                 pin: 6,
-                interval: Some(800),
-                value_error: Some((60, 80).into()),
+                interval: 800,
+                value_error: (60, 80).into(),
             },
-        ])
+        ]),
+        values: None,
     },
     Device {
         name: "Input/Output Digit".into(),
@@ -66,28 +70,26 @@ pub fn tst() {
                 name: "Скоростной счётчик импульсов".into(),
                 sensor_type: SensorType::Counter(0),
                 pin: 0,
-                interval: Some(2),
-                value_error: Some((333, 433).into()),
+                interval: 2,
+                value_error: (333, 433).into(),
             },
-            Sensor {
+            GroupPin {
                 name: "Клапан 24В".into(),
-                sensor_type: SensorType::DigitalOutput(false),
+                group_type: GroupValueType::DigitalOutput(false),
                 pin: 1,
-                .. Sensor::default()
             },
-            Sensor {
+            GroupPin {
                 name: "Клапан 2".into(),
-                sensor_type: SensorType::DigitalOutput(false),
+                group_type: GroupValueType::DigitalOutput(false),
                 pin: 2,
-                .. Sensor::default()
             },
-            Sensor {
+            GroupPin {
                 name: "Насос".into(),
-                sensor_type: SensorType::DigitalOutput(false),
+                group_type: GroupValueType::DigitalOutput(false),
                 pin: 3,
-                .. Sensor::default()
             },
-        ])
+        ]),
+        values: None,
     }
     ];
     

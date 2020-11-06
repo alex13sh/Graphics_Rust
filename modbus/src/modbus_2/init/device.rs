@@ -14,16 +14,3 @@ pub enum DeviceType {
     OwenDigitalIO,
     // Немецкий модуль
 }
-
-impl DeviceType {
-    pub fn new_sensor(&self) -> Sensor { // TODO: Изменить тип сенсора
-        match *self {
-        Self::OwenAnalog => {
-            Sensor::default()
-        },
-        Self::OwenDigitalIO => {
-            Sensor::default()
-        }
-        }
-    }
-}

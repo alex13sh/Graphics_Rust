@@ -77,22 +77,3 @@ impl Default for SensorType {
     }
 }
 
-impl SensorType {
-    fn value_float (&self) -> f32 {
-        match *self {
-        Self::Davl(_) => {
-            // v = pow(10, v*10-5.5);
-            0_f32
-        },
-        _ => 0_f32
-        }
-    }
-    
-    pub fn get_analog_type(&self) -> Option<&SensorAnalogType> {
-        match self {
-        Self::Analog(ref typ) => Some(typ),
-        Self::Davl(_) => Some(&SensorAnalogType::Volt_1),
-        _ => None
-        }
-    }
-}

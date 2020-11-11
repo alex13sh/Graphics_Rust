@@ -1,6 +1,6 @@
 // use super::Value;
 use super::Sensor;
-use super::Value;
+use super::{Value, ModbusValues};
 
 use super::init::{DeviceType};
 use super::init::Device as DeviceInit;
@@ -39,27 +39,38 @@ impl DeviceType {
             match s {
             SensorInit::Sensor{pin, ..} => {
                 values = create_values_owen_analog(pin);
-                value = values[0].clone();
+                value = values.get("value").unwrap_or(&Arc::new(Value::default())).clone();
                 
             },
             _ => {
-                values = Vec::new();
-                value = Arc::new(Value::default())
+                values = ModbusValues::new();
+                value = Arc::new(Value::default());
             }
             }
         },
         Self::OwenDigitalIO => {
-//             values = create_values_owen_digital();
-            values = Vec::new();
-            value = Arc::new(Value::default())
+            match s {
+            SensorInit::Sensor{pin, ..} => {
+                values = create_values_owen_digital(pin, false);
+                value = values.get("value").unwrap_or(&Arc::new(Value::default())).clone();
+            },
+            SensorInit::GroupPin{pin, ..} => {
+                values = create_values_owen_digital(pin, true);
+                value = Arc::new(Value::default());
+            },
+            _ => {
+                values = ModbusValues::new();
+                value = Arc::new(Value::default());
+            }
+            };
         }
-        }
+        };
         Sensor::new(s, values, value )
     }
     
 }
 
-fn create_values_owen_analog(pin: u8) -> Vec<Arc<Value>> {
+fn create_values_owen_analog(pin: u8) -> ModbusValues {
     let mut v = Vec::new();
     let pin = pin as u16;
     v.push(Value::new("value_float", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read));
@@ -71,7 +82,7 @@ fn create_values_owen_analog(pin: u8) -> Vec<Arc<Value>> {
     
     v.into_iter().map(|v| Arc::new(v)).collect()
 }
-fn create_values_owen_digital(pin: u8, output: bool) -> Vec<Arc<Value>> {
+fn create_values_owen_digital(pin: u8, output: bool) -> ModbusValues {
     let mut v = Vec::new();
     let pin = pin as u16;
     if pin>=1 && pin<=8 && !output {v.push(Value::new("type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Дополнительный режим"
@@ -90,4 +101,17 @@ fn create_values_owen_digital(pin: u8, output: bool) -> Vec<Arc<Value>> {
     }
     
     v.into_iter().map(|v| Arc::new(v)).collect()
+}
+
+
+impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
+    fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
+        let mut c = ModbusValues::new();
+
+        for i in iter {
+            c.insert(i.name().clone(), i);
+        }
+
+        c
+    }
 }

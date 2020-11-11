@@ -21,6 +21,9 @@ impl Value {
             value: 0,
         }
     }
+    pub fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 impl ValueSize {
@@ -31,6 +34,33 @@ impl ValueSize {
         INT32 | UINT32 | FLOAT => 2,
         BitMap => 1,
         }
+    }
+}
+
+use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
+
+#[derive(Debug, Default)]
+pub struct ModbusValues(HashMap<String, Arc<Value>>);
+
+impl ModbusValues {
+    pub fn new() -> Self {
+        ModbusValues(HashMap::new())
+    }
+}
+
+
+impl Deref for ModbusValues {
+    type Target = HashMap<String, Arc<Value>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for ModbusValues {
+//     type Target = HashMap<String, Arc<Value>>;
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

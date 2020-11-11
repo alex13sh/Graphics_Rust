@@ -1,4 +1,4 @@
-use super::Value;
+use super::{Value, ModbusValues};
 // use super::Device;
 
 use super::init::{ValueError, SensorType, SensorAnalogType};
@@ -11,7 +11,7 @@ pub struct Sensor {
     name: String,
     pin: u8,
     interval: u16,
-    values: Vec<Arc<Value>>,
+    values: ModbusValues,
     value: Arc<Value>,
 //     pub range: std::Range, 
     value_error: ValueError,
@@ -20,12 +20,12 @@ pub struct Sensor {
 struct GroupPin {
     name: String,
     pin: u8,
-    values: Vec<Arc<Value>>,
+    values: ModbusValues,
     value: Arc<Value>,
 }
 struct GroupValue {
     name: String,
-    values: Vec<Arc<Value>>,
+    values: ModbusValues,
 }
 enum ValueGroup {
     Sensor(Sensor),
@@ -34,7 +34,7 @@ enum ValueGroup {
 }
 
 impl Sensor {
-    pub fn new(s: SensorInit, values: Vec<Arc<Value>>, value: Arc<Value>) -> Self {
+    pub fn new(s: SensorInit, values: ModbusValues, value: Arc<Value>) -> Self {
         match s {
         SensorInit::Sensor {name, pin, value_error, sensor_type, interval} => {
             Sensor {

@@ -47,7 +47,7 @@ impl Sensor {
                 value: value
             }
         },
-        SensorInit::GroupPin {name, pin, group_type:typ}=> {
+        SensorInit::GroupPin {name, pin, group_type:_typ}=> {
             Sensor {
                 name: name,
                 pin: pin,

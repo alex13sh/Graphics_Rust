@@ -3,22 +3,36 @@
 pub struct Value {
     pub name: String,
     pub address: u16,
-    pub value_type: ValueType,
+    pub direct: ValueDirect,
+    pub size: ValueSize,
 }
 
 #[derive(Debug)]
-pub enum ValueType {
-    AnalogInput {
-        interval: u32,
-    },
-    DigitalInput {
-        interval: u32,
-    },
-    DigitalOutput,
+pub enum ValueDirect {
+    Read,
+    Write
 }
 
-impl Default for ValueType {
+impl Default for ValueDirect {
     fn default() -> Self {
-        ValueType::AnalogInput{interval: 1000}
+        ValueDirect::Write
+    }
+}
+
+#[derive(Debug)]
+pub enum ValueSize {
+    INT8,
+    UINT8,
+    INT16,
+    UINT16,
+    INT32,
+    UINT32,
+    FLOAT,
+    BitMap
+}
+
+impl Default for ValueSize {
+    fn default() -> Self {
+        ValueSize::FLOAT
     }
 }

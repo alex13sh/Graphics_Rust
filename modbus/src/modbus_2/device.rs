@@ -5,6 +5,7 @@ use super::Value;
 use super::init::{DeviceType};
 use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
+use super::init::{ValueDirect, ValueSize};
 
 use std::sync::Arc;
 
@@ -48,7 +49,8 @@ impl DeviceType {
             }
         },
         Self::OwenDigitalIO => {
-            values = create_values_owen_digital();
+//             values = create_values_owen_digital();
+            values = Vec::new();
             value = Arc::new(Value::default())
         }
         }
@@ -58,8 +60,34 @@ impl DeviceType {
 }
 
 fn create_values_owen_analog(pin: u8) -> Vec<Arc<Value>> {
-    Vec::new()
+    let mut v = Vec::new();
+    let pin = pin as u16;
+    v.push(Value::new("value_float", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read));
+    v.push(Value::new("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write)); // "Тип датчика"
+    v.push(Value::new("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write)); // "положение десятичной точки"
+    v.push(Value::new("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write));
+    v.push(Value::new("Нижняя граница", 4110+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write));
+    v.push(Value::new("interval", 4113+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write));
+    
+    v.into_iter().map(|v| Arc::new(v)).collect()
 }
-fn create_values_owen_digital(pin: u8) -> Vec<Arc<Value>> {
-    Vec::new()
+fn create_values_owen_digital(pin: u8, output: bool) -> Vec<Arc<Value>> {
+    let mut v = Vec::new();
+    let pin = pin as u16;
+    if pin>=1 && pin<=8 && !output {v.push(Value::new("type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Дополнительный режим"
+    if pin>=1 && pin<=12 {v.push(Value::new("filter", 96 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Фильтр"
+    if pin>=1 && pin<=8 && !output {v.push(Value::new("interval", 128 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Дополнительный режим"
+    if pin>=1 && pin<=12 {v.push(Value::new("value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read));} // "Значение входа в дополнительном режиме"
+    if pin>=1 && pin<=8 && !output {v.push(Value::new("reset_value", 224 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));} // "Сброс значения дополнительного режима"
+    if pin>=9 && pin<=12 {v.push(Value::new("reset_counter", 232 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));} // "Сброс значения счётчика импульсв"
+    
+    if pin>=1 && pin<=4 && output {
+        v.push(Value::new("type_output", 272 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write)); // "Режим работы выхода"
+        v.push(Value::new("Период ШИМ", 308 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));
+        v.push(Value::new("Коэффициент заполнения ШИМ", 340 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));
+        v.push(Value::new("Безопасное состояние выхода", 474 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));
+//         v.push(Value::new("Битовая маска состояния", 468, ValueSize::UINT8, ValueDirect::Read));
+    }
+    
+    v.into_iter().map(|v| Arc::new(v)).collect()
 }

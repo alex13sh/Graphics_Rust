@@ -1,5 +1,6 @@
 use std::hash::{Hash, Hasher};
 pub use super::init::{ValueDirect, ValueSize};
+pub use super::init::Value as ValueInit;
 
 #[derive(Debug, Default)]
 pub struct Value {
@@ -33,6 +34,18 @@ impl ValueSize {
         INT8 | UINT8 | INT16 | UINT16 => 1,
         INT32 | UINT32 | FLOAT => 2,
         BitMap => 1,
+        }
+    }
+}
+
+impl From<ValueInit> for Value {
+    fn from(v: ValueInit) -> Self {
+        Value {
+            name: v.name,
+            address: v.address,
+            direct: v.direct,
+            size: v.size,
+            value: 0,
         }
     }
 }

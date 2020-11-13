@@ -21,11 +21,12 @@ impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ = &d.device_type;
         let sens = d.sensors.unwrap_or(Vec::new()).into_iter().map(|s| typ.new_sensor(s));
+        let values = d.values.unwrap_or(Vec::new()).into_iter().map(|v| Arc::new(Value::from(v)));
         Device {
             name: d.name,
             sensors: sens.collect(),
             device_type: d.device_type,
-            values: Vec::new(),
+            values: values.collect(),
         }
     }
 }

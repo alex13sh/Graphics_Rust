@@ -63,6 +63,10 @@ impl DeviceType {
                 value = Arc::new(Value::default());
             }
             };
+        }, 
+        _ => {
+            values = ModbusValues::new();
+            value = Arc::new(Value::default());
         }
         };
         Sensor::new(s, values, value )

@@ -14,4 +14,5 @@ pub enum DeviceType {
     OwenAnalog,
     OwenDigitalIO,
     // Немецкий модуль
+    Invertor,
 }

@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types, dead_code)]
+
 // use super::Device;
 use super::Value;
 
@@ -41,7 +43,6 @@ impl From<(i32, i32)> for ValueError {
 
 
 #[derive(Debug)]
-#[allow(dead_code, snake_case)]
 pub enum SensorAnalogType {
     
     Amper_4_20=11,

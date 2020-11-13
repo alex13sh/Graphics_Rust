@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types, dead_code)]
 
 #[derive(Debug)]
 pub struct Value {

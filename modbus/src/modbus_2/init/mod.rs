@@ -105,12 +105,17 @@ pub fn init_devices() -> Vec<Device> {
     },
     Device {
         name: "Invertor".into(),
-        device_type: DeviceType::Invertor,
+        device_type: DeviceType::Invertor {
+            functions: vec![
+                InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута
+                InvertorFunc::DigitalOutput(0, 13), // Предупреждение о перегреве радиатора
+            ]
+        },
         sensors: Some(vec![
-            Group {
-                name: "".into(),
-                values: vec![],
-            },
+//             Group {
+//                 name: "".into(),
+//                 values: vec![],
+//             },
         ]),
         values: Some(vec![
             add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10

@@ -14,5 +14,15 @@ pub enum DeviceType {
     OwenAnalog,
     OwenDigitalIO,
     // Немецкий модуль
-    Invertor,
+    Invertor {
+        functions: Vec<InvertorFunc>
+    },
+}
+
+#[derive(Debug)]
+pub enum InvertorFunc {
+    DigitalInput(u8, u8), // Номер входа, Номер функции
+    DigitalOutput(u8, u8),
+    AnalogInput(u8, u8),
+    AnalogOutput(u8, u8),
 }

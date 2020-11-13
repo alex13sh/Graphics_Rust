@@ -9,6 +9,11 @@ pub use device::*;
 
 // #[test]
 pub fn tst() {
+    let d = init_devices();
+    dbg!(d);
+}
+
+pub fn init_devices() -> Vec<Device> {
     use SensorAnalogType::*;
     use ValueGroup::*;
 
@@ -161,6 +166,5 @@ pub fn tst() {
         ]),
     }
     ];
-    
-    dbg!(d);
+    return d;
 }

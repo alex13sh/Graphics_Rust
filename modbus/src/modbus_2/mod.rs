@@ -7,19 +7,12 @@ use value::*;
 use sensor::*;
 use device::*;
 
-// impl From<init::Value> for Value {
-//     fn from(v: init::Value) -> Value {
-//         Value {
-//             name: v.name,
-//             
-//         }
-//     }
-// }
-
-
 
 // #[test]
 pub fn tst() {
 
-    init::tst();
+//     init::tst();
+    let d = init::init_devices();
+    let d: Vec<_> = d.into_iter().map(|d| Device::from(d)).collect();
+    dbg!(d);
 }

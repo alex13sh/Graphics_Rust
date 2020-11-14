@@ -60,6 +60,10 @@ impl Sensor {
         _ => Sensor::default()
         }
     }
+    
+    pub fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 impl Into<f32> for Sensor {
@@ -86,5 +90,32 @@ impl SensorType {
         Self::Davl(_) => Some(&SensorAnalogType::Volt_1),
         _ => None
         }
+    }
+}
+
+use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
+// use std::sync::Arc;
+
+#[derive(Debug, Default)]
+pub struct ModbusSensors(HashMap<String, Arc<Sensor>>);
+
+impl ModbusSensors {
+    pub fn new() -> Self {
+        ModbusSensors(HashMap::new())
+    }
+}
+
+
+impl Deref for ModbusSensors {
+    type Target = HashMap<String, Arc<Sensor>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for ModbusSensors {
+//     type Target = HashMap<String, Arc<Sensor>>;
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

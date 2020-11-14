@@ -1,6 +1,6 @@
 // use super::Value;
 use super::Sensor;
-use super::{Value, ModbusValues};
+use super::{Value, ModbusValues, ModbusSensors};
 
 use super::init::{DeviceType};
 use super::init::Device as DeviceInit;
@@ -12,16 +12,18 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct Device {
     name: String,
-    sensors: Vec<Sensor>,
-    values: Vec<Arc<Value>>,
+    sensors: ModbusSensors,
+    values: ModbusValues,
     device_type: DeviceType
 }
 
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ = &d.device_type;
-        let sens = d.sensors.unwrap_or(Vec::new()).into_iter().map(|s| typ.new_sensor(s));
-        let values = d.values.unwrap_or(Vec::new()).into_iter().map(|v| Arc::new(Value::from(v)));
+        let sens = d.sensors.unwrap_or(Vec::new())
+            .into_iter().map(|s| typ.new_sensor(s));
+        let values = d.values.unwrap_or(Vec::new())
+            .into_iter().map(|v| Arc::new(Value::from(v)));
         Device {
             name: d.name,
             sensors: sens.collect(),
@@ -115,6 +117,17 @@ impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
 
         for i in iter {
             c.insert(i.name().clone(), i);
+        }
+
+        c
+    }
+}
+impl std::iter::FromIterator<Sensor> for ModbusSensors {
+    fn from_iter<I: IntoIterator<Item=Sensor>>(iter: I) -> Self {
+        let mut c = ModbusSensors::new();
+
+        for i in iter {
+            c.insert(i.name().clone(), Arc::new(i));
         }
 
         c

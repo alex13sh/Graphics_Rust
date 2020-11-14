@@ -8,13 +8,24 @@ use super::init::ValueGroup as SensorInit;
 use super::init::{ValueDirect, ValueSize};
 
 use std::sync::Arc;
+use derivative::Derivative;
 
-#[derive(Debug)]
+// #[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Device {
     name: String,
     sensors: ModbusSensors,
     values: ModbusValues,
-    device_type: DeviceType
+    device_type: DeviceType,
+    #[derivative(Debug="ignore")]
+    ctx: Option<super::ModbusContext>,
+}
+
+impl Device {
+    pub fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 impl From<DeviceInit> for Device {
@@ -29,6 +40,7 @@ impl From<DeviceInit> for Device {
             sensors: sens.collect(),
             device_type: d.device_type,
             values: values.collect(),
+            ctx: None
         }
     }
 }
@@ -74,7 +86,6 @@ impl DeviceType {
         };
         Sensor::new(s, values, value )
     }
-    
 }
 
 fn create_values_owen_analog(pin: u8) -> ModbusValues {

@@ -17,7 +17,7 @@ pub struct Device {
     name: String,
     sensors: ModbusSensors,
     values: ModbusValues,
-    device_type: DeviceType,
+    device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
     ctx: Option<super::ModbusContext>,
 }
@@ -30,22 +30,38 @@ impl Device {
 
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
-        let typ = &d.device_type;
+        let typ: DeviceType<Device> = d.device_type.into();
+        let ref_typ = &typ;
         let sens = d.sensors.unwrap_or(Vec::new())
-            .into_iter().map(|s| typ.new_sensor(s));
+            .into_iter().map(|s| ref_typ.new_sensor(s));
         let values = d.values.unwrap_or(Vec::new())
             .into_iter().map(|v| Arc::new(Value::from(v)));
         Device {
             name: d.name,
             sensors: sens.collect(),
-            device_type: d.device_type,
+            device_type: typ,
             values: values.collect(),
             ctx: None
         }
     }
 }
 
-impl DeviceType {
+impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
+    fn from(dt: DeviceType<DeviceInit>) -> Self {
+        match dt {
+        DeviceType::<DeviceInit>::OwenAnalog => DeviceType::<Device>::OwenAnalog,
+        DeviceType::<DeviceInit>::OwenDigitalIO => DeviceType::<Device>::OwenDigitalIO,
+        DeviceType::<DeviceInit>::Invertor {functions} => DeviceType::<Device>::Invertor {functions:functions},
+        DeviceType::<DeviceInit>::Convertor {devices} => {
+            DeviceType::<Device>::Convertor {
+                devices: devices.into_iter().map(|d| Device::from(d)).collect()
+            }
+        },
+        }
+    }
+}
+
+impl DeviceType<Device> {
     pub fn new_sensor(&self, s: SensorInit) -> Sensor { // TODO: Изменить тип сенсора
         let values;
         let value;

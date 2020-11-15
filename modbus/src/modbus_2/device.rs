@@ -2,7 +2,7 @@
 use super::Sensor;
 use super::{Value, ModbusValues, ModbusSensors};
 
-use super::init::{DeviceType};
+use super::init::{DeviceType, DeviceAddress};
 use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
 use super::init::{ValueDirect, ValueSize};
@@ -26,6 +26,40 @@ impl Device {
     pub fn name(&self) -> &String {
         &self.name
     }
+    
+    pub fn get_ranges_value(&self, empty_space: u8, read_only: bool) -> Option<Vec<std::ops::Range<u16>>> {
+        let empty_space = empty_space as u16;
+        
+        let mut adrs: Vec<_> = self.values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+        adrs.sort();
+        let adrs = adrs;
+//         dbg!(adrs);
+        
+        let mut itr = adrs.into_iter();
+        let adr = itr.next()?;
+        let mut res = vec![std::ops::Range { start: adr, end: adr }];
+        let mut last_range = res.last_mut()?;
+        
+        for adr in itr {
+//             let end = last_range.end;
+            if last_range.end +empty_space < adr {
+                let r = std::ops::Range { start: adr, end: adr };
+                res.push(r);
+            } else {
+                last_range.end = adr;
+            }
+            last_range = res.last_mut()?;
+        }
+        Some(res)
+    }
+    
+    pub fn update(&mut self) {
+        if let Some(ref mut ctx) = self.ctx {
+            use tokio_modbus::prelude::*;
+            let buff = ctx.read_input_registers(0x1000, 7).unwrap();
+            println!("Response is '{:?}'", buff);
+        }
+    }
 }
 
 impl From<DeviceInit> for Device {
@@ -36,12 +70,21 @@ impl From<DeviceInit> for Device {
             .into_iter().map(|s| ref_typ.new_sensor(s));
         let values = d.values.unwrap_or(Vec::new())
             .into_iter().map(|v| Arc::new(Value::from(v)));
+        
+        let  ctx: Option<super::ModbusContext> = None;
+//         if let DeviceAddress::TcpIP(txt) = d.address {
+//             use tokio_modbus::prelude::*;
+//             let socket_addr = (txt+":502").parse().unwrap();
+//             dbg!(&socket_addr);
+//             ctx = Some( sync::tcp::connect(socket_addr).unwrap() );
+//         }
+        
         Device {
             name: d.name,
             sensors: sens.collect(),
             device_type: typ,
             values: values.collect(),
-            ctx: None
+            ctx: ctx
         }
     }
 }

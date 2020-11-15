@@ -28,6 +28,7 @@ pub fn init_devices() -> Vec<Device> {
     Device {
         name: "Input Analog".into(),
         device_type: DeviceType::OwenAnalog,
+        address: DeviceAddress::TcpIP("192.168.1.5".into()),
         sensors: Some(vec![
             Sensor {
                 name: "Температура Ротора".into(),
@@ -77,6 +78,7 @@ pub fn init_devices() -> Vec<Device> {
     Device {
         name: "Input/Output Digit".into(),
         device_type: DeviceType::OwenDigitalIO,
+        address: DeviceAddress::TcpIP("192.168.1.6".into()),
         sensors: Some(vec![
             Sensor {
                 name: "Скоростной счётчик импульсов".into(),
@@ -105,6 +107,7 @@ pub fn init_devices() -> Vec<Device> {
     },
     Device {
         name: "Invertor".into(),
+        address: DeviceAddress::TcpIP("192.168.1.7".into()),
         device_type: DeviceType::Invertor {
             functions: vec![
                 InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута

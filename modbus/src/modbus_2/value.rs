@@ -25,6 +25,16 @@ impl Value {
     pub fn name(&self) -> &String {
         &self.name
     }
+    pub fn address(&self) -> u16 {
+        self.address
+    }
+    pub fn is_read_only(&self) -> bool {
+        if let ValueDirect::Read = self.direct {
+            true
+        } else {
+            false 
+        }
+    }
 }
 
 impl ValueSize {

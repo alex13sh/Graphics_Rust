@@ -7,7 +7,7 @@ pub struct Device {
     pub sensors: Option<Vec<ValueGroup>>,
     pub values: Option<Vec<Value>>,
     pub device_type: DeviceType<Device>, 
-//     pub address: DeviceAddress,
+    pub address: DeviceAddress,
 }
 
 #[derive(Debug)]
@@ -33,6 +33,6 @@ pub enum InvertorFunc {
 
 #[derive(Debug)]
 pub enum DeviceAddress {
-    TcpIp(String),
+    TcpIP(String),
     Rtu(u8), // String device_convertor_name
 }

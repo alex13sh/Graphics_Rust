@@ -33,7 +33,7 @@ impl Device {
         let mut adrs: Vec<_> = self.values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
         adrs.sort();
         let adrs = adrs;
-//         dbg!(adrs);
+//         dbg!(&adrs);
         
         let mut itr = adrs.into_iter();
         let adr = itr.next()?;
@@ -71,6 +71,14 @@ impl From<DeviceInit> for Device {
         let values = d.values.unwrap_or(Vec::new())
             .into_iter().map(|v| Arc::new(Value::from(v)));
         
+        let mut values: ModbusValues = values.collect();
+        let sens: ModbusSensors = sens.collect();
+        for s in sens.values() {
+            for v in s.values().values() {
+                values.insert(s.name().clone()+"/"+v.name(),v.clone());
+            };
+        };
+        
         let  ctx: Option<super::ModbusContext> = None;
 //         if let DeviceAddress::TcpIP(txt) = d.address {
 //             use tokio_modbus::prelude::*;
@@ -81,9 +89,9 @@ impl From<DeviceInit> for Device {
         
         Device {
             name: d.name,
-            sensors: sens.collect(),
+            sensors: sens,
             device_type: typ,
-            values: values.collect(),
+            values: values,
             ctx: ctx
         }
     }

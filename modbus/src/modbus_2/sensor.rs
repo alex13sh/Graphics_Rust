@@ -64,6 +64,9 @@ impl Sensor {
     pub fn name(&self) -> &String {
         &self.name
     }
+    pub fn values(&self) -> &ModbusValues {
+        &self.values
+    }
 }
 
 impl Into<f32> for Sensor {

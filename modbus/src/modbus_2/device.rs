@@ -7,6 +7,7 @@ use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
 use super::init::{ValueDirect, ValueSize};
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use derivative::Derivative;
 
@@ -19,7 +20,7 @@ pub struct Device {
     values: ModbusValues,
     device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    ctx: Option<super::ModbusContext>,
+    ctx: Option<ModbusContext>,
 }
 
 impl Device {
@@ -27,18 +28,21 @@ impl Device {
         &self.name
     }
     
-    pub fn get_ranges_value(&self, empty_space: u8, read_only: bool) -> Option<Vec<std::ops::Range<u16>>> {
+    pub fn get_ranges_value(&self, empty_space: u8, read_only: bool) -> Vec<std::ops::Range<u16>> {
         let empty_space = empty_space as u16;
         
         let mut adrs: Vec<_> = self.values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+        if adrs.len() == 0 {
+            return Vec::new();
+        }
         adrs.sort();
         let adrs = adrs;
 //         dbg!(&adrs);
         
         let mut itr = adrs.into_iter();
-        let adr = itr.next()?;
+        let adr = itr.next().unwrap();
         let mut res = vec![std::ops::Range { start: adr, end: adr }];
-        let mut last_range = res.last_mut()?;
+        let mut last_range = res.last_mut().unwrap();
         
         for adr in itr {
 //             let end = last_range.end;
@@ -48,17 +52,74 @@ impl Device {
             } else {
                 last_range.end = adr;
             }
-            last_range = res.last_mut()?;
+            last_range = res.last_mut().unwrap();
         }
-        Some(res)
+        res
     }
-    
     pub fn update(&mut self) {
         if let Some(ref mut ctx) = self.ctx {
-            use tokio_modbus::prelude::*;
-            let buff = ctx.read_input_registers(0x1000, 7).unwrap();
-            println!("Response is '{:?}'", buff);
+            ctx.update();
         }
+    }
+}
+
+struct ModbusContext {
+    ctx: super::ModbusContext,
+    values: HashMap<u16, Arc<Value>>,
+    ranges_address: Vec<std::ops::Range<u16>>,
+}
+
+impl ModbusContext {
+    pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        if let DeviceAddress::TcpIP(txt) = address {
+            use tokio_modbus::prelude::*;
+            let socket_addr = (txt.to_owned()+":502").parse().ok()?;
+            dbg!(&socket_addr);
+            
+            Some(ModbusContext {
+                ctx: sync::tcp::connect(socket_addr).ok()?,
+                ranges_address: Self::get_ranges_value(&values, 8, true),
+                values: values.iter().map(|v| (v.1.address(), v.1.clone())).collect(),
+            })
+        } else {
+            None
+        }
+    }
+    pub fn update(&mut self) {
+//         let ranges = self.get_ranges_value(8, true);
+        for r in &self.ranges_address {
+            use tokio_modbus::prelude::*;
+            let buff = self.ctx.read_input_registers(r.start, r.end - r.start).unwrap();
+            println!("Ranges ({:?}) is '{:?}'", r, buff);
+        }
+    }
+    fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::Range<u16>> {
+        let empty_space = empty_space as u16;
+        if values.len() == 0 {
+            return Vec::new();
+        }
+        
+        let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+        adrs.sort();
+        let adrs = adrs;
+//         dbg!(&adrs);
+        
+        let mut itr = adrs.into_iter();
+        let adr = itr.next().unwrap();
+        let mut res = vec![std::ops::Range { start: adr, end: adr }];
+        let mut last_range = res.last_mut().unwrap();
+        
+        for adr in itr {
+//             let end = last_range.end;
+            if last_range.end +empty_space < adr {
+                let r = std::ops::Range { start: adr, end: adr };
+                res.push(r);
+            } else {
+                last_range.end = adr;
+            }
+            last_range = res.last_mut().unwrap();
+        }
+        res
     }
 }
 
@@ -79,20 +140,12 @@ impl From<DeviceInit> for Device {
             };
         };
         
-        let  ctx: Option<super::ModbusContext> = None;
-//         if let DeviceAddress::TcpIP(txt) = d.address {
-//             use tokio_modbus::prelude::*;
-//             let socket_addr = (txt+":502").parse().unwrap();
-//             dbg!(&socket_addr);
-//             ctx = Some( sync::tcp::connect(socket_addr).unwrap() );
-//         }
-        
         Device {
             name: d.name,
             sensors: sens,
             device_type: typ,
+            ctx: ModbusContext::new(&d.address, &values),
             values: values,
-            ctx: ctx
         }
     }
 }

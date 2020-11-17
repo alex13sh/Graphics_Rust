@@ -12,7 +12,7 @@ pub struct Sensor {
     pin: u8,
     interval: u16,
     values: ModbusValues,
-    value: Arc<Value>,
+    value: Option<Arc<Value>>,
 //     pub range: std::Range, 
     value_error: ValueError,
     sensor_type: SensorType,
@@ -34,7 +34,7 @@ enum ValueGroup {
 }
 
 impl Sensor {
-    pub fn new(s: SensorInit, values: ModbusValues, value: Arc<Value>) -> Self {
+    pub fn new(s: SensorInit, values: ModbusValues, value: Option<Arc<Value>>) -> Self {
         match s {
         SensorInit::Sensor {name, pin, value_error, sensor_type, interval} => {
             Sensor {

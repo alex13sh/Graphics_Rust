@@ -66,7 +66,7 @@ impl Device {
 struct ModbusContext {
     ctx: super::ModbusContext,
     values: HashMap<u16, Arc<Value>>,
-    ranges_address: Vec<std::ops::Range<u16>>,
+    ranges_address: Vec<std::ops::RangeInclusive<u16>>,
 }
 
 impl ModbusContext {
@@ -89,11 +89,18 @@ impl ModbusContext {
 //         let ranges = self.get_ranges_value(8, true);
         for r in &self.ranges_address {
             use tokio_modbus::prelude::*;
-            let buff = self.ctx.read_input_registers(r.start, r.end - r.start).unwrap();
-            println!("Ranges ({:?}) is '{:?}'", r, buff);
+            let buff = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start()).unwrap();
+//             println!("Ranges ({:?}) is '{:?}'", r, buff);
+            let mut itr_buff = buff.into_iter();
+            for (adr, v) in r.clone().zip(itr_buff) {
+                if let Some(val) = self.values.get_mut(&adr) {
+                    val.update_value(v as u32);
+                }
+                
+            }
         }
     }
-    fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::Range<u16>> {
+    fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
         let empty_space = empty_space as u16;
         if values.len() == 0 {
             return Vec::new();
@@ -119,7 +126,7 @@ impl ModbusContext {
             }
             last_range = res.last_mut().unwrap();
         }
-        res
+        res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
     }
 }
 
@@ -166,7 +173,7 @@ impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
 }
 
 impl DeviceType<Device> {
-    pub fn new_sensor(&self, s: SensorInit) -> Sensor { // TODO: Изменить тип сенсора
+    pub fn new_sensor(&self, s: SensorInit) -> Sensor {
         let values;
         let value;
         match *self {
@@ -174,12 +181,13 @@ impl DeviceType<Device> {
             match s {
             SensorInit::Sensor{pin, ..} => {
                 values = create_values_owen_analog(pin);
-                value = values.get("value").unwrap_or(&Arc::new(Value::default())).clone();
+//                 value = values.get("value").unwrap_or(&None)).clone();
+                value = None;
                 
             },
             _ => {
                 values = ModbusValues::new();
-                value = Arc::new(Value::default());
+                value = None;
             }
             }
         },
@@ -187,21 +195,22 @@ impl DeviceType<Device> {
             match s {
             SensorInit::Sensor{pin, ..} => {
                 values = create_values_owen_digital(pin, false);
-                value = values.get("value").unwrap_or(&Arc::new(Value::default())).clone();
+//                 value = values.get("value").unwrap_or(&Arc::new(Value::default())).clone();
+                value = None;
             },
             SensorInit::GroupPin{pin, ..} => {
                 values = create_values_owen_digital(pin, true);
-                value = Arc::new(Value::default());
+                value = None;
             },
             _ => {
                 values = ModbusValues::new();
-                value = Arc::new(Value::default());
+                value = None;
             }
             };
         }, 
         _ => {
             values = ModbusValues::new();
-            value = Arc::new(Value::default());
+            value = None;
         }
         };
         Sensor::new(s, values, value )

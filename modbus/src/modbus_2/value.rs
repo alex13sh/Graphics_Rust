@@ -2,11 +2,13 @@ use std::hash::{Hash, Hasher};
 pub use super::init::{ValueDirect, ValueSize};
 pub use super::init::Value as ValueInit;
 
-#[derive(Debug, Default)]
+use std::cell::Cell;
+
+#[derive(Debug)]
 pub struct Value {
     name: String,
     address: u16,
-    value: u32, // Cell
+    value: Cell<u32>, // Cell
     // value: [u16, 2]
     direct: ValueDirect,
     size: ValueSize,
@@ -19,7 +21,7 @@ impl Value {
             address: address,
             direct: direct,
             size: size,
-            value: 0,
+            value: Cell::new(0),
         }
     }
     pub fn name(&self) -> &String {
@@ -34,6 +36,9 @@ impl Value {
         } else {
             false 
         }
+    }
+    pub fn update_value(&self, value: u32) {
+        self.value.set(value);
     }
 }
 
@@ -55,7 +60,7 @@ impl From<ValueInit> for Value {
             address: v.address,
             direct: v.direct,
             size: v.size,
-            value: 0,
+            value: Cell::new(0),
         }
     }
 }

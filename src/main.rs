@@ -13,7 +13,7 @@ fn main() {
 }
 
 struct GraphicsApp {
-    graph_state: graphic::State,
+    graph: graphic::Graphic,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +30,7 @@ impl Application for GraphicsApp {
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (
         Self {
-            graph_state: graphic::State::series(&["ser_1", "ser_2"])
+            graph: graphic::Graphic::series(&["ser_1", "ser_2"])
         },
         Command::none()
         )
@@ -40,7 +40,7 @@ impl Application for GraphicsApp {
     }
     
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(500))
+        time::every(std::time::Duration::from_millis(10))
             .map(|_| Self::Message::Tick(chrono::Local::now()))
     }
 
@@ -50,23 +50,23 @@ impl Application for GraphicsApp {
         use graphic::Message::*;
         match message {
         Tick(_) => {
-            self.graph_state.update(AppendValues(vec![1_f32, 2_f32]))
+            self.graph.update(AppendValues(vec![1_f32, 2_f32]));
         },
         _ => {}
         };
         Command::none()
     }
     fn view(&mut self) -> Element<Self::Message> {
-        let canvas = Canvas::new(Graphic::new(&mut self.graph_state))
-            .width(Length::Units(400))
-            .height(Length::Units(400));
+//         let canvas = Canvas::new(Graphic::new(&mut self.graph_state))
+//             .width(Length::Units(1000))
+//             .height(Length::Units(1000));
 //         canvas.into()
-        let canvas = Element::from(canvas)
-        .map(GraphicsAppMessage::Graphic);
+        let canvas = self.graph.view()
+            .map(GraphicsAppMessage::Graphic);
         Container::new(canvas)
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(20)
+            .padding(10)
             .center_x()
             .center_y()
             .into()

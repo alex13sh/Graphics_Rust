@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // use super::Value;
 use super::Sensor;
 use super::{Value, ModbusValues, ModbusSensors};
@@ -9,6 +11,7 @@ use super::init::{ValueDirect, ValueSize};
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::cell::{RefCell}; //, Cell, RefMut};
 use derivative::Derivative;
 
 // #[derive(Debug)]

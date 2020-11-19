@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod value;
 mod sensor;
 mod device;

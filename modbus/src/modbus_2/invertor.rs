@@ -39,21 +39,34 @@ impl Invertor {
         0_f32
     }
     
-    fn get_address_function(&self, num_func: u8) -> u16 {
+    fn get_address_function(&self, num_func: u8) -> Option<u16> {
         match &self.device.device_type {
         DeviceType::Invertor {functions} => {
             for f in functions.iter() {
                 match f {
                 InvertorFunc::DigitalInput(num_input, num_func_input) => {
-                    return 0;
+                    if *num_func_input == num_func {
+                        if *num_input >= 2 {
+                            return Some(*num_input as u16 -2 + 2*256+1);
+                        } else {return None;}
+                    }
                 },
-                _ => {return 0;}
+                InvertorFunc::DigitalOutput(num_output, num_func_output) => {
+                    if *num_func_output == num_func {
+                        if [0, 1, 3, 4].contains(num_output) {
+                            return Some(*num_output as u16 + 2*256+13);
+                        } else if *num_output >= 5 {
+                            return Some(*num_output as u16-5 + 2*256+36);
+                        }
+                    }
+                },
+                _ => {return None;}
                 }
             }
         },
         _ => {}
         };
-        0
+        None
     }
 }
 
@@ -73,4 +86,10 @@ impl Invertor {
     fn read_analog_func(func: &InvertorFunc) -> f32 {
         0_f32
     }
+}
+
+#[test]
+fn test_array_contsins() {
+    assert_eq!([0,1, 3,4].contains(&1), true);
+    assert_eq!([0,1, 3,4].contains(&2), false);
 }

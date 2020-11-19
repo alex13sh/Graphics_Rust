@@ -20,10 +20,10 @@ use derivative::Derivative;
 pub struct Device {
     name: String,
     sensors: ModbusSensors,
-    values: ModbusValues,
-    device_type: DeviceType<Device>,
+    pub(super) values: ModbusValues,
+    pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    ctx: Option<ModbusContext>,
+    pub(super) ctx: Option<RefCell<ModbusContext>>,
 }
 
 impl Device {
@@ -59,16 +59,22 @@ impl Device {
         }
         res
     }
-    pub fn update(&mut self) {
-        if let Some(ref mut ctx) = self.ctx {
-            ctx.update();
+    pub fn update(&self) {
+        if let Some(ref ctx) = self.ctx {
+            ctx.borrow_mut().update();
         }
+    }
+    pub fn values(&self) -> Vec<Arc<Value>> {
+        self.values.values().map(Arc::clone).collect()
+    }
+    pub fn values_map(&self) -> &ModbusValues {
+        &self.values
     }
 }
 
-struct ModbusContext {
+pub(super) struct ModbusContext {
     ctx: super::ModbusContext,
-    values: HashMap<u16, Arc<Value>>,
+    pub(super) values: HashMap<u16, Arc<Value>>,
     ranges_address: Vec<std::ops::RangeInclusive<u16>>,
 }
 
@@ -94,7 +100,7 @@ impl ModbusContext {
             use tokio_modbus::prelude::*;
             let buff = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start()).unwrap();
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-            let mut itr_buff = buff.into_iter();
+            let itr_buff = buff.into_iter();
             for (adr, v) in r.clone().zip(itr_buff) {
                 if let Some(val) = self.values.get_mut(&adr) {
                     val.update_value(v as u32);
@@ -131,6 +137,20 @@ impl ModbusContext {
         }
         res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
     }
+    
+    pub(super) fn set_value(&mut self, v: Value) {
+//         let v = self.values.get(address).unwrap().clone();
+        use tokio_modbus::client::sync::Writer;
+        match v.size.size() {
+        1 => self.ctx.write_single_register(v.address(), v.value() as u16).unwrap(),
+        2 => {
+            self.ctx.write_single_register(v.address(), v.value() as u16).unwrap();
+            self.ctx.write_single_register(v.address()+1, (v.value()>>16) as u16).unwrap();
+        },
+        _ => {}
+        };
+        
+    }
 }
 
 impl From<DeviceInit> for Device {
@@ -154,7 +174,7 @@ impl From<DeviceInit> for Device {
             name: d.name,
             sensors: sens,
             device_type: typ,
-            ctx: ModbusContext::new(&d.address, &values),
+            ctx: ModbusContext::new(&d.address, &values).map(RefCell::new),
             values: values,
         }
     }

@@ -10,8 +10,8 @@ pub struct Value {
     address: u16,
     value: Cell<u32>, // Cell
     // value: [u16, 2]
-    direct: ValueDirect,
-    size: ValueSize,
+    pub(super) direct: ValueDirect,
+    pub(super) size: ValueSize,
 }
 
 impl Value {
@@ -37,8 +37,34 @@ impl Value {
             false 
         }
     }
-    pub fn update_value(&self, value: u32) {
+    pub(super) fn update_value(&self, value: u32) {
         self.value.set(value);
+    }
+    
+    pub fn new_value(&self, value: u32) -> Self {
+        Self {
+            name: self.name.clone(),
+            address: self.address,
+            value: Cell::new(value),
+            direct: self.direct,
+            size: self.size,
+        }
+    }
+    pub fn value(&self) -> u32 {
+        self.value.get()
+    }
+    
+    pub fn set_bit(&self, num: u8, lvl: bool) {
+//         self.value.update(|v| {
+//             v+1
+//         });
+        let mut v = self.value.get();
+        if lvl {
+            v |= 1<<num;
+        } else {
+            v &= !(1<<num);
+        };
+        self.value.set(v);
     }
 }
 

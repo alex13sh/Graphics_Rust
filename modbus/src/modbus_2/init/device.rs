@@ -25,7 +25,7 @@ pub enum DeviceType<D> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum InvertorFunc {
     DigitalInput(u8, u8), // Номер входа, Номер функции
     DigitalOutput(u8, u8),

@@ -8,7 +8,7 @@ pub struct Value {
     pub size: ValueSize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ValueDirect {
     Read,
     Write
@@ -20,7 +20,7 @@ impl Default for ValueDirect {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ValueSize {
     INT8,
     UINT8,

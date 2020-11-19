@@ -66,6 +66,9 @@ impl Value {
         };
         self.value.set(v);
     }
+    pub fn get_bit(&self, num: u8) -> bool {
+        self.value.get() & (1<<num) > 0
+    }
 }
 
 impl ValueSize {
@@ -87,6 +90,23 @@ impl From<ValueInit> for Value {
             direct: v.direct,
             size: v.size,
             value: Cell::new(0),
+        }
+    }
+}
+
+use std::convert::TryInto;
+impl TryInto<f32> for Value {
+    type Error = ();
+    fn try_into(self) -> Result<f32, ()> {
+        match self.size {
+        ValueSize::FLOAT => Ok(f32::from_bits(self.value.get())),
+        ValueSize::UINT32
+        | ValueSize::INT32
+        | ValueSize::UINT16
+        | ValueSize::INT16
+        | ValueSize::UINT8
+        | ValueSize::INT8 => Ok(self.value.get() as f32),
+        _ => Err(()),
         }
     }
 }
@@ -119,3 +139,34 @@ impl DerefMut for ModbusValues {
 }
 
 // try into bool, i32, f32
+
+#[test]
+fn test_value_ops_bit() {
+    let v = Value::from(ValueInit{
+        name: "Name_1".into(),
+        address: 1,
+        direct: ValueDirect::Write,
+        size: ValueSize::BitMap,
+    });
+    v.set_bit(1, true);
+    assert_eq!(v.value.get(), 2);
+    v.set_bit(4, true);
+    assert_eq!(v.value.get(), 18);
+    assert_eq!(v.get_bit(3), false);
+    assert_eq!(v.get_bit(4), true);
+}
+
+#[test]
+fn test_value_into_f32() {
+    let v = Value::from(ValueInit{
+        name: "Name_1".into(),
+        address: 1,
+        direct: ValueDirect::Write,
+        size: ValueSize::FLOAT,
+    });
+    v.value.set(u32::from_le_bytes([0x00,0x00,0x20,0x3E]));
+    let f: f32 = v.try_into().unwrap();
+    assert_eq!(f, 0.15625);
+    let f = f32::from_le_bytes([0x00,0x00,0x20,0x3E]);
+    assert_eq!(f, 0.15625);
+}

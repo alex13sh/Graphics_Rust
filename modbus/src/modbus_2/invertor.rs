@@ -22,21 +22,34 @@ impl Invertor {
         let vm = self.device.values_map();
         let _v_start_hz: Arc<Value> = vm.get("Стартовая частота").unwrap().clone();
         let _v_max_hz = vm.get("Максимальная выходная частота").unwrap().clone();
-        let v_bitmap_input = vm.get("Выбор состояния для дискретных входов").unwrap().clone();
+        let v_bitmap_run = vm.get("2000H").unwrap().clone();
         
-        let v_bitmap_input_w = v_bitmap_input.new_value(v_bitmap_input.value());
-        v_bitmap_input_w.set_bit(2, true);
-        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(v_bitmap_input_w);
-        // v_bitmap_input.set_bit(2, true);
-        // self.device.ctx.set_value(v_bitmap_input);
+        v_bitmap_run.set_bit(1, false); // Stop
+        v_bitmap_run.set_bit(2, true); // Run
+        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_bitmap_run);
+        
     }
     fn stop(&self) {
+        let vm = self.device.values_map();
+        let v_bitmap_run = vm.get("2000H").unwrap().clone();
+        
+        v_bitmap_run.set_bit(1, true); // Stop
+        v_bitmap_run.set_bit(2, false); // Run
+        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_bitmap_run);
     }
-    fn set_hz(&mut self, _hz: u32) {
-    
+    fn set_hz(&mut self, hz: u16) {
+        let vm = self.device.values_map();
+        let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
+        v_set_hz.update_value(hz as u32);
+        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_set_hz);
     }
-    fn get_amper(&self) -> f32 {
-        0_f32
+    fn get_amper_out_value(&self) -> Arc<Value> {
+        let vm = self.device.values_map();
+        vm.get("Выходной ток (A)").unwrap().clone()
+    } 
+    fn get_hz_out_value(&self) -> Arc<Value> {
+        let vm = self.device.values_map();
+        vm.get("Выходная частота (H)").unwrap().clone()
     }
     
     fn get_address_function(&self, num_func: u8) -> Option<u16> {

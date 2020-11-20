@@ -184,7 +184,7 @@ pub fn init_devices() -> Vec<Device> {
             
             // Part 9 
             reg.append(&mut vec![
-                add_simple_invertor_value("Заданная частота по коммуникационному интерфейсу", 9, 10),
+                add_simple_invertor_value("Заданная частота по коммуникационному интерфейсу", 9, 10), // 600.00
                 
                 add_simple_invertor_value("Индетификация коммуникационной платы", 9, 60),
                 add_simple_invertor_value("IP конфигурация комм. платы", 9, 75),
@@ -203,11 +203,14 @@ pub fn init_devices() -> Vec<Device> {
                     address: 0x2000,
                     direct: ValueDirect::Write,
                     size: ValueSize::BitMap ( vec![
-                        ValueBit {
-                            name: "Run/Stop".into(),
-                            bit_num: 0,
-                            bit_size: 4, 
-                        },
+//                         ValueBit {
+//                             name: "Run/Stop".into(),
+//                             bit_num: 0,
+//                             bit_size: 4, 
+//                         },
+                        add_simple_value_bit(1, "Stop"),
+                        add_simple_value_bit(2, "Run"),
+                        add_simple_value_bit(3, "Jog Run"),
                         ValueBit {
                             name: "Изменить направление вращения".into(),
                             bit_num: 4,

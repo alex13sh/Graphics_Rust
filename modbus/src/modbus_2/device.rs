@@ -138,7 +138,7 @@ impl ModbusContext {
         res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
     }
     
-    pub(super) fn set_value(&mut self, v: Value) {
+    pub(super) fn set_value(&mut self, v: &Value) {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::sync::Writer;
         match v.size.size() {

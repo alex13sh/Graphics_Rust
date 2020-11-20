@@ -80,10 +80,10 @@ impl From<Device> for Invertor {
 
 // Funcs
 impl Invertor {
-    fn read_digit_func(func: &InvertorFunc) -> bool {
+    fn read_digit_func(_func: &InvertorFunc) -> bool {
         false
     }
-    fn read_analog_func(func: &InvertorFunc) -> f32 {
+    fn read_analog_func(_func: &InvertorFunc) -> f32 {
         0_f32
     }
 }

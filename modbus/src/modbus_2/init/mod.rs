@@ -195,10 +195,95 @@ pub fn init_devices() -> Vec<Device> {
                 add_simple_invertor_value("IP адрес 4 комм. платы", 9, 79),
             ]);
             
+            let add_simple_value_bit = |num:u8, name: &str| ValueBit {name: name.into(), bit_num: num, bit_size: 1};
             // Part 20 Write
+            reg.append(&mut vec![
+                Value {
+                    name: "2000H".into(),
+                    address: 0x2000,
+                    direct: ValueDirect::Write,
+                    size: ValueSize::BitMap ( vec![
+                        ValueBit {
+                            name: "Run/Stop".into(),
+                            bit_num: 0,
+                            bit_size: 4, 
+                        },
+                        ValueBit {
+                            name: "Изменить направление вращения".into(),
+                            bit_num: 4,
+                            bit_size: 2,
+                        },
+                        ValueBit {
+                            name: "Выбор времени разгона".into(),
+                            bit_num: 8,
+                            bit_size: 12-8, 
+                        },
+                        ValueBit {
+                            name: "Разрешение функции bit6-11".into(),
+                            bit_num: 12,
+                            bit_size: 1, 
+                        },
+                        ValueBit {
+                            name: "Изменение источника управления".into(),
+                            bit_num: 13,
+                            bit_size: 2, 
+                        }, 
+                    ]),
+                },
+                Value {
+                    name: "Команда задания частоты".into(),
+                    address: 0x2001,
+                    direct: ValueDirect::Write,
+                    size: ValueSize::UINT16,
+                },
+                Value {
+                    name: "2002H".into(),
+                    address: 0x2002,
+                    direct: ValueDirect::Write,
+                    size: ValueSize::BitMap ( vec![
+                        add_simple_value_bit(0, "EF"),
+                        add_simple_value_bit(1, "Сброс ошибки"),
+                        add_simple_value_bit(2, "Внешняя пауза"),
+                    ]),
+                },
+            ]);
             
-            
+            let add_simple_value_read = |adr: u16, name: &str| Value {
+                name: name.into(), address: adr, 
+                direct: ValueDirect::Read, size: ValueSize::UINT16,
+            };
             // Part 21 ReadOnly
+            reg.append(&mut vec![
+                Value {
+                    name: "Код ошибки".into(), // Pr.06-17 - 06.22
+                    address: 0x2100,
+                    direct: ValueDirect::Read, // interval
+                    size: ValueSize::UINT16, // UINT32
+                },
+                Value {
+                    name: "2119H".into(),
+                    address: 0x2119,
+                    direct: ValueDirect::Read,
+                    size: ValueSize::BitMap (vec![
+                        add_simple_value_bit(0, "Команда FWD"),
+                        add_simple_value_bit(1, "Состояние привода"),
+                        add_simple_value_bit(2, "Jog команда"),
+                        add_simple_value_bit(3, "REV команда"),
+                        add_simple_value_bit(4, "REV команда"),
+                        add_simple_value_bit(8, "Задание частоты через интерфейс"),
+                        add_simple_value_bit(9, "Задание частоты через аналоговый вход"),
+                        add_simple_value_bit(10, "Управление приводом через интерфейс"),
+                        add_simple_value_bit(12, "Копирование параметров из пульта разрешено"),
+                    ]),
+                },
+                add_simple_value_read(0x2102, "Заданная частота (F)"),
+                add_simple_value_read(0x2103, "Выходная частота (H)"),
+                add_simple_value_read(0x2104, "Выходной ток (A)"),
+                add_simple_value_read(0x2106, "Выходное напряжение (E)"),
+                add_simple_value_read(0x2109, "Значение счётчика"),
+                add_simple_value_read(0x211B, "Максимальная установленная частота"),
+                add_simple_value_read(0x220F, "Температура радиатора"),
+            ]);
             
             Some(reg)
         },

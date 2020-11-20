@@ -47,7 +47,7 @@ impl Value {
             address: self.address,
             value: Cell::new(value),
             direct: self.direct,
-            size: self.size,
+            size: self.size.clone(),
         }
     }
     pub fn value(&self) -> u32 {
@@ -77,7 +77,7 @@ impl ValueSize {
         match self {
         INT8 | UINT8 | INT16 | UINT16 => 1,
         INT32 | UINT32 | FLOAT => 2,
-        BitMap => 1,
+        BitMap(_) => 1,
         }
     }
 }

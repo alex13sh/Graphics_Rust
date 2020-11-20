@@ -18,13 +18,6 @@ pub fn tst() {
 pub fn init_devices() -> Vec<Device> {
     use SensorAnalogType::*;
     use ValueGroup::*;
-
-    let add_simple_invertor_value = |name: &str, p: u16, adr: u16| Value {
-        name: name.into(),
-        address: p*256+adr,
-        direct: ValueDirect::Write,
-        size: ValueSize::UINT16,
-    };
     
     let d = vec![
     Device {
@@ -112,8 +105,12 @@ pub fn init_devices() -> Vec<Device> {
         address: DeviceAddress::TcpIP("192.168.1.7".into()),
         device_type: DeviceType::Invertor {
             functions: vec![
-                InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута
-                InvertorFunc::DigitalOutput(0, 13), // Предупреждение о перегреве радиатора
+//                 InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута
+//                 InvertorFunc::DigitalOutput(0, 13), // Предупреждение о перегреве радиатора
+//                 InvertorFunc::DigitalInput(0, 6), // Команда JOG (Разгон и Замедление)
+//                 InvertorFunc::DigitalInput(0, 12), // Остановка на выбег/Пуск по рампе
+//                 InvertorFunc::DigitalInput(0, 40), // Остановка на выбеге
+                
             ]
         },
         sensors: Some(vec![
@@ -122,58 +119,89 @@ pub fn init_devices() -> Vec<Device> {
 //                 values: vec![],
 //             },
         ]),
-        values: Some(vec![
-            add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
-            
-            add_simple_invertor_value("Режим управления",  0, 10), // 0 - 2
-            add_simple_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
-            add_simple_invertor_value("Режим работы привода",   0, 16), // 0 - 1
-            add_simple_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
-            add_simple_invertor_value("Управление направлением вращения двигателя",  0, 23), // 0 - 2
-            add_simple_invertor_value("Сбособ остановки",   0, 22), // 0 - 1
-            
-            add_simple_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
-            add_simple_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
-            add_simple_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
-            
-            add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
-            add_simple_invertor_value("Номинальная частота двигателя",      1, 1), // 0.0 - 600.0
-            add_simple_invertor_value("Номинальное напряжение двигателя",   1, 2), // 0 - 255.0
-            add_simple_invertor_value("Сбособ остановки",  0, 22), // 0 - 1
-            
-            add_simple_invertor_value("Стартовая частота",  1, 9), // 0.00 - 600.00
-            add_simple_invertor_value("Верхнее ограничение выходной частота",  1, 10), // 0.00 - 600.00
-            add_simple_invertor_value( "Нижнее ограничение выходной частота",  1, 11), // 0.00 - 600.00
-            
-            // 1.12 - 1.21 -- Временные параметры
-            
-            // 1.28 - 1.33 -- Частота пропуска (1, 2, 3)
-            
-            add_simple_invertor_value("Выбор режима разгона/замедления",  1, 44), // 0 - 4
-            
-            // 2.1 - 2.8, 2.26 - 2.31 -- Дискретные входы // Значения 0 - 53
-            // add_simple_invertor_value("Выбор состояния для дискретных входов",  2, 12), // BitMap 16 bit
-            Value {
-                name: "Выбор состояния для дискретных входов".into(),
-                address: 2*256+12,
+        values: {
+            let add_simple_invertor_value = |name: &str, p: u16, adr: u16| Value {
+                name: name.into(),
+                address: p*256+adr,
                 direct: ValueDirect::Write,
-                size: ValueSize::BitMap, // 16 bit
-            },
-            add_simple_invertor_value("Скорость изменения частоты командами Up/Down",  2, 10), // 0.01 - 1.00
+                size: ValueSize::UINT16,
+            };
             
-            // 2.36 - 2.46 -- Цифровые выходы // Значения 0 - 51
-            // f-2 -- Заданная частота достигнута
-            // f-13 -- Предупреждение о перегреве радиатора
-            // f-27-28 -- Выходной ток выше или ниже p-2-33
-            // f-35-39 -- Индикация ошибок p-6-23-26
+            let mut reg = vec![
+                add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
+                
+                add_simple_invertor_value("Режим управления",  0, 10), // 0 - 2
+                add_simple_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
+                add_simple_invertor_value("Режим работы привода",   0, 16), // 0 - 1
+                add_simple_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
+                add_simple_invertor_value("Управление направлением вращения двигателя",  0, 23), // 0 - 2
+                add_simple_invertor_value("Сбособ остановки",   0, 22), // 0 - 1
+                
+                add_simple_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
+                add_simple_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
+                add_simple_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
+                
+                add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
+                add_simple_invertor_value("Номинальная частота двигателя",      1, 1), // 0.0 - 600.0
+                add_simple_invertor_value("Номинальное напряжение двигателя",   1, 2), // 0 - 255.0
+                add_simple_invertor_value("Сбособ остановки",  0, 22), // 0 - 1
+                
+                add_simple_invertor_value("Стартовая частота",  1, 9), // 0.00 - 600.00
+                add_simple_invertor_value("Верхнее ограничение выходной частота",  1, 10), // 0.00 - 600.00
+                add_simple_invertor_value( "Нижнее ограничение выходной частота",  1, 11), // 0.00 - 600.00
+                
+                // 1.12 - 1.21 -- Временные параметры
+                
+                // 1.28 - 1.33 -- Частота пропуска (1, 2, 3)
+                
+                add_simple_invertor_value("Выбор режима разгона/замедления",  1, 44), // 0 - 4
+                
+            ];
+            reg.append(&mut vec![
+                // 2.1 - 2.8, 2.26 - 2.31 -- Дискретные входы // Значения 0 - 53
+                    // add_simple_invertor_value("Выбор состояния для дискретных входов",  2, 12), // BitMap 16 bit
+        //             Value {
+        //                 name: "Выбор состояния для дискретных входов".into(),
+        //                 address: 2*256+12,
+        //                 direct: ValueDirect::Write,
+        //                 size: ValueSize::BitMap, // 16 bit
+        //             },
+        //             add_simple_invertor_value("Скорость изменения частоты командами Up/Down",  2, 10), // 0.01 - 1.00
+                    
+                    // 2.36 - 2.46 -- Цифровые выходы // Значения 0 - 51
+                    // f-2 -- Заданная частота достигнута
+                    // f-13 -- Предупреждение о перегреве радиатора
+                    // f-27-28 -- Выходной ток выше или ниже p-2-33
+                    // f-35-39 -- Индикация ошибок p-6-23-26
+                    
+        //             Value {
+        //                 name: "Выбор неактивного состояния для дискретных выходов".into(),
+        //                 address: 2*256+18,
+        //                 direct: ValueDirect::Write,
+        //                 size: ValueSize::BitMap, // 16 bit
+        //             },
+            ]);
             
-            Value {
-                name: "Выбор неактивного состояния для дискретных выходов".into(),
-                address: 2*256+18,
-                direct: ValueDirect::Write,
-                size: ValueSize::BitMap, // 16 bit
-            },
-        ]),
+            // Part 9 
+            reg.append(&mut vec![
+                add_simple_invertor_value("Заданная частота по коммуникационному интерфейсу", 9, 10),
+                
+                add_simple_invertor_value("Индетификация коммуникационной платы", 9, 60),
+                add_simple_invertor_value("IP конфигурация комм. платы", 9, 75),
+                
+                add_simple_invertor_value("IP адрес 1 комм. платы", 9, 76),
+                add_simple_invertor_value("IP адрес 2 комм. платы", 9, 77),
+                add_simple_invertor_value("IP адрес 3 комм. платы", 9, 78),
+                add_simple_invertor_value("IP адрес 4 комм. платы", 9, 79),
+            ]);
+            
+            // Part 20 Write
+            
+            
+            // Part 21 ReadOnly
+            
+            Some(reg)
+        },
     }
     ];
     return d;

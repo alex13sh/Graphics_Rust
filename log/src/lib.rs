@@ -41,12 +41,11 @@ pub struct LogValue {
     pub value: f32,
 }
 
+use std::collections::HashSet;
 impl NewJsonLog {
-    pub fn get_all_hash(&self) -> Vec<String> {
-        self.values.iter().fold(vec![], |mut hashs, val| {
-            if !hashs.contains(&val.hash) {
-                hashs.push(val.hash.clone());
-            }
+    pub fn get_all_hash(&self) -> HashSet<String> {
+        self.values.iter().fold(HashSet::new(), |mut hashs, val| {
+            hashs.insert(val.hash.clone());
             hashs
         })
     }

@@ -22,7 +22,7 @@ pub struct Graphic {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppendValues(/*DateTime,*/ Vec<f32> ),
+    AppendValues(log::LogValue ),
     LoadLog()
 }
 

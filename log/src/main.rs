@@ -1,7 +1,11 @@
 use log::*;
 
 fn main() -> std::io::Result<()> {
-    convert_log_file("values_14_09_2020__13_24_19_668.json", "Log/", "new_log")
+//     convert_log_file("values_14_09_2020__13_24_19_668.json", "log/", "new_log/")
+    let js = open_json_file("values_14_09_2020__13_24_19_668.json");
+    let hashs = js.get_all_hash();
+    dbg!(hashs.len(), hashs);
+    Ok(())
 }
 
 // За 11 секунд и 30-40 мб озу

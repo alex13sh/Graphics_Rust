@@ -38,7 +38,18 @@ pub struct NewJsonLog {
 pub struct LogValue {
     pub date_time: String,
     pub hash: String,
-    pub value: i32,
+    pub value: f32,
+}
+
+impl NewJsonLog {
+    pub fn get_all_hash(&self) -> Vec<String> {
+        self.values.iter().fold(vec![], |mut hashs, val| {
+            if !hashs.contains(&val.hash) {
+                hashs.push(val.hash.clone());
+            }
+            hashs
+        })
+    }
 }
 
 fn convert_log(source_log: SourceJsonLog) -> NewJsonLog {
@@ -48,7 +59,7 @@ fn convert_log(source_log: SourceJsonLog) -> NewJsonLog {
         values: source_log.v_dt.into_iter()
             .zip(source_log.v_hash.into_iter())
             .zip(source_log.v_value.into_iter())
-            .map(|((dt, hash), value)| LogValue{date_time: dt, hash: hash, value: value})
+            .map(|((dt, hash), value)| LogValue{date_time: dt, hash: hash, value: f32::from_bits(value as u32)})
             .collect()
     }
 }
@@ -74,7 +85,7 @@ pub fn convert_log_file(file_name: &str, from_dir: &str, to_dir: &str) -> std::i
 }
 
 pub fn open_json_file(file_name: &str) -> NewJsonLog {
-    let path = get_file_path(&("new_log".to_owned() + file_name));
+    let path = get_file_path(&("new_log/".to_owned() + file_name));
     println!("Path: {:?}", path);
     let mut contents = String::new();
     let mut file = File::open(path).expect("Файл не найден");

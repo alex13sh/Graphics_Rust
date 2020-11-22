@@ -1,12 +1,10 @@
 use iced::{
-    slider, Align, Column, Container, Element, Length,
-    Slider, Text, Canvas,
+    Align, Column, Container, Element, Length,
+    Text, text_input, TextInput,
     Application, Settings, executor, Subscription, Command, time,
 };
 
 mod graphic;
-use graphic::Graphic;
-use std::ops::Deref;
 
 fn main() {
     println!("Hello World");
@@ -29,6 +27,7 @@ mod app_graphic {
         Tick(chrono::DateTime<chrono::Local>)
     }
 
+    use graphic::Graphic;
     impl Application for GraphicsApp {
         type Executor = executor::Default;
         type Flags = ();
@@ -60,7 +59,7 @@ mod app_graphic {
         
         fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
             use GraphicsAppMessage::*;
-            use graphic::Message::*;
+//             use graphic::Message::*;
             match message {
             Tick(_) => {
     //             self.graph.update(AppendValues(self.log_js.values[0]));
@@ -97,11 +96,12 @@ mod app_graphic {
 mod app_test {
     use super::*;
     pub struct TestApp {
-    
+        input_ip_address: text_input::State,
+        ip_address: String,
     }
     #[derive(Debug, Clone)]
     pub enum Message {
-    
+        InputIpAddressChanged(String),
     }
     
     impl Application for TestApp {
@@ -111,7 +111,10 @@ mod app_test {
     
         fn new(_flags: ()) -> (Self, Command<Self::Message>) {
             (
-                Self{},
+                Self {
+                    input_ip_address: text_input::State::new(),
+                    ip_address: "192.168.1.5".into(),
+                },
                 Command::none()
             )
         }
@@ -120,11 +123,22 @@ mod app_test {
         }
         
         fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+            match message {
+            Message::InputIpAddressChanged(txt) => self.ip_address = txt,
+            };
             Command::none()
         }
         fn view(&mut self) -> Element<Self::Message> {
+        
+            let input = TextInput::new(
+                &mut self.input_ip_address,
+                "Введите IP адрес",
+                &self.ip_address,
+                Message::InputIpAddressChanged,
+            );
+                
             let text = Text::new("My Text");
-            Container::new(text)
+            Container::new(input)
                 .width(Length::Fill).height(Length::Fill)
                 .padding(10)
                 .center_x().center_y()

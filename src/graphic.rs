@@ -1,6 +1,8 @@
+#![allow(dead_code, unused_imports)]
+
 use iced::{
     canvas::{
-        self, Cache, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke, Text,
+        self, Cache, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke,
     },
     mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
     Size, Vector, VerticalAlignment,
@@ -109,9 +111,9 @@ impl canvas::Program<Message> for Graphic {
 
     fn update(
         &mut self,
-        event: Event,
-        bounds: Rectangle,
-        cursor: Cursor,
+        _event: Event,
+        _bounds: Rectangle,
+        _cursor: Cursor,
     ) -> Option<Message> {
         None
     }
@@ -148,9 +150,9 @@ impl canvas::Program<Message> for Graphic {
 //                         .filter(|v| {
 //                             v.dt>=self.view_port.start 
 //                             && v.dt<=self.view_port.end});
-                    let mut itr = self.view_port.get_slice_points(&s.points);
-                    let cnt = itr.len();
-                    let mut itr = itr.iter().step_by(cnt/200+1);
+                    let points = self.view_port.get_slice_points(&s.points);
+                    let cnt = points.len();
+                    let mut itr = points.iter().step_by(cnt/200+1);
                     let (x, y) = self.view_port.calc_point(itr.next().unwrap(), bounds.size());
                     path.move_to(Point{x: x, y: y});
                     

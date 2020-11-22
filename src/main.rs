@@ -142,7 +142,7 @@ mod app_test {
             match self {
             Self::Connect {ip_address, ..} => match message {
                 Message::InputIpAddressChanged(txt) => *ip_address = txt,
-                Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::default()),
+                Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new()),
                 _ => {}
                 },
             Self::TestInvertor (invertor) => match message {
@@ -188,8 +188,15 @@ mod app_test {
     
     mod test_invertor {
         use super::*;
-        #[derive(Default)]
+        use modbus::init;
+        
         pub struct TestInvertor {
+            ui: UI,
+            invertor: init::Device,
+        }
+        
+        #[derive(Default)]
+        struct UI {
             pb_start: button::State,
             pb_stop: button::State,
         }
@@ -201,6 +208,12 @@ mod app_test {
         }
         
         impl TestInvertor {
+            pub fn new() -> Self {
+                Self {
+                    invertor: init::make_invertor(),
+                    ui: Default::default()
+                }
+            }
             pub fn update(&mut self, message: Message) {
                 match message {
                     Message::Start => {},
@@ -208,13 +221,15 @@ mod app_test {
                 }
             }
             pub fn view(&mut self) -> Element<Message> {
-                let start = Button::new(&mut self.pb_start, Text::new("Старт"))
+                let start = Button::new(&mut self.ui.pb_start, Text::new("Старт"))
                     .on_press(Message::Start);
-                let stop = Button::new(&mut self.pb_stop, Text::new("Стоп"))
+                let stop = Button::new(&mut self.ui.pb_stop, Text::new("Стоп"))
                     .on_press(Message::Stop);
                 Column::new()
                     .spacing(20)
                     .align_items(Align::Center)
+                    .push(Text::new(&self.invertor.name))
+                    .push(Text::new(format!("Values: {}", self.invertor.values.as_ref().unwrap().len())))
                     .push(start)
                     .push(stop)
                     .into()

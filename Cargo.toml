@@ -14,9 +14,10 @@ iced_graphics = { path = "../iced/graphics" }
 chrono = "0.4"
 
 log = {path = "./log"}
+modbus = {path = "./modbus"}
 
 [workspace]
 members = [
     "log",
-    #"modbus",
+    "modbus",
 ]

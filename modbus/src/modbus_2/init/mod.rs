@@ -10,12 +10,12 @@ pub use device::*;
 
 
 // #[test]
-pub fn tst() {
+pub(crate) fn tst() {
     let d = init_devices();
     dbg!(d);
 }
 
-pub fn init_devices() -> Vec<Device> {
+pub(crate) fn init_devices() -> Vec<Device> {
     use SensorAnalogType::*;
     use ValueGroup::*;
     
@@ -100,6 +100,12 @@ pub fn init_devices() -> Vec<Device> {
         ]),
         values: None,
     },
+    make_invertor(),
+    ];
+    return d;
+}
+
+pub fn make_invertor() -> Device {
     Device {
         name: "Invertor".into(),
         address: DeviceAddress::TcpIP("192.168.1.7".into()),
@@ -289,8 +295,6 @@ pub fn init_devices() -> Vec<Device> {
             ]);
             
             Some(reg)
-        },
+        }
     }
-    ];
-    return d;
 }

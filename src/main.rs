@@ -109,11 +109,18 @@ mod app_test {
             ip_address: String,
             pb_connect: button::State,
         },
+        TestInvertor {
+            pb_start: button::State,
+            pb_stop: button::State,
+        }
     }
     #[derive(Debug, Clone)]
     pub enum Message {
         InputIpAddressChanged(String),
         Connect,
+        
+        InvertorStart,
+        InvertorStop,
     }
     
     impl Application for TestApp {
@@ -139,13 +146,22 @@ mod app_test {
             match self {
             Self::Connect {ip_address, ..} => match message {
                 Message::InputIpAddressChanged(txt) => *ip_address = txt,
-                Message::Connect => *ip_address = "Готово!".into(),
+                Message::Connect => *self = Self::TestInvertor {
+                    pb_start: button::State::new(),
+                    pb_stop: button::State::new(),
                 },
+                _ => {}
+                },
+            _ => match message {
+                Message::InvertorStart => {},
+                Message::InvertorStop => {},
+                _ => {}
+            }
             };
             Command::none()
         }
         fn view(&mut self) -> Element<Self::Message> {
-            match self {
+            let content: Element<_> = match self {
             Self::Connect {ip_address, input_ip_address, pb_connect} => {
                 let input = TextInput::new(
                     input_ip_address,
@@ -159,18 +175,31 @@ mod app_test {
                     .on_press(Message::Connect);
                     
 //                 let text = Text::new("My Text");
-                let row = Row::new()
+                Row::new()
                     .spacing(20)
                     .align_items(Align::Center)
                     .push(input)
-                    .push(connect);
-                Container::new(row)
-                    .width(Length::Fill).height(Length::Fill)
-                    .padding(10)
-                    .center_x().center_y()
+                    .push(connect)
                     .into()
             },
+            Self::TestInvertor {pb_start, pb_stop} => {
+                let start = Button::new(pb_start, Text::new("Старт"))
+                    .on_press(Message::InvertorStart);
+                let stop = Button::new(pb_stop, Text::new("Стоп"))
+                    .on_press(Message::InvertorStop);
+                Column::new()
+                    .spacing(20)
+                    .align_items(Align::Center)
+                    .push(start)
+                    .push(stop)
+                    .into()
             }
+            };
+            Container::new(content)
+                .width(Length::Fill).height(Length::Fill)
+                .padding(10)
+                .center_x().center_y()
+                .into()
         }
     }
 }

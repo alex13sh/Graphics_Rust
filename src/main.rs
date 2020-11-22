@@ -1,5 +1,5 @@
 use iced::{
-    Align, Column, Row, Container, Element, Length,
+    Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 
     Application, window, Settings, executor, Subscription, Command, time,
 };
@@ -11,7 +11,7 @@ fn main() {
 //     app_graphic::GraphicsApp::run(Settings::default());
     app_test::TestApp::run(Settings { 
         window: window::Settings {
-            size: (500, 400), //size: (1200, 800),
+            size: (600, 500), //size: (1200, 800),
             resizable: true,
             .. Default::default()
         },
@@ -190,6 +190,7 @@ mod app_test {
         use super::*;
         use modbus::init;
         use modbus::{Device, Invertor};
+        use modbus::{Value, ModbusValues};
         
         pub struct TestInvertor {
             ui: UI,
@@ -200,6 +201,7 @@ mod app_test {
         struct UI {
             pb_start: button::State,
             pb_stop: button::State,
+            scroll_value: scrollable::State,
         }
         
         #[derive(Debug, Clone)]
@@ -239,8 +241,26 @@ mod app_test {
                 } else {
                     res.push(Text::new("Инвертор не подключен!"))
                 };
-                res.into()
+                let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
+                scroll = values_view(self.invertor.device().values_map())
+                    .into_iter().fold(scroll, |scroll, e| scroll.push(e));
+                res.push(scroll).into()
+//                 res.into()
             }
+        }
+        
+        fn values_view<'a,'b>(values: &'a ModbusValues) -> Vec<Element<'b, Message>> {
+            let mut elements = Vec::new();
+            for v in values.values() {
+                let mut txt: String = v.name().chars().take(20).collect();
+                if v.name().chars().nth(20).is_some() {
+                    txt = txt + "...";
+                }
+                let elm = Text::new(format!("Value Name: {}", txt)).size(12);
+                elements.push(elm.into());
+            }
+            
+            elements
         }
     }
 }

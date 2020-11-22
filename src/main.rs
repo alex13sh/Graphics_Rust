@@ -1,7 +1,7 @@
 use iced::{
-    Align, Column, Container, Element, Length,
-    Text, text_input, TextInput,
-    Application, Settings, executor, Subscription, Command, time,
+    Align, Column, Row, Container, Element, Length,
+    Text, text_input, TextInput, button, Button, 
+    Application, window, Settings, executor, Subscription, Command, time,
 };
 
 mod graphic;
@@ -9,7 +9,15 @@ mod graphic;
 fn main() {
     println!("Hello World");
 //     app_graphic::GraphicsApp::run(Settings::default());
-    app_test::TestApp::run(Settings::default());
+    app_test::TestApp::run(Settings { 
+        window: window::Settings {
+            size: (500, 400), //size: (1200, 800),
+            resizable: true,
+            .. Default::default()
+        },
+        flags: (),
+        .. Settings::default()
+    });
 }
 
 mod app_graphic {
@@ -95,13 +103,17 @@ mod app_graphic {
 
 mod app_test {
     use super::*;
-    pub struct TestApp {
-        input_ip_address: text_input::State,
-        ip_address: String,
+    pub enum TestApp {
+        Connect {
+            input_ip_address: text_input::State,
+            ip_address: String,
+            pb_connect: button::State,
+        },
     }
     #[derive(Debug, Clone)]
     pub enum Message {
         InputIpAddressChanged(String),
+        Connect,
     }
     
     impl Application for TestApp {
@@ -111,9 +123,10 @@ mod app_test {
     
         fn new(_flags: ()) -> (Self, Command<Self::Message>) {
             (
-                Self {
+                Self::Connect {
                     input_ip_address: text_input::State::new(),
                     ip_address: "192.168.1.5".into(),
+                    pb_connect: button::State::new(),
                 },
                 Command::none()
             )
@@ -123,26 +136,41 @@ mod app_test {
         }
         
         fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-            match message {
-            Message::InputIpAddressChanged(txt) => self.ip_address = txt,
+            match self {
+            Self::Connect {ip_address, ..} => match message {
+                Message::InputIpAddressChanged(txt) => *ip_address = txt,
+                Message::Connect => *ip_address = "Готово!".into(),
+                },
             };
             Command::none()
         }
         fn view(&mut self) -> Element<Self::Message> {
-        
-            let input = TextInput::new(
-                &mut self.input_ip_address,
-                "Введите IP адрес",
-                &self.ip_address,
-                Message::InputIpAddressChanged,
-            );
+            match self {
+            Self::Connect {ip_address, input_ip_address, pb_connect} => {
+                let input = TextInput::new(
+                    input_ip_address,
+                    "Введите IP адрес",
+                    ip_address,
+                    Message::InputIpAddressChanged,
+                ).padding(10)
+                .on_submit(Message::Connect);
                 
-            let text = Text::new("My Text");
-            Container::new(input)
-                .width(Length::Fill).height(Length::Fill)
-                .padding(10)
-                .center_x().center_y()
-                .into()
+                let connect = Button::new(pb_connect, Text::new("Подключиться"))
+                    .on_press(Message::Connect);
+                    
+//                 let text = Text::new("My Text");
+                let row = Row::new()
+                    .spacing(20)
+                    .align_items(Align::Center)
+                    .push(input)
+                    .push(connect);
+                Container::new(row)
+                    .width(Length::Fill).height(Length::Fill)
+                    .padding(10)
+                    .center_x().center_y()
+                    .into()
+            },
+            }
         }
     }
 }

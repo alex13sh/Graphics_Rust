@@ -109,18 +109,14 @@ mod app_test {
             ip_address: String,
             pb_connect: button::State,
         },
-        TestInvertor {
-            pb_start: button::State,
-            pb_stop: button::State,
-        }
+        TestInvertor (test_invertor::TestInvertor),
     }
     #[derive(Debug, Clone)]
     pub enum Message {
         InputIpAddressChanged(String),
         Connect,
         
-        InvertorStart,
-        InvertorStop,
+        Invertor(test_invertor::Message),
     }
     
     impl Application for TestApp {
@@ -146,17 +142,13 @@ mod app_test {
             match self {
             Self::Connect {ip_address, ..} => match message {
                 Message::InputIpAddressChanged(txt) => *ip_address = txt,
-                Message::Connect => *self = Self::TestInvertor {
-                    pb_start: button::State::new(),
-                    pb_stop: button::State::new(),
-                },
+                Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::default()),
                 _ => {}
                 },
-            _ => match message {
-                Message::InvertorStart => {},
-                Message::InvertorStop => {},
+            Self::TestInvertor (invertor) => match message {
+                Message::Invertor(message) => invertor.update(message),
                 _ => {}
-            }
+                }
             };
             Command::none()
         }
@@ -182,17 +174,8 @@ mod app_test {
                     .push(connect)
                     .into()
             },
-            Self::TestInvertor {pb_start, pb_stop} => {
-                let start = Button::new(pb_start, Text::new("Старт"))
-                    .on_press(Message::InvertorStart);
-                let stop = Button::new(pb_stop, Text::new("Стоп"))
-                    .on_press(Message::InvertorStop);
-                Column::new()
-                    .spacing(20)
-                    .align_items(Align::Center)
-                    .push(start)
-                    .push(stop)
-                    .into()
+            Self::TestInvertor (invertor) => {
+                invertor.view().map(Message::Invertor)
             }
             };
             Container::new(content)
@@ -200,6 +183,42 @@ mod app_test {
                 .padding(10)
                 .center_x().center_y()
                 .into()
+        }
+    }
+    
+    mod test_invertor {
+        use super::*;
+        #[derive(Default)]
+        pub struct TestInvertor {
+            pb_start: button::State,
+            pb_stop: button::State,
+        }
+        
+        #[derive(Debug, Clone)]
+        pub enum Message {
+            Start,
+            Stop,
+        }
+        
+        impl TestInvertor {
+            pub fn update(&mut self, message: Message) {
+                match message {
+                    Message::Start => {},
+                    Message::Stop => {},
+                }
+            }
+            pub fn view(&mut self) -> Element<Message> {
+                let start = Button::new(&mut self.pb_start, Text::new("Старт"))
+                    .on_press(Message::Start);
+                let stop = Button::new(&mut self.pb_stop, Text::new("Стоп"))
+                    .on_press(Message::Stop);
+                Column::new()
+                    .spacing(20)
+                    .align_items(Align::Center)
+                    .push(start)
+                    .push(stop)
+                    .into()
+            }
         }
     }
 }

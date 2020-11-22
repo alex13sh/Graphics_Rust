@@ -6,6 +6,7 @@ use iced::{
 
 mod graphic;
 use graphic::Graphic;
+use std::ops::Deref;
 
 fn main() {
     println!("Hello World");
@@ -14,6 +15,9 @@ fn main() {
 
 struct GraphicsApp {
     graph: graphic::Graphic,
+    log_js: log::NewJsonLog,
+//     log_value_iter: &dyn Iterator<Item=log::LogValue>,
+    log_value_index: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -28,11 +32,17 @@ impl Application for GraphicsApp {
     type Message = GraphicsAppMessage;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+        let js = log::open_json_file("values_25_08_2020__13_41_06_111.json");
+        dbg!(js.values.len());
+        let hashs = js.get_all_hash();
+        let hashs: Vec<_> = hashs.iter().map(|s| &s[..]).collect();
         (
-        Self {
-            graph: graphic::Graphic::series(&["ser_1", "ser_2"])
-        },
-        Command::none()
+            Self {
+                graph: graphic::Graphic::series(&hashs),
+                log_value_index: 0,
+                log_js: js,
+            },
+            Command::none()
         )
     }
     fn title(&self) -> String {
@@ -40,7 +50,7 @@ impl Application for GraphicsApp {
     }
     
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(10))
+        time::every(std::time::Duration::from_millis(40))
             .map(|_| Self::Message::Tick(chrono::Local::now()))
     }
 
@@ -50,7 +60,13 @@ impl Application for GraphicsApp {
         use graphic::Message::*;
         match message {
         Tick(_) => {
-            self.graph.update(AppendValues(vec![1_f32, 2_f32]));
+//             self.graph.update(AppendValues(self.log_js.values[0]));
+            for _ in 0..40 {
+                if self.log_value_index+1<self.log_js.values.len() {
+                    self.log_value_index += 1;
+                    self.graph.append_value(self.log_js.values[self.log_value_index].clone());
+                }
+            }
         },
         _ => {}
         };

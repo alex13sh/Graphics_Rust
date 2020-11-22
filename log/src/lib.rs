@@ -27,14 +27,14 @@ struct SourceJsonLog {
     v_value: Vec<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NewJsonLog {
     pub start: String,
     pub finish: String,
     pub values: Vec<LogValue>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogValue {
     pub date_time: String,
     pub hash: String,

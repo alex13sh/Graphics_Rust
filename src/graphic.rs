@@ -7,11 +7,12 @@ use iced::{
 };
 
 type DateTime = chrono::DateTime<chrono::Local>;
+type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
 use chrono::Duration;
 // use std::time::Duration;
 
 pub struct Graphic {
-    series: Vec<LineSeries>,
+    series: Vec<LineSeries>, // HashMap
     view_port: ViewPort,
     
     grid_cache: Cache,
@@ -22,7 +23,8 @@ pub struct Graphic {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppendValues(log::LogValue ),
+//     AppendValues(log::LogValue ),
+    AppendValues(Vec<f32>),
     LoadLog()
 }
 
@@ -34,9 +36,9 @@ impl Graphic {
             series: Vec::new(),
             view_port: ViewPort {
                 end: chrono::Local::now(),
-                start: chrono::Local::now() - Duration::seconds(10),
+                start: chrono::Local::now() - Duration::seconds(5*60),
                 min_value: -10_f32, 
-                max_value: 20_f32,
+                max_value: 100_f32,
             },
             grid_cache: Default::default(),
             lines_cache: Default::default(),
@@ -66,6 +68,25 @@ impl Graphic {
         _ => {}
         }
     }
+    pub fn append_value(&mut self, value: log::LogValue) {
+        let hash = value.hash;
+        for ser in self.series.iter_mut() {
+            if ser.name == hash {
+//                 dbg!(&value.date_time);
+                let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
+                ser.points.push(DatePoint{
+                    dt: dt,
+                    value: value.value
+                });
+//                 dbg!(&dt);
+                self.view_port.set_end(dt);
+//                 dbg!(&self.view_port);
+                self.lines_cache.clear();
+                return;
+            }
+        }
+    }
+    
     pub fn append_values(&mut self, values: Vec<f32>) {
         for (s, v) in self.series.iter_mut().zip(values.into_iter()) {
             s.points.append_value(v);
@@ -123,7 +144,13 @@ impl canvas::Program<Message> for Graphic {
                 for s in self.series.iter() {
                     if s.points.len() < 2 {continue;}
                     
-                    let mut itr = s.points.iter();
+//                     let mut itr = s.points.iter()
+//                         .filter(|v| {
+//                             v.dt>=self.view_port.start 
+//                             && v.dt<=self.view_port.end});
+                    let mut itr = self.view_port.get_slice_points(&s.points);
+                    let cnt = itr.len();
+                    let mut itr = itr.iter().step_by(cnt/200+1);
                     let (x, y) = self.view_port.calc_point(itr.next().unwrap(), bounds.size());
                     path.move_to(Point{x: x, y: y});
                     
@@ -183,6 +210,7 @@ impl VecDatePoint for Vec<DatePoint> {
     }
 }
 
+#[derive(Debug)]
 struct ViewPort {
     start: DateTime,
     end: DateTime,
@@ -209,6 +237,29 @@ impl ViewPort {
         let dlt = self.end - self.start;
         self.end = end;
         self.start = self.end - dlt;
+    }
+    
+    fn get_index_by_date(points: &Vec<DatePoint>, dt: &DateTime) -> usize {
+        let mut start = 0;
+        let mut end = points.len();
+        while end-start>2 {
+            let cur = (end-start)/2+start;
+            let point = &points[cur];
+            if point.dt > *dt {
+                end = cur;
+            } else if point.dt < *dt {
+                start = cur;
+            } else {
+                return cur;
+            }
+        }
+        return start;
+    }
+    
+    fn get_slice_points<'a>(&self, points: &'a Vec<DatePoint>) -> &'a [DatePoint] {
+        let i_start=Self::get_index_by_date(points, &self.start);
+        let i_end=Self::get_index_by_date(points, &self.end);
+        &points[i_start..i_end]
     }
 }
 

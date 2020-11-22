@@ -59,10 +59,9 @@ impl Device {
         }
         res
     }
-    pub fn update(&self) {
-        if let Some(ref ctx) = self.ctx {
-            ctx.borrow_mut().update();
-        }
+    pub fn update(&self) -> Result<(), DeviceError> {
+        self.context()?.borrow_mut().update();
+        Ok(())
     }
     pub fn values(&self) -> Vec<Arc<Value>> {
         self.values.values().map(Arc::clone).collect()
@@ -70,6 +69,20 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
+    pub(super) fn context(&self) -> Result<&RefCell<ModbusContext>, DeviceError> {
+        if let Some(ctx) = &self.ctx {
+            Ok(ctx)
+        } else {
+            Err(DeviceError::ContextNull)
+        }
+    }
+    pub fn is_connect(&self) -> bool {
+        self.context().is_ok()
+    }
+}
+
+pub enum DeviceError {
+    ContextNull
 }
 
 pub(super) struct ModbusContext {

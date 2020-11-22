@@ -189,10 +189,11 @@ mod app_test {
     mod test_invertor {
         use super::*;
         use modbus::init;
+        use modbus::{Device, Invertor};
         
         pub struct TestInvertor {
             ui: UI,
-            invertor: init::Device,
+            invertor: Invertor,
         }
         
         #[derive(Default)]
@@ -210,29 +211,35 @@ mod app_test {
         impl TestInvertor {
             pub fn new() -> Self {
                 Self {
-                    invertor: init::make_invertor(),
+                    invertor: Invertor::new(init::make_invertor().into()),
                     ui: Default::default()
                 }
             }
             pub fn update(&mut self, message: Message) {
+                #![allow(unused_must_use)]
                 match message {
-                    Message::Start => {},
-                    Message::Stop => {},
-                }
+                    Message::Start => self.invertor.start(),
+                    Message::Stop => self.invertor.stop(),
+                };
             }
             pub fn view(&mut self) -> Element<Message> {
                 let start = Button::new(&mut self.ui.pb_start, Text::new("Старт"))
                     .on_press(Message::Start);
                 let stop = Button::new(&mut self.ui.pb_stop, Text::new("Стоп"))
                     .on_press(Message::Stop);
-                Column::new()
+                let mut res = Column::new()
                     .spacing(20)
                     .align_items(Align::Center)
-                    .push(Text::new(&self.invertor.name))
-                    .push(Text::new(format!("Values: {}", self.invertor.values.as_ref().unwrap().len())))
-                    .push(start)
-                    .push(stop)
-                    .into()
+                    .push(Text::new(self.invertor.device().name()))
+                    .push(Text::new(format!("Values: {}", self.invertor.device().values_map().len())))
+                    ;
+                res = if self.invertor.device().is_connect() {
+                    res.push(start)
+                        .push(stop)
+                } else {
+                    res.push(Text::new("Инвертор не подключен!"))
+                };
+                res.into()
             }
         }
     }

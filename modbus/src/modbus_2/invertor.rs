@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::init::{DeviceType, InvertorFunc};
-use super::Device;
+use super::{Device, DeviceError};
 use super::Value;
 
 use std::sync::Arc;
@@ -18,7 +18,7 @@ impl Invertor {
         }
     }
     
-    fn start(&self) {
+    pub fn start(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
         let _v_start_hz: Arc<Value> = vm.get("Стартовая частота").unwrap().clone();
         let _v_max_hz = vm.get("Максимальная выходная частота").unwrap().clone();
@@ -26,28 +26,30 @@ impl Invertor {
         
         v_bitmap_run.set_bit(1, false); // Stop
         v_bitmap_run.set_bit(2, true); // Run
-        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_bitmap_run);
-        
+        self.device.context()?.borrow_mut().set_value(&v_bitmap_run);
+        Ok(())
     }
-    fn stop(&self) {
+    pub fn stop(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
         let v_bitmap_run = vm.get("2000H").unwrap().clone();
         
         v_bitmap_run.set_bit(1, true); // Stop
         v_bitmap_run.set_bit(2, false); // Run
-        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_bitmap_run);
+        self.device.context()?.borrow_mut().set_value(&v_bitmap_run);
+        Ok(())
     }
-    fn set_hz(&mut self, hz: u16) {
+    pub fn set_hz(&mut self, hz: u16) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         v_set_hz.update_value(hz as u32);
-        self.device.ctx.as_ref().unwrap().borrow_mut().set_value(&v_set_hz);
+        self.device.context()?.borrow_mut().set_value(&v_set_hz);
+        Ok(())
     }
-    fn get_amper_out_value(&self) -> Arc<Value> {
+    pub fn get_amper_out_value(&self) -> Arc<Value> {
         let vm = self.device.values_map();
         vm.get("Выходной ток (A)").unwrap().clone()
     } 
-    fn get_hz_out_value(&self) -> Arc<Value> {
+    pub fn get_hz_out_value(&self) -> Arc<Value> {
         let vm = self.device.values_map();
         vm.get("Выходная частота (H)").unwrap().clone()
     }
@@ -80,6 +82,10 @@ impl Invertor {
         _ => {}
         };
         None
+    }
+    
+    pub fn device(&self) -> Arc<Device> {
+        self.device.clone()
     }
 }
 

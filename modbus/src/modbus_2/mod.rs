@@ -11,7 +11,7 @@ pub mod invertor;
 pub use value::*;
 pub use sensor::*;
 pub use device::*;
-// use invertor::*;
+pub use invertor::*;
 
 use tokio_modbus::client::sync::Context as ModbusContext;
 

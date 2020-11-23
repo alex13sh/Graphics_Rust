@@ -217,14 +217,16 @@ mod app_test {
                     ui: Default::default()
                 }
             }
+            #[allow(unused_must_use)]
             pub fn update(&mut self, message: Message) {
-                #![allow(unused_must_use)]
+//                 println!("update");
                 match message {
                     Message::Start => self.invertor.start(),
                     Message::Stop => self.invertor.stop(),
                 };
             }
             pub fn view(&mut self) -> Element<Message> {
+//                 println!("view");
                 let start = Button::new(&mut self.ui.pb_start, Text::new("Старт"))
                     .on_press(Message::Start);
                 let stop = Button::new(&mut self.ui.pb_stop, Text::new("Стоп"))
@@ -250,13 +252,18 @@ mod app_test {
         }
         
         fn values_view<'a,'b>(values: &'a ModbusValues) -> Vec<Element<'b, Message>> {
+//             println!("values_view");
+            use std::collections::HashMap;
             let mut elements = Vec::new();
-            for v in values.values() {
+            let mut adr_name: Vec<_> = values.values().into_iter().map(|v| (v.address(), v.name().clone())).collect();
+            adr_name.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            for (_, nam) in adr_name {
+                let v = values.get(&nam).unwrap();
                 let mut txt: String = v.name().chars().take(20).collect();
                 if v.name().chars().nth(20).is_some() {
                     txt = txt + "...";
                 }
-                let elm = Text::new(format!("Value Name: {}", txt)).size(12);
+                let elm = Text::new(format!("{:0>4X}) name: {}", v.address(), txt)).size(12); // {:0>4})
                 elements.push(elm.into());
             }
             

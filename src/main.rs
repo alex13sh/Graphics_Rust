@@ -195,6 +195,7 @@ mod app_test {
         pub struct TestInvertor {
             ui: UI,
             invertor: Invertor,
+            values: Vec<DeviceValue>,
         }
         
         #[derive(Default)]
@@ -212,8 +213,10 @@ mod app_test {
         
         impl TestInvertor {
             pub fn new() -> Self {
+                let invertor = Invertor::new(init::make_invertor().into());
                 Self {
-                    invertor: Invertor::new(init::make_invertor().into()),
+                    values: make_values(invertor.device().values_map()),
+                    invertor: invertor,
                     ui: Default::default()
                 }
             }
@@ -244,30 +247,41 @@ mod app_test {
                     res.push(Text::new("Инвертор не подключен!"))
                 };
                 let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
-                scroll = values_view(self.invertor.device().values_map())
-                    .into_iter().fold(scroll, |scroll, e| scroll.push(e));
+                scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
                 res.push(scroll).into()
 //                 res.into()
             }
         }
         
-        fn values_view<'a,'b>(values: &'a ModbusValues) -> Vec<Element<'b, Message>> {
+        fn make_values(values: &ModbusValues) -> Vec<DeviceValue> {
 //             println!("values_view");
             use std::collections::HashMap;
-            let mut elements = Vec::new();
             let mut adr_name: Vec<_> = values.values().into_iter().map(|v| (v.address(), v.name().clone())).collect();
             adr_name.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-            for (_, nam) in adr_name {
-                let v = values.get(&nam).unwrap();
-                let mut txt: String = v.name().chars().take(20).collect();
-                if v.name().chars().nth(20).is_some() {
-                    txt = txt + "...";
+            adr_name.into_iter().map(|(_, name)| 
+                DeviceValue::new(values.get(&name).unwrap().clone())
+            ).collect()
+        }
+        
+        use std::sync::Arc;
+        struct DeviceValue {
+            value: Arc<Value>,
+        }
+        impl DeviceValue {
+            fn new(value: Arc<Value>) -> Self {
+                Self {
+                    value: value.clone(),
                 }
-                let elm = Text::new(format!("{:0>4X}) name: {}", v.address(), txt)).size(12); // {:0>4})
-                elements.push(elm.into());
             }
             
-            elements
+            fn view(&mut self) -> Element<Message> {
+                let mut txt: String = self.value.name().chars().take(20).collect();
+                if self.value.name().chars().nth(20).is_some() {
+                    txt = txt + "...";
+                }
+                Text::new(format!("{:0>4X}) name: {}", self.value.address(), txt)).size(12) // {:0>4})
+                    .into()
+            }
         }
     }
 }

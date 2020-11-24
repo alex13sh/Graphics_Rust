@@ -9,7 +9,7 @@ mod graphic;
 fn main() {
     println!("Hello World");
 //     app_graphic::GraphicsApp::run(Settings::default());
-    app_test::TestApp::run(Settings { 
+    app_test::TestUI::run(Settings { 
         window: window::Settings {
             size: (600, 500), //size: (1200, 800),
             resizable: true,
@@ -103,7 +103,52 @@ mod app_graphic {
 
 mod app_test {
     use super::*;
-    pub enum TestApp {
+    pub struct TestUI {
+        
+    }
+    
+    struct UI {
+    
+    }
+    
+    #[derive(Debug, Clone)]
+    pub enum Message {
+    
+    }
+    
+    impl Application for TestUI {
+        type Executor = executor::Default;
+        type Flags = ();
+        type Message = Message;
+        
+        fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+            (
+            TestUI {
+            
+            },
+            Command::none()
+            )
+        }
+        
+        fn title(&self) -> String {
+            "Test UI".into()
+        }
+        
+        fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+            match message {
+            
+            }
+        }
+        
+        fn view(&mut self) -> Element<Self::Message> {
+            Column::new().into()
+        }
+    }
+}
+
+mod app_test_device {
+    use super::*;
+    pub enum TestDeviceApp {
         Connect {
             input_ip_address: text_input::State,
             ip_address: String,
@@ -119,7 +164,7 @@ mod app_test {
         Invertor(test_invertor::Message),
     }
     
-    impl Application for TestApp {
+    impl Application for TestDeviceApp {
         type Executor = executor::Default;
         type Flags = ();
         type Message = Message;
@@ -135,7 +180,7 @@ mod app_test {
             )
         }
         fn title(&self) -> String {
-            String::from("TestApp - Iced")
+            String::from("TestDeviceApp - Iced")
         }
         
         fn update(&mut self, message: Self::Message) -> Command<Self::Message> {

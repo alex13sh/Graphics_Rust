@@ -33,7 +33,7 @@ pub enum InvertorFunc {
     AnalogOutput(u8, u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DeviceAddress {
     TcpIP(String),
     Rtu(u8), // String device_convertor_name

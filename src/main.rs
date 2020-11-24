@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 
@@ -9,7 +11,7 @@ mod graphic;
 fn main() {
     println!("Hello World");
 //     app_graphic::GraphicsApp::run(Settings::default());
-    app_test::TestUI::run(Settings { 
+    app_test_device::TestDeviceApp::run(Settings { 
         window: window::Settings {
             size: (600, 500), //size: (1200, 800),
             resizable: true,
@@ -104,9 +106,10 @@ mod app_graphic {
 mod app_test {
     use super::*;
     pub struct TestUI {
-        
+        ui: UI,
     }
     
+    #[derive(Default)]
     struct UI {
     
     }
@@ -124,7 +127,8 @@ mod app_test {
         fn new(_flags: ()) -> (Self, Command<Self::Message>) {
             (
             TestUI {
-            
+                ui: UI::default(),
+                
             },
             Command::none()
             )
@@ -187,7 +191,7 @@ mod app_test_device {
             match self {
             Self::Connect {ip_address, ..} => match message {
                 Message::InputIpAddressChanged(txt) => *ip_address = txt,
-                Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new()),
+                Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
                 _ => {}
                 },
             Self::TestInvertor (invertor) => match message {
@@ -234,7 +238,7 @@ mod app_test_device {
     mod test_invertor {
         use super::*;
         use modbus::init;
-        use modbus::{Device, Invertor};
+        use modbus::{Invertor}; // Device
         use modbus::{Value, ModbusValues};
         
         pub struct TestInvertor {
@@ -257,8 +261,8 @@ mod app_test_device {
         }
         
         impl TestInvertor {
-            pub fn new() -> Self {
-                let invertor = Invertor::new(init::make_invertor().into());
+            pub fn new(ip_address: String) -> Self {
+                let invertor = Invertor::new(init::make_invertor(ip_address).into());
                 Self {
                     values: make_values(invertor.device().values_map()),
                     invertor: invertor,
@@ -289,7 +293,7 @@ mod app_test_device {
                     res.push(start)
                         .push(stop)
                 } else {
-                    res.push(Text::new("Инвертор не подключен!"))
+                    res.push(Text::new(format!("Инвертор не подключен!\nIP Address: {}", self.invertor.device().get_ip_address())))
                 };
                 let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
                 scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));

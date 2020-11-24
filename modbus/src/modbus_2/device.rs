@@ -19,6 +19,7 @@ use derivative::Derivative;
 #[derivative(Debug)]
 pub struct Device {
     name: String,
+    address: DeviceAddress,
     sensors: ModbusSensors,
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
@@ -78,6 +79,12 @@ impl Device {
     }
     pub fn is_connect(&self) -> bool {
         self.context().is_ok()
+    }
+    pub fn get_ip_address(&self) -> String {
+        match &self.address {
+        DeviceAddress::TcpIP(ip_address) => ip_address.clone(),
+        _ => "None".into(),
+        }
     }
 }
 
@@ -185,6 +192,7 @@ impl From<DeviceInit> for Device {
         
         Device {
             name: d.name,
+            address: d.address.clone(),
             sensors: sens,
             device_type: typ,
             ctx: ModbusContext::new(&d.address, &values).map(RefCell::new),

@@ -100,15 +100,15 @@ pub(crate) fn init_devices() -> Vec<Device> {
         ]),
         values: None,
     },
-    make_invertor(),
+    make_invertor("192.168.1.7".into()),
     ];
     return d;
 }
 
-pub fn make_invertor() -> Device {
+pub fn make_invertor(ip_address: String) -> Device {
     Device {
         name: "Invertor".into(),
-        address: DeviceAddress::TcpIP("192.168.1.7".into()),
+        address: DeviceAddress::TcpIP(ip_address), // "192.168.1.7"
         device_type: DeviceType::Invertor {
             functions: vec![
 //                 InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута

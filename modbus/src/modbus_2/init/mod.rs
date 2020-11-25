@@ -70,10 +70,19 @@ pub(crate) fn init_devices() -> Vec<Device> {
         ]),
         values: None,
     },
+    make_io_digit("192.168.1.3".into()),
+    make_invertor("192.168.1.5".into()),
+    ];
+    return d;
+}
+
+pub fn make_io_digit(ip_address: String) -> Device {
+    use SensorAnalogType::*;
+    use ValueGroup::*;
     Device {
         name: "Input/Output Digit".into(),
         device_type: DeviceType::OwenDigitalIO,
-        address: DeviceAddress::TcpIP("192.168.1.6".into()),
+        address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
             Sensor {
                 name: "Скоростной счётчик импульсов".into(),
@@ -99,10 +108,7 @@ pub(crate) fn init_devices() -> Vec<Device> {
             },
         ]),
         values: None,
-    },
-    make_invertor("192.168.1.7".into()),
-    ];
-    return d;
+    }
 }
 
 pub fn make_invertor(ip_address: String) -> Device {

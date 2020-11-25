@@ -5,6 +5,7 @@ use iced::{
 };
 
 mod test_invertor;
+mod owen;
 
 pub enum TestDeviceApp {
     Connect {
@@ -13,6 +14,7 @@ pub enum TestDeviceApp {
         pb_connect: button::State,
     },
     TestInvertor (test_invertor::TestInvertor),
+    TestDigitIO (owen::io_digit::IODigit),
 }
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -20,6 +22,7 @@ pub enum Message {
     Connect,
     
     Invertor(test_invertor::Message),
+    DigitIO(owen::io_digit::Message),
 }
 
 impl Application for TestDeviceApp {
@@ -45,13 +48,18 @@ impl Application for TestDeviceApp {
         match self {
         Self::Connect {ip_address, ..} => match message {
             Message::InputIpAddressChanged(txt) => *ip_address = txt,
-            Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
+//             Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
+            Message::Connect => *self = Self::TestDigitIO ( owen::io_digit::IODigit::new(ip_address.clone())),
             _ => {}
             },
         Self::TestInvertor (invertor) => match message {
             Message::Invertor(message) => invertor.update(message),
             _ => {}
-            }
+            },
+        Self::TestDigitIO (device) => match message {
+            Message::DigitIO(message) => device.update(message),
+            _ => {}
+            },  
         };
         Command::none()
     }
@@ -79,6 +87,9 @@ impl Application for TestDeviceApp {
         },
         Self::TestInvertor (invertor) => {
             invertor.view().map(Message::Invertor)
+        },
+        Self::TestDigitIO (device) => {
+            device.view().map(Message::DigitIO)
         }
         };
         Container::new(content)

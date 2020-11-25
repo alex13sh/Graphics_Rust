@@ -70,6 +70,10 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
+    pub fn sensors_map(&self) -> &ModbusSensors {
+        &self.sensors
+    }
+    
     pub(super) fn context(&self) -> Result<&RefCell<ModbusContext>, DeviceError> {
         if let Some(ctx) = &self.ctx {
             Ok(ctx)

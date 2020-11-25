@@ -24,11 +24,17 @@ fn main() {
 
 mod app_graphic {
     use super::*;
+    use modbus::init;
+    use modbus::Device;
+    use modbus::{Value, ModbusValues};
+    use modbus::{Sensor, ModbusSensors};
+    
     pub struct GraphicsApp {
         graph: graphic::Graphic,
         log_js: log::NewJsonLog,
     //     log_value_iter: &dyn Iterator<Item=log::LogValue>,
         log_value_index: usize,
+        sensors: ModbusSensors,
     }
 
     #[derive(Debug, Clone)]
@@ -44,15 +50,22 @@ mod app_graphic {
         type Message = GraphicsAppMessage;
         
         fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+            let devices = modbus::init::init_devices();
+            let devices: Vec<_> = devices.iter().map(Device::From).collect();
+            let sensors = devices.iter().fold(mut Vec::new(), |mut sens, d| {}).collect();
+            
+            // Загрузка логов
             let js = log::open_json_file("values_25_08_2020__13_41_06_111.json");
             dbg!(js.values.len());
             let hashs = js.get_all_hash();
             let hashs: Vec<_> = hashs.iter().map(|s| &s[..]).collect();
+            
             (
                 Self {
                     graph: graphic::Graphic::series(&hashs),
                     log_value_index: 0,
                     log_js: js,
+                    sensors: sensors,
                 },
                 Command::none()
             )
@@ -101,6 +114,23 @@ mod app_graphic {
         }
     }
 
+    mod sensor_list {
+        
+        struct Sensor {
+        
+        }
+        
+        #[derive(Debug, Clone)]
+        pub enum Message {
+            
+        }
+        
+        impl Sensor {
+            pub fn new() -> Self {
+            
+            }
+        }
+    }
 }
 
 mod app_test {
@@ -258,6 +288,7 @@ mod app_test_device {
         pub enum Message {
             Start,
             Stop,
+            InputValue(String, String), // ValueName, Value
         }
         
         impl TestInvertor {
@@ -279,10 +310,7 @@ mod app_test_device {
             }
             pub fn view(&mut self) -> Element<Message> {
 //                 println!("view");
-                let start = Button::new(&mut self.ui.pb_start, Text::new("Старт"))
-                    .on_press(Message::Start);
-                let stop = Button::new(&mut self.ui.pb_stop, Text::new("Стоп"))
-                    .on_press(Message::Stop);
+                
                 let mut res = Column::new()
                     .spacing(20)
                     .align_items(Align::Center)
@@ -290,15 +318,36 @@ mod app_test_device {
                     .push(Text::new(format!("Values: {}", self.invertor.device().values_map().len())))
                     ;
                 res = if self.invertor.device().is_connect() {
+                    let start = Button::new(&mut self.ui.pb_start, Text::new("Старт"))
+                        .on_press(Message::Start);
+                    let stop = Button::new(&mut self.ui.pb_stop, Text::new("Стоп"))
+                        .on_press(Message::Stop);
+                        
                     res.push(start)
                         .push(stop)
                 } else {
                     res.push(Text::new(format!("Инвертор не подключен!\nIP Address: {}", self.invertor.device().get_ip_address())))
                 };
+                
                 let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
                 scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
-                res.push(scroll).into()
-//                 res.into()
+                res = res.push(scroll);
+                
+                res.into()
+            }
+            
+            fn control_view(&mut self) -> Element<Message> {
+                let make_row = |label, input_state, input_value| Row::new()
+                    .spacing(20)
+                    .align_items(Align::Center)
+                    .push(Text::new(label))
+                    .push(TextInput::new(input_state, "Input Value", input_value, 
+                        |inpit_value| Message::InputValue(label, input_value)));
+                    
+                Column::new()
+                    .spacing(20)
+                    .align_items(Align::Center)
+//                     .push(make_row("Скорость", ))
             }
         }
         

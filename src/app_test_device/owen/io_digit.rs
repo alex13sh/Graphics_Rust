@@ -73,23 +73,3 @@ impl IODigit {
         res.into()
     }
 }
-
-mod sensor_output {
-    use modbus::Sensor;
-    pub struct DigitOutput {
-        sensor: Sensor,
-    }
-    
-    pub enum Message {
-        Trigger(bool),
-    }
-    
-    impl DigitOutput {
-        pub fn new(sens: Sensor) -> Option<Self> {
-//             if sens
-            Some(DigitOutput {
-                sensor: sens,
-            })
-        }
-    }
-}

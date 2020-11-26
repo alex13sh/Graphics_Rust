@@ -88,6 +88,7 @@ impl Device {
     }
 }
 
+#[derive(Debug)]
 pub enum DeviceError {
     ContextNull,
     ValueOut,
@@ -167,6 +168,19 @@ impl ModbusContext {
         2 => {
             self.ctx.write_single_register(v.address(), v.value() as u16).unwrap();
             self.ctx.write_single_register(v.address()+1, (v.value()>>16) as u16).unwrap();
+        },
+        _ => {}
+        };
+        
+    }
+    pub(super) fn get_value(&mut self, v: &Value) {
+//         let v = self.values.get(address).unwrap().clone();
+        use tokio_modbus::client::sync::Reader;
+        match v.size.size() {
+        1 => v.update_value(self.ctx.read_holding_registers(v.address(), 1).unwrap()[0] as u32),
+        2 => {
+            let buf = self.ctx.read_holding_registers(v.address(), 2).unwrap();
+            v.update_value((buf[0] as u32) | (buf[1] as u32)<<16);
         },
         _ => {}
         };

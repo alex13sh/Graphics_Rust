@@ -28,6 +28,16 @@ impl DigitIO {
             Err(DeviceError::ValueOut)
         }
     }
+    pub fn get_turn_clapan(&self, num: u8)  ->  Result<bool, DeviceError> {
+        if let 1..=8 = num  {
+            let vm = self.device.values_map();
+            let v_bitmap = vm.get("Битовая маска состояния выходов").unwrap().clone();
+            self.device.context()?.borrow_mut().get_value(&v_bitmap);
+            Ok(v_bitmap.get_bit(num))
+        } else {
+            Err(DeviceError::ValueOut)
+        }
+    }
     
     
     pub fn device(&self) -> Arc<Device> {

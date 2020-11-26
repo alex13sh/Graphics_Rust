@@ -29,10 +29,16 @@ pub enum Message {
 impl IODigit {
     pub fn new(ip_address: String) -> Self {
         let device: Device = init::make_io_digit(ip_address).into();
+        let device = DigitIO::from(device);
+        let clapans: [bool; 3] = [
+            device.get_turn_clapan(1).unwrap(),
+            device.get_turn_clapan(2).unwrap(),
+            device.get_turn_clapan(3).unwrap(),
+        ];
         IODigit {
             ui: UI::default(),
-            device: DigitIO::from(device),
-            clapans: [false; 3],
+            device: device,
+            clapans: clapans,
         }
     }
 
@@ -41,8 +47,9 @@ impl IODigit {
         match message {
         ClapanTurn(num, enb) => {
             if let 0..=2 = num {
-                self.clapans[num as usize] = enb;
                 self.device.turn_clapan(num+1, enb);
+                let enb = self.device.get_turn_clapan(num+1).unwrap();
+                self.clapans[num as usize] = enb;
             }
         },
         }

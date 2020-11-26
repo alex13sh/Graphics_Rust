@@ -146,27 +146,15 @@ impl canvas::Program<Message> for Graphic {
                 for s in self.series.iter() {
                     if s.points.len() < 2 {continue;}
                     
-//                     let mut itr = s.points.iter()
-//                         .filter(|v| {
-//                             v.dt>=self.view_port.start 
-//                             && v.dt<=self.view_port.end});
                     let points = self.view_port.get_slice_points(&s.points);
-                    let cnt = points.len();
-                    let mut itr = points.chunks(cnt/200+1).map(|points| {
-                        let sum_value = points.iter().fold(0_f32, |value, point| value + point.value);
-                        DatePoint{
-                            dt: points.first().unwrap().dt ,
-                            value: sum_value / points.len() as f32
-                        }
-                    });
-                    
+                    let mut itr = averge_iterator(points, 200);                    
 //                     let mut itr = points.iter();
+
                     let (x, y) = self.view_port.calc_point(&itr.next().unwrap(), bounds.size());
                     path.move_to(Point{x: x, y: y});
                     
                     for p in itr {
                         let (x, y) = self.view_port.calc_point(&p, bounds.size());
-//                         dbg!(&x, &y);
                         path.line_to(Point{x: x, y: y});
                         path.move_to(Point{x: x, y: y});
                     }
@@ -260,3 +248,13 @@ impl ViewPort {
 // LineSeries iter into 
 // impl Iterator for LineSeriesIter;
 // type Item = iced::Point;
+
+fn averge_iterator(points: &[DatePoint], max_points: usize) -> impl Iterator<Item=DatePoint> + '_ {
+    points.chunks(points.len()/max_points+1).map(|points| {
+        let sum_value = points.iter().fold(0_f32, |value, point| value + point.value);
+        DatePoint{
+            dt: points.first().unwrap().dt ,
+            value: sum_value / points.len() as f32
+        }
+    })
+}

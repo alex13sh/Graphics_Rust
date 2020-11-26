@@ -89,10 +89,12 @@ impl TestInvertor {
                 self.speed/10,
                 |speed| Message::SpeedChanged(speed*10),
             );
+            let speed_out = self.invertor.get_hz_out_value().value();
             let slider = Row::new()
                 .spacing(20)
-                .push(Text::new(format!("Speed: {}", self.speed)))
-                .push(slider);
+                .push(Text::new(format!("Установка скорости: {}", self.speed)))
+                .push(slider)
+                .push(Text::new(format!("Выходная скорость: {}", speed_out)));
                 
             res.push(start)
                 .push(stop)

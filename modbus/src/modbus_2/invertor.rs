@@ -26,7 +26,7 @@ impl Invertor {
         
         v_bitmap_run.set_bit(1, false); // Stop
         v_bitmap_run.set_bit(2, true); // Run
-        self.device.context()?.borrow_mut().set_value(&v_bitmap_run);
+        self.device.context()?.borrow_mut().set_value(&v_bitmap_run)?;
         Ok(())
     }
     pub fn stop(&self) ->  Result<(), DeviceError> {
@@ -35,14 +35,14 @@ impl Invertor {
         
         v_bitmap_run.set_bit(1, true); // Stop
         v_bitmap_run.set_bit(2, false); // Run
-        self.device.context()?.borrow_mut().set_value(&v_bitmap_run);
+        self.device.context()?.borrow_mut().set_value(&v_bitmap_run)?;
         Ok(())
     }
     pub fn set_hz(&mut self, hz: u16) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         v_set_hz.update_value(hz as u32);
-        self.device.context()?.borrow_mut().set_value(&v_set_hz);
+        self.device.context()?.borrow_mut().set_value(&v_set_hz)?;
         Ok(())
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {

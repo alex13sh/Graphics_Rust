@@ -58,15 +58,15 @@ impl TestInvertor {
             Message::Stop => self.invertor.stop().unwrap(),
             Message::SpeedChanged(speed) => {
                 self.speed = speed;
-                if self.invertor.device().is_connect() {
-                    self.invertor.set_hz(speed).unwrap();
-                }
+                if let Err(error) = self.invertor.set_hz(speed) {
+                    self.ui.error = Some(format!("Error: {}", error));
+                } else { self.ui.error = Some("Not error".into()); }
             },
             Message::Update => {
                 use modbus::DeviceError;
-                if let Err(DeviceError::ContextNull) = self.invertor.device().update() {
-                    self.ui.error = Some("Error: ContextNull".into());
-                }
+                if let Err(error) = self.invertor.device().update() {
+                    self.ui.error = Some(format!("Error: {}", error));
+                } else { self.ui.error = None; }
             }
         };
     }
@@ -83,19 +83,20 @@ impl TestInvertor {
             .push(Text::new(format!("Values: {}", self.invertor.device().values_map().len())))
             ;
         res = if self.invertor.device().is_connect() {
-            let slider = Slider::new(
-                &mut self.ui.speed_slider,
-                0..=100/10,
-                self.speed/10,
-                |speed| Message::SpeedChanged(speed*10),
-            );
-            let speed_out = self.invertor.get_hz_out_value().value();
-            let slider = Row::new()
-                .spacing(20)
-                .push(Text::new(format!("Установка скорости: {}", self.speed)))
-                .push(slider)
-                .push(Text::new(format!("Выходная скорость: {}", speed_out)));
-                
+            let slider = {
+                let slider = Slider::new(
+                    &mut self.ui.speed_slider,
+                    0..=100/10,
+                    self.speed/10,
+                    |speed| Message::SpeedChanged(speed*10),
+                );
+                let speed_out = self.invertor.get_hz_out_value().value();
+                Row::new()
+                    .spacing(20)
+                    .push(Text::new(format!("Установка скорости: {}", self.speed)))
+                    .push(slider)
+                    .push(Text::new(format!("Выходная скорость: {}", speed_out)))
+            };
             res.push(start)
                 .push(stop)
                 .push(slider)

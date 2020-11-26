@@ -61,7 +61,7 @@ impl Device {
         res
     }
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update();
+        self.context()?.borrow_mut().update()?;
         Ok(())
     }
     pub fn values(&self) -> Vec<Arc<Value>> {
@@ -92,6 +92,25 @@ impl Device {
 pub enum DeviceError {
     ContextNull,
     ValueOut,
+    ValueError,
+}
+
+use std::fmt;
+impl fmt::Display for DeviceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use DeviceError::*;
+        match self {
+        ContextNull => write!(f, "ContextNull"),
+        ValueOut => write!(f, "ValueOut"),
+        ValueError => write!(f, "ValueError"),
+        }
+    }
+}
+
+impl std::convert::From<std::io::Error> for DeviceError {
+    fn from(err: std::io::Error) -> Self {
+        DeviceError::ValueError
+    }
 }
 
 pub(super) struct ModbusContext {
@@ -116,11 +135,11 @@ impl ModbusContext {
             None
         }
     }
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Result<(), DeviceError> {
 //         let ranges = self.get_ranges_value(8, true);
         for r in &self.ranges_address {
             use tokio_modbus::prelude::*;
-            let buff = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start()).unwrap();
+            let buff = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start())?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
             for (adr, v) in r.clone().zip(itr_buff) {
@@ -130,6 +149,7 @@ impl ModbusContext {
                 
             }
         }
+        Ok(())
     }
     fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
         let empty_space = empty_space as u16;
@@ -160,31 +180,31 @@ impl ModbusContext {
         res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
     }
     
-    pub(super) fn set_value(&mut self, v: &Value) {
+    pub(super) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::sync::Writer;
         match v.size.size() {
-        1 => self.ctx.write_single_register(v.address(), v.value() as u16).unwrap(),
+        1 => self.ctx.write_single_register(v.address(), v.value() as u16)?,
         2 => {
-            self.ctx.write_single_register(v.address(), v.value() as u16).unwrap();
-            self.ctx.write_single_register(v.address()+1, (v.value()>>16) as u16).unwrap();
+            self.ctx.write_single_register(v.address(), v.value() as u16)?;
+            self.ctx.write_single_register(v.address()+1, (v.value()>>16) as u16)?;
         },
         _ => {}
         };
-        
+        Ok(())
     }
-    pub(super) fn get_value(&mut self, v: &Value) {
+    pub(super) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::sync::Reader;
         match v.size.size() {
-        1 => v.update_value(self.ctx.read_holding_registers(v.address(), 1).unwrap()[0] as u32),
+        1 => v.update_value(self.ctx.read_holding_registers(v.address(), 1)?[0] as u32),
         2 => {
-            let buf = self.ctx.read_holding_registers(v.address(), 2).unwrap();
+            let buf = self.ctx.read_holding_registers(v.address(), 2)?;
             v.update_value((buf[0] as u32) | (buf[1] as u32)<<16);
         },
         _ => {}
         };
-        
+        Ok(())
     }
 }
 

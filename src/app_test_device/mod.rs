@@ -36,7 +36,7 @@ impl Application for TestDeviceApp {
         (
             Self::Connect {
                 input_ip_address: text_input::State::new(),
-                ip_address: "192.168.1.10".into(),
+                ip_address: "192.168.1.5".into(),
                 pb_connect: button::State::new(),
             },
             Command::none()
@@ -50,8 +50,8 @@ impl Application for TestDeviceApp {
         match self {
         Self::Connect {ip_address, ..} => match message {
             Message::InputIpAddressChanged(txt) => *ip_address = txt,
-//             Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
-            Message::Connect => *self = Self::TestDigitIO ( owen::io_digit::IODigit::new(ip_address.clone())),
+            Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
+//             Message::Connect => *self = Self::TestDigitIO ( owen::io_digit::IODigit::new(ip_address.clone())),
             _ => {}
             },
         Self::TestInvertor (invertor) => match message {

@@ -1,6 +1,8 @@
+#![allow(unused_imports)]
+
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
-    Text, text_input, TextInput, button, Button, 
+    Text, text_input, TextInput, button, Button, slider, Slider,
     Application, window, Settings, executor, Subscription, Command, time,
 };
 
@@ -12,6 +14,7 @@ pub struct TestInvertor {
     ui: UI,
     invertor: Invertor,
     values: Vec<DeviceValue>,
+    speed: u16,
 }
 
 #[derive(Default)]
@@ -19,12 +22,14 @@ struct UI {
     pb_start: button::State,
     pb_stop: button::State,
     scroll_value: scrollable::State,
+    speed_slider: slider::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     Start,
     Stop,
+    SpeedChanged(u16), 
 }
 
 impl TestInvertor {
@@ -33,6 +38,7 @@ impl TestInvertor {
         Self {
             values: make_values(invertor.device().values_map()),
             invertor: invertor,
+            speed: 10_u16,
             ui: Default::default()
         }
     }
@@ -42,6 +48,12 @@ impl TestInvertor {
         match message {
             Message::Start => self.invertor.start().unwrap(),
             Message::Stop => self.invertor.stop().unwrap(),
+            Message::SpeedChanged(speed) => {
+                self.speed = speed;
+                if self.invertor.device().is_connect() {
+                    self.invertor.set_hz(speed).unwrap();
+                }
+            },
         };
     }
     pub fn view(&mut self) -> Element<Message> {
@@ -57,15 +69,30 @@ impl TestInvertor {
             .push(Text::new(format!("Values: {}", self.invertor.device().values_map().len())))
             ;
         res = if self.invertor.device().is_connect() {
+            let slider = Slider::new(
+                &mut self.ui.speed_slider,
+                0..=100/10,
+                self.speed/10,
+                |speed| Message::SpeedChanged(speed*10),
+            );
+            let slider = Row::new()
+                .spacing(20)
+                .push(Text::new(format!("Speed: {}", self.speed)))
+                .push(slider);
+                
             res.push(start)
                 .push(stop)
+                .push(slider)
         } else {
             res.push(Text::new(format!("Инвертор не подключен!\nIP Address: {}", self.invertor.device().get_ip_address())))
         };
-        let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
-        scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
-        res.push(scroll).into()
-//                 res.into()
+        /*{
+            let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
+            scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
+            res.push(scroll).into()
+        }*/
+        
+        res.into()
     }
 }
 

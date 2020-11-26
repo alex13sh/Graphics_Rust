@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::init::{DeviceType, InvertorFunc};
-use super::{Device, DeviceError};
+use super::{Device, DeviceError, ModbusValues};
 use super::Value;
 
 use std::sync::Arc;
@@ -86,6 +86,48 @@ impl Invertor {
     
     pub fn device(&self) -> Arc<Device> {
         self.device.clone()
+    }
+    
+    pub fn configure(&self) {
+        let vm = self.device.values_map();
+        let mut values = Vec::new();
+        values.append(&mut Self::configure_source(&vm));
+    }
+    fn configure_ip_address(vm: &ModbusValues) -> Vec<Arc<Value>> {           
+        let values = vec![
+            vm.set_value("IP адрес 1 комм. платы", 192_u32),
+            vm.set_value("IP адрес 2 комм. платы", 168_u32),
+            vm.set_value("IP адрес 3 комм. платы", 1_u32),
+            vm.set_value("IP адрес 4 комм. платы", 5_u32),
+        ];
+        values
+    }
+    fn configure_source(vm: &ModbusValues) -> Vec<Arc<Value>> { 
+        vec![
+            vm.set_value("Источник задания частоты", 0_u32),
+            vm.set_value("Источник команд управления", 0_u32),
+            vm.set_value("Источник задания частоты (HAND)", 0_u32),
+        ]
+    }
+    fn configure_base(vm: &ModbusValues) -> Vec<Arc<Value>> { 
+        vec![
+            vm.set_value("Режим управления", 0_u32), // 0.10
+            vm.set_value("Метод управления скоростью", 0_u32), // 0.11
+            vm.set_value("Режим работы привода", 0_u32), // 0.16
+            vm.set_value("Несущая частота ШИМ", 4_u32), // 0.17
+            vm.set_value("Управление направлением вращения двигателя", 0_u32), // 0.23
+            vm.set_value("Сбособ остановки", 1_u32), // 0.22
+            
+            vm.set_value("Максимальная выходная частота", 400_00_u32), // 1.0
+            vm.set_value("Номинальная частота двигателя", 50_00_u32), // 1.1
+            vm.set_value("Номинальное напряжение двигателя", 380_0_u32), // 1.2
+            vm.set_value("Стартовая частота", 0_30_u32), // 1.9
+            
+            vm.set_value("Верхнее ограничение выходной частота", 400_00_u32), // 1.10
+            vm.set_value("Нижнее ограничение выходной частота", 0_00_u32), // 1.11
+            
+            vm.set_value("Выбор режима разгона/замедления", 0_u32), // 1.44
+        ]
     }
 }
 

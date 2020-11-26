@@ -122,6 +122,11 @@ impl ModbusValues {
     pub fn new() -> Self {
         ModbusValues(HashMap::new())
     }
+    pub fn set_value(&self, name: &str, value: u32) -> Arc<Value> {
+        let val = self.get(name).unwrap().clone();
+        val.update_value(value);
+        val
+    }
 }
 
 

@@ -169,7 +169,6 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
                 add_simple_invertor_value("Номинальная частота двигателя",      1, 1), // 0.0 - 600.0
                 add_simple_invertor_value("Номинальное напряжение двигателя",   1, 2), // 0 - 255.0
-                add_simple_invertor_value("Сбособ остановки",  0, 22), // 0 - 1
                 
                 add_simple_invertor_value("Стартовая частота",  1, 9), // 0.00 - 600.00
                 add_simple_invertor_value("Верхнее ограничение выходной частота",  1, 10), // 0.00 - 600.00

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,

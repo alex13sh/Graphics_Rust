@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 

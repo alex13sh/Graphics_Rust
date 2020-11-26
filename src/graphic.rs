@@ -118,6 +118,7 @@ impl canvas::Program<Message> for Graphic {
         None
     }
     
+    #[cfg(not(feature = "plotters"))]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
 //         dbg!(&self.state.series);
 
@@ -164,6 +165,29 @@ impl canvas::Program<Message> for Graphic {
         });
         
         vec![grid, lines]
+    }
+    
+    #[cfg(feature = "plotters")]
+    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
+        let grid = self.grid_cache.draw(bounds.size(), |frame| {
+            let lines = Path::new(|p| {
+                let step_x = 100;
+                let h = bounds.size().height;
+                for x in (1..=10).map(|x| (x*step_x) as f32) {
+                    p.move_to(Point{x: x, y: 0_f32});
+                    p.line_to(Point{x: x, y: h});
+                }
+                
+                let step_y = 100;
+                let w = bounds.size().width;
+                for y in (1..=10).map(|y| (y*step_y) as f32) {
+                    p.move_to(Point{x: 0_f32, y: y});
+                    p.line_to(Point{x: w, y: y});
+                }
+            });
+            frame.stroke(&lines, Stroke::default().with_width(1.0));
+        });
+        vec![grid]
     }
 }
 

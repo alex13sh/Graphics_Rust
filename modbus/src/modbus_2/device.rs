@@ -108,7 +108,7 @@ impl fmt::Display for DeviceError {
 }
 
 impl std::convert::From<std::io::Error> for DeviceError {
-    fn from(err: std::io::Error) -> Self {
+    fn from(_err: std::io::Error) -> Self {
         DeviceError::ValueError
     }
 }

@@ -18,9 +18,15 @@ impl DigitIO {
     }
     
     pub fn turn_clapan(&self, num: u8, enb: bool)  ->  Result<(), DeviceError> {
-        let vm = self.device.values_map();
-        
-        Ok(())
+        if let 1..=8 = num  {
+            let vm = self.device.values_map();
+            let v_bitmap = vm.get("Битовая маска установки состояния выходов").unwrap().clone();
+            v_bitmap.set_bit(num, enb);
+            self.device.context()?.borrow_mut().set_value(&v_bitmap);
+            Ok(())
+        } else {
+            Err(DeviceError::ValueOut)
+        }
     }
     
     

@@ -107,7 +107,20 @@ pub fn make_io_digit(ip_address: String) -> Device {
                 pin: 3,
             },
         ]),
-        values: None,
+        values: Some(vec![
+            Value {
+                name: "Битовая маска состояния выходов".into(), // DO1 - DO8
+                address: 470,
+                direct: ValueDirect::Read,
+                size: ValueSize::UINT8,
+            },
+            Value {
+                name: "Битовая маска установки состояния выходов".into(),
+                address: 470,
+                direct: ValueDirect::Write,
+                size: ValueSize::UINT8,
+            },
+        ]),
     }
 }
 

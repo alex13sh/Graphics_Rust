@@ -89,7 +89,8 @@ impl Device {
 }
 
 pub enum DeviceError {
-    ContextNull
+    ContextNull,
+    ValueOut,
 }
 
 pub(super) struct ModbusContext {

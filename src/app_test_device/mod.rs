@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 
@@ -34,7 +36,7 @@ impl Application for TestDeviceApp {
         (
             Self::Connect {
                 input_ip_address: text_input::State::new(),
-                ip_address: "192.168.1.5".into(),
+                ip_address: "192.168.1.10".into(),
                 pb_connect: button::State::new(),
             },
             Command::none()

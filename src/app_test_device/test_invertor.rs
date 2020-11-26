@@ -23,6 +23,7 @@ struct UI {
     pb_stop: button::State,
     scroll_value: scrollable::State,
     speed_slider: slider::State,
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +31,7 @@ pub enum Message {
     Start,
     Stop,
     SpeedChanged(u16), 
+    Update,
 }
 
 impl TestInvertor {
@@ -42,6 +44,12 @@ impl TestInvertor {
             ui: Default::default()
         }
     }
+    
+    pub fn subscription(&self) -> Subscription<Message> {
+        time::every(std::time::Duration::from_millis(500))
+            .map(|_| Message::Update)
+    }
+
     #[allow(unused_must_use)]
     pub fn update(&mut self, message: Message) {
 //                 println!("update");
@@ -54,6 +62,12 @@ impl TestInvertor {
                     self.invertor.set_hz(speed).unwrap();
                 }
             },
+            Message::Update => {
+                use modbus::DeviceError;
+                if let Err(DeviceError::ContextNull) = self.invertor.device().update() {
+                    self.ui.error = Some("Error: ContextNull".into());
+                }
+            }
         };
     }
     pub fn view(&mut self) -> Element<Message> {
@@ -86,6 +100,9 @@ impl TestInvertor {
         } else {
             res.push(Text::new(format!("Инвертор не подключен!\nIP Address: {}", self.invertor.device().get_ip_address())))
         };
+        if let Some(ref error) = self.ui.error {
+            res = res.push(Text::new(error));
+        }
         /*{
             let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
             scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));

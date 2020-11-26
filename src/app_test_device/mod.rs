@@ -46,6 +46,13 @@ impl Application for TestDeviceApp {
         String::from("TestDeviceApp - Iced")
     }
     
+    fn subscription(&self) -> Subscription<Message> {
+        match self {
+        Self::TestInvertor (invertor) => invertor.subscription().map(Message::Invertor),
+        _ => Subscription::none(),
+        }
+    }
+    
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match self {
         Self::Connect {ip_address, ..} => match message {

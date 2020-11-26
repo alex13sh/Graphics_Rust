@@ -152,8 +152,16 @@ impl canvas::Program<Message> for Graphic {
 //                             && v.dt<=self.view_port.end});
                     let points = self.view_port.get_slice_points(&s.points);
                     let cnt = points.len();
-                    let mut itr = points.iter().step_by(cnt/200+1);
-                    let (x, y) = self.view_port.calc_point(itr.next().unwrap(), bounds.size());
+                    let mut itr = points.chunks(cnt/200+1).map(|points| {
+                        let sum_value = points.iter().fold(0_f32, |value, point| value + point.value);
+                        DatePoint{
+                            dt: points.first().unwrap().dt ,
+                            value: sum_value / points.len() as f32
+                        }
+                    });
+                    
+//                     let mut itr = points.iter();
+                    let (x, y) = self.view_port.calc_point(&itr.next().unwrap(), bounds.size());
                     path.move_to(Point{x: x, y: y});
                     
                     for p in itr {
@@ -192,7 +200,7 @@ struct LineSeries {
     points: Vec<DatePoint>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct DatePoint {
     dt: DateTime,
     value: f32
@@ -241,26 +249,10 @@ impl ViewPort {
         self.start = self.end - dlt;
     }
     
-    fn get_index_by_date(points: &Vec<DatePoint>, dt: &DateTime) -> usize {
-        let mut start = 0;
-        let mut end = points.len();
-        while end-start>2 {
-            let cur = (end-start)/2+start;
-            let point = &points[cur];
-            if point.dt > *dt {
-                end = cur;
-            } else if point.dt < *dt {
-                start = cur;
-            } else {
-                return cur;
-            }
-        }
-        return start;
-    }
-    
     fn get_slice_points<'a>(&self, points: &'a Vec<DatePoint>) -> &'a [DatePoint] {
-        let i_start=Self::get_index_by_date(points, &self.start);
-        let i_end=Self::get_index_by_date(points, &self.end);
+        let points = &points[..];
+        let i_start=match points.binary_search_by(|point| point.dt.cmp(&self.start)) {Ok(pos)=>pos, Err(pos)=>pos};
+        let i_end=match points.binary_search_by(|point| point.dt.cmp(&self.end)) {Ok(pos)=>pos, Err(pos)=>pos};
         &points[i_start..i_end]
     }
 }

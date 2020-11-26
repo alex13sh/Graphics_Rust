@@ -40,8 +40,8 @@ impl TestInvertor {
     pub fn update(&mut self, message: Message) {
 //                 println!("update");
         match message {
-            Message::Start => self.invertor.start(),
-            Message::Stop => self.invertor.stop(),
+            Message::Start => self.invertor.start().unwrap(),
+            Message::Stop => self.invertor.stop().unwrap(),
         };
     }
     pub fn view(&mut self) -> Element<Message> {

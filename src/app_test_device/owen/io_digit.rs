@@ -30,11 +30,13 @@ impl IODigit {
     pub fn new(ip_address: String) -> Self {
         let device: Device = init::make_io_digit(ip_address).into();
         let device = DigitIO::from(device);
-        let clapans: [bool; 3] = [
+        let clapans: [bool; 3] = if device.device().is_connect() {
+        [
             device.get_turn_clapan(1).unwrap(),
             device.get_turn_clapan(2).unwrap(),
             device.get_turn_clapan(3).unwrap(),
-        ];
+        ]} else {[false; 3]};
+        
         IODigit {
             ui: UI::default(),
             device: device,
@@ -45,12 +47,10 @@ impl IODigit {
     pub fn update(&mut self, message: Message) {
         use Message::*;
         match message {
-        ClapanTurn(num, enb) => {
-            if let 0..=2 = num {
-                self.device.turn_clapan(num+1, enb);
-                let enb = self.device.get_turn_clapan(num+1).unwrap();
-                self.clapans[num as usize] = enb;
-            }
+        ClapanTurn(num, enb) => if let 0..=2 = num {
+            self.device.turn_clapan(num+1, enb).unwrap();
+            let enb = self.device.get_turn_clapan(num+1).unwrap();
+            self.clapans[num as usize] = enb;
         },
         }
     }

@@ -39,7 +39,7 @@ impl Graphic {
                 end: chrono::Local::now(),
                 start: chrono::Local::now() - Duration::seconds(20*60),
                 min_value: -10_f32, 
-                max_value: 100_f32,
+                max_value: 300_f32,
             },
             grid_cache: Default::default(),
             lines_cache: Default::default(),
@@ -98,11 +98,8 @@ impl Graphic {
             s.points.append_value(v);
         }
 //         dbg!(&self.series);
-        if cfg!(feature = "plotters") {
-            self.update_svg();
-        } else {
-            self.lines_cache.clear();
-        }
+        #[cfg(feature = "plotters")] self.update_svg();
+        #[cfg(not(feature = "plotters"))] self.lines_cache.clear();
         self.view_port.set_end(chrono::Local::now());
 //         dbg!(&self.view_port.start);
     }
@@ -131,8 +128,22 @@ impl Graphic {
                 format!("y = x^{}", 1 + 2 * 0),
                 ("sans-serif", 40).into_font(),
             )
-            .build_ranged(-1f32..1f32, -1f32..1f32).unwrap();
+            .build_ranged(
+                self.view_port.start..self.view_port.end, 
+                self.view_port.min_value..self.view_port.max_value
+            ).unwrap();
         cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+        
+        for s in self.series.iter().filter(|s| s.points.len() >=2 ) {
+            let points = self.view_port.get_slice_points(&s.points);
+            let itr = averge_iterator(points, 200);  
+            cc.draw_series(LineSeries::new(
+                itr.map(|p| (p.dt, p.value)),
+                &RED,
+            )).unwrap()
+            .label(&s.name);
+    //         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+        }
         }
 //         dbg!(svg_text.len());
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));

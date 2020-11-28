@@ -46,7 +46,7 @@ impl Application for GraphicsApp {
     }
     
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(100))
+        time::every(std::time::Duration::from_millis(200))
             .map(|_| Self::Message::Tick(chrono::Local::now()))
     }
 
@@ -57,13 +57,13 @@ impl Application for GraphicsApp {
         match message {
         Tick(_) => {
 //             self.graph.update(AppendValues(self.log_js.values[0]));
-            for _ in 0..100 {
+            for _ in 0..1000 {
                 if self.log_value_index+1<self.log_js.values.len() {
                     self.log_value_index += 1;
                     self.graph.append_value(self.log_js.values[self.log_value_index].clone());
                 }
             }
-            if cfg!(feature = "plotters") {self.graph.update_svg();}
+            #[cfg(feature = "plotters")] {self.graph.update_svg();}
         },
         _ => {}
         };

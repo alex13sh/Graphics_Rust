@@ -4,6 +4,7 @@ use iced::{
     canvas::{
         self, Cache, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke,
     },
+    Svg, svg, Container,
     mouse, Color, Element, HorizontalAlignment, Length, Point, Rectangle,
     Size, Vector, VerticalAlignment,
 };
@@ -19,9 +20,8 @@ pub struct Graphic {
     
     grid_cache: Cache,
     lines_cache: Cache,
-    
+    plotters_svg: Option<svg::Handle>,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -32,18 +32,18 @@ pub enum Message {
 
 impl Graphic {
 
-    pub fn new() -> Self {
-        dbg!(chrono::Local::now() - Duration::seconds(20));
+    pub fn new() -> Self {        
         Self {
             series: Vec::new(),
             view_port: ViewPort {
                 end: chrono::Local::now(),
-                start: chrono::Local::now() - Duration::seconds(5*60),
+                start: chrono::Local::now() - Duration::seconds(20*60),
                 min_value: -10_f32, 
                 max_value: 100_f32,
             },
             grid_cache: Default::default(),
             lines_cache: Default::default(),
+            plotters_svg:  Default::default(),
         }
     }
     
@@ -83,7 +83,11 @@ impl Graphic {
 //                 dbg!(&dt);
                 self.view_port.set_end(dt);
 //                 dbg!(&self.view_port);
-                self.lines_cache.clear();
+                if cfg!(feature = "plotters") {
+//                     self.update_svg();
+                } else {
+                    self.lines_cache.clear();
+                }
                 return;
             }
         }
@@ -94,16 +98,61 @@ impl Graphic {
             s.points.append_value(v);
         }
 //         dbg!(&self.series);
-        self.lines_cache.clear();
+        if cfg!(feature = "plotters") {
+            self.update_svg();
+        } else {
+            self.lines_cache.clear();
+        }
         self.view_port.set_end(chrono::Local::now());
 //         dbg!(&self.view_port.start);
     }
     
+    #[cfg(not(feature = "plotters"))]
     pub fn view(&mut self) -> Element<Message> {
         Canvas::new(self)
             .width(Length::Units(1000))
             .height(Length::Units(1000))
         .into()
+    }
+
+    #[cfg(feature = "plotters")]
+    pub fn update_svg(&mut self) {
+        use plotters::prelude::*;
+        
+        let mut svg_text = String::new();
+        {
+        let root_area = SVGBackend::with_string(&mut svg_text, (800, 600)).into_drawing_area();
+        root_area.fill(&WHITE).unwrap();
+        let mut cc = ChartBuilder::on(&root_area)
+            .x_label_area_size(30)
+            .y_label_area_size(30)
+            .margin_right(20)
+            .caption(
+                format!("y = x^{}", 1 + 2 * 0),
+                ("sans-serif", 40).into_font(),
+            )
+            .build_ranged(-1f32..1f32, -1f32..1f32).unwrap();
+        cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+        }
+//         dbg!(svg_text.len());
+        self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
+    }
+    #[cfg(feature = "plotters")]
+    pub fn view(&mut self) -> Element<Message> {
+        let content: Element<Message> = if let Some(handle) = self.plotters_svg.clone() {
+            Svg::new(handle)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+        } else {iced::Text::new("Not SVG").into()};
+//         svg.into()
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(20)
+            .center_x()
+            .center_y()
+            .into()
     }
 }
 
@@ -169,25 +218,15 @@ impl canvas::Program<Message> for Graphic {
     
     #[cfg(feature = "plotters")]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        let grid = self.grid_cache.draw(bounds.size(), |frame| {
-            let lines = Path::new(|p| {
-                let step_x = 100;
-                let h = bounds.size().height;
-                for x in (1..=10).map(|x| (x*step_x) as f32) {
-                    p.move_to(Point{x: x, y: 0_f32});
-                    p.line_to(Point{x: x, y: h});
-                }
-                
-                let step_y = 100;
-                let w = bounds.size().width;
-                for y in (1..=10).map(|y| (y*step_y) as f32) {
-                    p.move_to(Point{x: 0_f32, y: y});
-                    p.line_to(Point{x: w, y: y});
-                }
-            });
-            frame.stroke(&lines, Stroke::default().with_width(1.0));
+        let plotters = self.lines_cache.draw(bounds.size(), |_frame| {
+            
+            
+//             Primitive::Svg {
+//                 handle: svg::Handle::from_memory(self.svg_text.clone()),
+//                 bounds: bounds,
+//             }
         });
-        vec![grid]
+        vec![plotters]
     }
 }
 

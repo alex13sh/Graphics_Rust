@@ -7,9 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79", default-features = false, features = ["glow", "glow_canvas", "glow_default_system_font", "tokio"]} #  features = ["canvas", "tokio"]
+iced = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79",  features = ["canvas", "tokio", "svg"] }
 iced_native = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79"}
-iced_graphics = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79"}
 
 chrono = "0.4"
 
@@ -17,11 +16,11 @@ log = {path = "./log"}
 modbus = {path = "./modbus"}
 
 [dependencies.plotters]
-git="https://github.com/topo-finance/plotters"
+#path = "../plotters"
+version = "*"
 optional = true
 default-features = false
-features = ["image_encoder", "chrono", "line_series", "iced_back"]
-
+features = ["image_encoder", "chrono", "line_series", "svg"] # "iced_back"]
 
 [workspace]
 members = [

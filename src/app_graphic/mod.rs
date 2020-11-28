@@ -28,7 +28,7 @@ impl Application for GraphicsApp {
     type Message = GraphicsAppMessage;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let js = log::open_json_file("values_25_08_2020__13_41_06_111.json");
+        let js = log::open_json_file("values_27_08_2020__13_08_30_042.json");
         dbg!(js.values.len());
         let hashs = js.get_all_hash();
         let hashs: Vec<_> = hashs.iter().map(|s| &s[..]).collect();
@@ -46,7 +46,7 @@ impl Application for GraphicsApp {
     }
     
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(40))
+        time::every(std::time::Duration::from_millis(100))
             .map(|_| Self::Message::Tick(chrono::Local::now()))
     }
 
@@ -57,12 +57,13 @@ impl Application for GraphicsApp {
         match message {
         Tick(_) => {
 //             self.graph.update(AppendValues(self.log_js.values[0]));
-            for _ in 0..40 {
+            for _ in 0..100 {
                 if self.log_value_index+1<self.log_js.values.len() {
                     self.log_value_index += 1;
                     self.graph.append_value(self.log_js.values[self.log_value_index].clone());
                 }
             }
+            if cfg!(feature = "plotters") {self.graph.update_svg();}
         },
         _ => {}
         };

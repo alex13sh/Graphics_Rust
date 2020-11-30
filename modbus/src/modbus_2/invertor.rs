@@ -11,6 +11,12 @@ pub struct Invertor {
     // device_analog_output: Arc<Device>, // Owen Analog
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DvijDirect {
+    FWD,
+    REV,
+}
+
 impl Invertor {
     pub fn new(device: Device) -> Self {
         Invertor {
@@ -20,8 +26,8 @@ impl Invertor {
     
     pub fn start(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
-        let _v_start_hz: Arc<Value> = vm.get("Стартовая частота").unwrap().clone();
-        let _v_max_hz = vm.get("Максимальная выходная частота").unwrap().clone();
+//         let _v_start_hz: Arc<Value> = vm.get("Стартовая частота").unwrap().clone();
+//         let _v_max_hz = vm.get("Максимальная выходная частота").unwrap().clone();
         let v_bitmap_run = vm.get("2000H").unwrap().clone();
         
         v_bitmap_run.set_bit(1, false); // Stop
@@ -36,6 +42,10 @@ impl Invertor {
         v_bitmap_run.set_bit(1, true); // Stop
         v_bitmap_run.set_bit(2, false); // Run
         self.device.context()?.borrow_mut().set_value(&v_bitmap_run)?;
+        Ok(())
+    }
+    pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {
+        dbg!(direct);
         Ok(())
     }
     pub fn set_hz(&mut self, hz: u16) ->  Result<(), DeviceError> {

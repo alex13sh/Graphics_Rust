@@ -2,12 +2,12 @@
 
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
-    Text, text_input, TextInput, button, Button, slider, Slider,
+    Text, text_input, TextInput, button, Button, slider, Slider, Radio,
     Application, window, Settings, executor, Subscription, Command, time,
 };
 
 use modbus::init;
-use modbus::{Invertor}; // Device
+use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Value, ModbusValues};
 
 pub struct TestInvertor {
@@ -15,6 +15,7 @@ pub struct TestInvertor {
     invertor: Invertor,
     values: Vec<DeviceValue>,
     speed: u16,
+    direct: DvijDirect,
 }
 
 #[derive(Default)]
@@ -30,7 +31,8 @@ struct UI {
 pub enum Message {
     Start,
     Stop,
-    SpeedChanged(u16), 
+    SpeedChanged(u16),
+    DirectChanged(DvijDirect),
     Update,
 }
 
@@ -41,6 +43,7 @@ impl TestInvertor {
             values: make_values(invertor.device().values_map()),
             invertor: invertor,
             speed: 10_u16,
+            direct: DvijDirect::FWD,
             ui: Default::default()
         }
     }
@@ -61,6 +64,10 @@ impl TestInvertor {
                 if let Err(error) = self.invertor.set_hz(speed) {
                     self.ui.error = Some(format!("Error: {}", error));
                 } else { self.ui.error = Some("Not error".into()); }
+            },
+            Message::DirectChanged(direct) => {
+                self.invertor.set_direct(direct);
+                self.direct = direct;
             },
             Message::Update => {
                 use modbus::DeviceError;
@@ -97,9 +104,21 @@ impl TestInvertor {
                     .push(slider)
                     .push(Text::new(format!("Выходная скорость: {}", speed_out)))
             };
+            let direct = {
+                let ref cur_direct = self.direct;
+                let radio_direct = |direct: &DvijDirect| Radio::new(
+                        *direct, &format!("{:?}", direct),
+                        Some(*cur_direct), Message::DirectChanged,
+                        );
+                Row::new()
+                    .spacing(20)
+                    .push(radio_direct(&DvijDirect::FWD))
+                    .push(radio_direct(&DvijDirect::REV))
+            };
             res.push(start)
                 .push(stop)
                 .push(slider)
+                .push(direct)
         } else {
             res.push(Text::new(format!("Инвертор не подключен!\nIP Address: {}", self.invertor.device().get_ip_address())))
         };

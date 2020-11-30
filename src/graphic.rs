@@ -133,7 +133,7 @@ impl Graphic {
                 self.view_port.min_value..self.view_port.max_value
             ).unwrap()
             .set_secondary_coord(self.view_port.start..self.view_port.end,
-            -0.001_f32..1000.0f32);
+            (0.001_f32..1000.0f32).log_scale());
             
         cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
 //         let color = Palette99::pick(idx).mix(0.9);
@@ -141,15 +141,16 @@ impl Graphic {
             let points = self.view_port.get_slice_points(&s.points);
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
-            let mut f = |ls| if s.name == "82dc5b4c30" {
+            let ls = LineSeries::new(
+                itr.map(|p| (p.dt, p.value)),
+                &Palette99::pick(c),
+            );
+            let ser = if s.name == "82dc5b4c30" {
                  cc.draw_secondary_series(ls)
             } else {
                 cc.draw_series(ls)
-            };
-            f(LineSeries::new(
-                itr.map(|p| (p.dt, p.value)),
-                &Palette99::pick(c),
-            )).unwrap()
+            }.unwrap();
+            ser
             .label(&s.name)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }

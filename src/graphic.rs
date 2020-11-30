@@ -121,29 +121,43 @@ impl Graphic {
         let root_area = SVGBackend::with_string(&mut svg_text, (800, 600)).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let mut cc = ChartBuilder::on(&root_area)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .margin_right(20)
+            .x_label_area_size(50)
+            .y_label_area_size(50)
+            .margin_right(30)
             .caption(
-                format!("y = x^{}", 1 + 2 * 0),
+                "Graphic", // date name
                 ("sans-serif", 40).into_font(),
             )
             .build_ranged(
                 self.view_port.start..self.view_port.end, 
                 self.view_port.min_value..self.view_port.max_value
-            ).unwrap();
+            ).unwrap()
+            .set_secondary_coord(self.view_port.start..self.view_port.end,
+            -0.001_f32..1000.0f32);
+            
         cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
-        
-        for s in self.series.iter().filter(|s| s.points.len() >=2 ) {
+//         let color = Palette99::pick(idx).mix(0.9);
+        for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
             let points = self.view_port.get_slice_points(&s.points);
-            let itr = averge_iterator(points, 200);  
-            cc.draw_series(LineSeries::new(
+//             let itr = averge_iterator(points, 200);
+            let itr = points.iter();
+            let mut f = |ls| if s.name == "82dc5b4c30" {
+                 cc.draw_secondary_series(ls)
+            } else {
+                cc.draw_series(ls)
+            };
+            f(LineSeries::new(
                 itr.map(|p| (p.dt, p.value)),
-                &RED,
+                &Palette99::pick(c),
             )).unwrap()
-            .label(&s.name);
-    //         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+            .label(&s.name)
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
+        
+        cc.configure_series_labels()
+            .background_style(&WHITE.mix(0.8))
+            .border_style(&BLACK)
+            .draw().unwrap();
         }
 //         dbg!(svg_text.len());
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
@@ -167,6 +181,7 @@ impl Graphic {
     }
 }
 
+#[cfg(not(feature = "plotters"))]
 impl canvas::Program<Message> for Graphic {
 
     fn update(
@@ -178,7 +193,7 @@ impl canvas::Program<Message> for Graphic {
         None
     }
     
-    #[cfg(not(feature = "plotters"))]
+//     #[cfg(not(feature = "plotters"))]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
 //         dbg!(&self.state.series);
 
@@ -227,18 +242,6 @@ impl canvas::Program<Message> for Graphic {
         vec![grid, lines]
     }
     
-    #[cfg(feature = "plotters")]
-    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        let plotters = self.lines_cache.draw(bounds.size(), |_frame| {
-            
-            
-//             Primitive::Svg {
-//                 handle: svg::Handle::from_memory(self.svg_text.clone()),
-//                 bounds: bounds,
-//             }
-        });
-        vec![plotters]
-    }
 }
 
 // struct Legend {

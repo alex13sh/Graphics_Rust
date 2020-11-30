@@ -24,6 +24,7 @@ struct UI {
 #[derive(Debug, Clone)]
 pub enum Message {
     ClapanTurn(u8, bool),
+    Update,
 }
 
 impl IODigit {
@@ -44,6 +45,11 @@ impl IODigit {
         }
     }
 
+    pub fn subscription(&self) -> Subscription<Message> {
+        time::every(std::time::Duration::from_millis(500))
+            .map(|_| Message::Update)
+    }
+    
     pub fn update(&mut self, message: Message) {
         use Message::*;
         match message {
@@ -51,6 +57,14 @@ impl IODigit {
             self.device.turn_clapan(num+1, enb).unwrap();
             let enb = self.device.get_turn_clapan(num+1).unwrap();
             self.clapans[num as usize] = enb;
+        },
+        Update => {
+            use modbus::DeviceError;
+            println!("Message::Update");
+            if let Err(error) = self.device.device().update() {
+                dbg!(&error);
+//                 self.ui.error = Some(format!("Error: {}", error));
+            } // else { self.ui.error = None; }
         },
         }
     }

@@ -93,22 +93,25 @@ pub enum DeviceError {
     ContextNull,
     ValueOut,
     ValueError,
+    OtherError
 }
 
 use std::fmt;
 impl fmt::Display for DeviceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use DeviceError::*;
-        match self {
-        ContextNull => write!(f, "ContextNull"),
-        ValueOut => write!(f, "ValueOut"),
-        ValueError => write!(f, "ValueError"),
-        }
+//         use DeviceError::*;
+//         match self {
+//         ContextNull => write!(f, "ContextNull"),
+//         ValueOut => write!(f, "ValueOut"),
+//         ValueError => write!(f, "ValueError"),
+//         }
+        write!(f, "{:?}", self)
     }
 }
 
 impl std::convert::From<std::io::Error> for DeviceError {
-    fn from(_err: std::io::Error) -> Self {
+    fn from(err: std::io::Error) -> Self {
+        dbg!(err);
         DeviceError::ValueError
     }
 }

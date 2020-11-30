@@ -49,6 +49,7 @@ impl Application for TestDeviceApp {
     fn subscription(&self) -> Subscription<Message> {
         match self {
         Self::TestInvertor (invertor) => invertor.subscription().map(Message::Invertor),
+        Self::TestDigitIO (device) => device.subscription().map(Message::DigitIO),
         _ => Subscription::none(),
         }
     }

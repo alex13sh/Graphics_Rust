@@ -137,10 +137,11 @@ impl ModbusContext {
     }
     pub fn update(&mut self) -> Result<(), DeviceError> {
 //         let ranges = self.get_ranges_value(8, true);
+        use tokio_modbus::client::sync::Reader;
         for r in &self.ranges_address {
-            use tokio_modbus::prelude::*;
-            let buff = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start())?;
-//             println!("Ranges ({:?}) is '{:?}'", r, buff);
+//             use tokio_modbus::prelude::*;
+            let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
+            println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
             for (adr, v) in r.clone().zip(itr_buff) {
                 if let Some(val) = self.values.get_mut(&adr) {
@@ -157,23 +158,27 @@ impl ModbusContext {
             return Vec::new();
         }
         
-        let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-        adrs.sort();
-        let adrs = adrs;
-//         dbg!(&adrs);
+//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+        let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
+        values.sort_by(|a, b| a.address().cmp(&b.address()));
+        let values = values;
+//         dbg!(&values);
         
-        let mut itr = adrs.into_iter();
-        let adr = itr.next().unwrap();
-        let mut res = vec![std::ops::Range { start: adr, end: adr }];
+        let mut itr = values.into_iter();
+        let v = itr.next().unwrap();
+        let adr = v.address();
+        let end = adr + v.size() as u16;
+        let mut res = vec![std::ops::Range { start: adr, end: end }];
         let mut last_range = res.last_mut().unwrap();
         
-        for adr in itr {
-//             let end = last_range.end;
+        for v in itr {
+            let adr = v.address();
+            let end = adr + v.size() as u16 -1;
             if last_range.end +empty_space < adr {
-                let r = std::ops::Range { start: adr, end: adr };
+                let r = std::ops::Range { start: adr, end: end };
                 res.push(r);
             } else {
-                last_range.end = adr;
+                last_range.end = end;
             }
             last_range = res.last_mut().unwrap();
         }

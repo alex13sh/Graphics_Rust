@@ -53,6 +53,9 @@ impl Value {
     pub fn value(&self) -> u32 {
         self.value.get()
     }
+    pub fn size(&self) -> u8 {
+        self.size.size()
+    }
     
     pub fn set_bit(&self, num: u8, lvl: bool) {
 //         self.value.update(|v| {

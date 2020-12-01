@@ -29,24 +29,16 @@ impl Invertor {
     
     pub fn start(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
-//         let _v_start_hz: Arc<Value> = vm.get("Стартовая частота").unwrap().clone();
-//         let _v_max_hz = vm.get("Максимальная выходная частота").unwrap().clone();
         let v_bitmap = vm.get("2000H").unwrap().clone();
         
-        v_bitmap.set_bit(1, false); // Stop
-        v_bitmap.set_bit(2, true); // Run
+        v_bitmap.set_bit(1, true); // Stop
+        v_bitmap.set_bit(2, false); // Run
         
         self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn stop(&self) ->  Result<(), DeviceError> {
-        let vm = self.device.values_map();
-        let v_bitmap = vm.get("2000H").unwrap().clone();
-        
-        v_bitmap.set_bit(1, true); // Stop
-        v_bitmap.set_bit(2, false); // Run
-
-        self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
+        self.set_speed(0)?;
         Ok(())
     }
     pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {
@@ -65,7 +57,7 @@ impl Invertor {
         self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
         Ok(())
     }
-    pub fn set_speed(&mut self, hz: u16) ->  Result<(), DeviceError> {
+    pub fn set_speed(&self, hz: u16) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
 //         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();

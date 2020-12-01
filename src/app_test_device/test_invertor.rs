@@ -63,7 +63,7 @@ impl TestInvertor {
                 self.speed = speed;
                 if let Err(error) = self.invertor.set_speed(speed) {
                     self.ui.error = Some(format!("Error: {}", error));
-                } else { self.ui.error = Some("Not error".into()); }
+                } else { self.ui.error = None; }
             },
             Message::DirectChanged(direct) => {
                 self.invertor.set_direct(direct);
@@ -160,13 +160,13 @@ impl DeviceValue {
     
     fn view(&mut self) -> Element<Message> {
         use std::convert::{TryInto, TryFrom};
-        let mut txt: String = self.value.name().chars().take(20).collect();
-        if self.value.name().chars().nth(20).is_some() {
+        let mut txt: String = self.value.name().chars().take(30).collect();
+        if self.value.name().chars().nth(30).is_some() {
             txt = txt + "...";
         }
         Text::new(format!("{:0>4X}) name: {}; value: {:?}", 
             self.value.address(), txt, 
-            f32::try_from(self.value.as_ref()))).size(14) // {:0>4})
+            f32::try_from(self.value.as_ref()))).size(18) // {:0>4})
             .into()
     }
 }

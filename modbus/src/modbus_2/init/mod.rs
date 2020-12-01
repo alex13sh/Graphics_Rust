@@ -151,6 +151,12 @@ pub fn make_invertor(ip_address: String) -> Device {
                 direct: ValueDirect::Write,
                 size: ValueSize::UINT16,
             };
+            let add_simple_value_read = |p: u16, adr: u16, name: &str| Value {
+                name: name.into(),
+                address: p*256+adr,
+                direct: ValueDirect::Read,
+                size: ValueSize::UINT16,
+            };
             
             let mut reg = vec![
                 add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
@@ -204,6 +210,12 @@ pub fn make_invertor(ip_address: String) -> Device {
         //                 direct: ValueDirect::Write,
         //                 size: ValueSize::BitMap, // 16 bit
         //             },
+            ]);
+            
+            // Part 5
+            reg.append(&mut vec![
+                add_simple_value_read(5, 31, "Наработка двигателя (мин)"),
+                add_simple_value_read(5, 32, "Наработка двигателя (дни)"),
             ]);
             
             // Part 9 

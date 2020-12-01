@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 tokio-modbus = { version = "*", default-features = false, features = ["tcp", "sync"] }
 derivative = "2.1.1"
+thiserror = "1.0"

@@ -6,6 +6,9 @@ use super::Value;
 
 use std::sync::Arc;
 
+mod error;
+use error::*;
+
 pub struct Invertor {
     device: Arc<Device>, // make mut
     // device_analog_output: Arc<Device>, // Owen Analog
@@ -178,4 +181,14 @@ impl Invertor {
 fn test_array_contsins() {
     assert_eq!([0,1, 3,4].contains(&1), true);
     assert_eq!([0,1, 3,4].contains(&2), false);
+}
+
+#[test]
+fn test_invertor_error() {
+    let err_num = 2_u8;
+    let err: InvertorError = unsafe { ::std::mem::transmute(err_num) };
+    assert_eq!("ocd", format!("{:?}", err));
+    
+    let err: InvertorError = unsafe { ::std::mem::transmute(4_u8) };
+    assert_eq!("Замыкание на землю (GFF)", format!("{}", err));
 }

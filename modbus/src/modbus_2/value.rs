@@ -172,7 +172,7 @@ fn test_value_ops_bit() {
         name: "Name_1".into(),
         address: 1,
         direct: ValueDirect::Write,
-        size: ValueSize::BitMap,
+        size: ValueSize::BitMap(vec![]),
     });
     v.set_bit(1, true);
     assert_eq!(v.value.get(), 2);
@@ -191,7 +191,7 @@ fn test_value_into_f32() {
         size: ValueSize::FLOAT,
     });
     v.value.set(u32::from_le_bytes([0x00,0x00,0x20,0x3E]));
-    let f: f32 = v.try_into().unwrap();
+    let f: f32 = (&v).try_into().unwrap();
     assert_eq!(f, 0.15625);
     let f = f32::from_le_bytes([0x00,0x00,0x20,0x3E]);
     assert_eq!(f, 0.15625);

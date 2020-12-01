@@ -61,7 +61,7 @@ impl TestInvertor {
             Message::Stop => self.invertor.stop().unwrap(),
             Message::SpeedChanged(speed) => {
                 self.speed = speed;
-                if let Err(error) = self.invertor.set_hz(speed) {
+                if let Err(error) = self.invertor.set_speed(speed) {
                     self.ui.error = Some(format!("Error: {}", error));
                 } else { self.ui.error = Some("Not error".into()); }
             },
@@ -93,7 +93,7 @@ impl TestInvertor {
             let slider = {
                 let slider = Slider::new(
                     &mut self.ui.speed_slider,
-                    0..=100/10,
+                    0..=5000/10,
                     self.speed/10,
                     |speed| Message::SpeedChanged(speed*10),
                 );

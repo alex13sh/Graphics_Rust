@@ -125,11 +125,11 @@ impl TestInvertor {
         if let Some(ref error) = self.ui.error {
             res = res.push(Text::new(error));
         }
-        /*{
+        let res = {
             let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
             scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
-            res.push(scroll).into()
-        }*/
+            res.push(scroll)
+        };
         
         res.into()
     }
@@ -138,7 +138,9 @@ impl TestInvertor {
 fn make_values(values: &ModbusValues) -> Vec<DeviceValue> {
 //             println!("values_view");
     use std::collections::HashMap;
-    let mut adr_name: Vec<_> = values.values().into_iter().map(|v| (v.address(), v.name().clone())).collect();
+    let mut adr_name: Vec<_> = values.values().into_iter()
+        .filter(|v| v.is_read_only())
+        .map(|v| (v.address(), v.name().clone())).collect();
     adr_name.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
     adr_name.into_iter().map(|(_, name)| 
         DeviceValue::new(values.get(&name).unwrap().clone())
@@ -157,11 +159,14 @@ impl DeviceValue {
     }
     
     fn view(&mut self) -> Element<Message> {
+        use std::convert::{TryInto, TryFrom};
         let mut txt: String = self.value.name().chars().take(20).collect();
         if self.value.name().chars().nth(20).is_some() {
             txt = txt + "...";
         }
-        Text::new(format!("{:0>4X}) name: {}", self.value.address(), txt)).size(12) // {:0>4})
+        Text::new(format!("{:0>4X}) name: {}; value: {:?}", 
+            self.value.address(), txt, 
+            f32::try_from(self.value.as_ref()))).size(14) // {:0>4})
             .into()
     }
 }

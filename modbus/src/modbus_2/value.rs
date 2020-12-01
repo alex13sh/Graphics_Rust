@@ -3,6 +3,7 @@ pub use super::init::{ValueDirect, ValueSize};
 pub use super::init::Value as ValueInit;
 
 use std::cell::Cell;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Value {
@@ -97,26 +98,36 @@ impl From<ValueInit> for Value {
     }
 }
 
-use std::convert::TryInto;
-impl TryInto<f32> for Value {
+pub use std::convert::{TryInto, TryFrom};
+impl TryFrom<&Value> for f32 {
     type Error = ();
-    fn try_into(self) -> Result<f32, ()> {
-        match self.size {
-        ValueSize::FLOAT => Ok(f32::from_bits(self.value.get())),
+    fn try_from(val: &Value) -> Result<f32, Self::Error> {
+        match val.size {
+        ValueSize::FLOAT => Ok(f32::from_bits(val.value.get())),
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16
         | ValueSize::INT16
         | ValueSize::UINT8
-        | ValueSize::INT8 => Ok(self.value.get() as f32),
+        | ValueSize::INT8 => Ok(val.value.get() as f32),
         _ => Err(()),
         }
     }
 }
 
+pub struct ValueArc (Arc<Value>);
+
+// impl TryFrom<ValueArc> for f32 {
+// impl TryFrom<Arc<Value>> for f32 {
+//     type Error = ();
+//     fn try_from(val: Arc<Value>) -> Result<f32, ()> {
+//         let v = val.as_ref();
+//         f32::try_from(v)
+//     }
+// }
+
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 
 #[derive(Debug, Default)]
 pub struct ModbusValues(HashMap<String, Arc<Value>>);
@@ -143,6 +154,13 @@ impl DerefMut for ModbusValues {
 //     type Target = HashMap<String, Arc<Value>>;
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl Deref for ValueArc {
+    type Target = Value;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

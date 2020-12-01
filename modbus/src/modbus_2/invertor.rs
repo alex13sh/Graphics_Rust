@@ -31,14 +31,20 @@ impl Invertor {
         let vm = self.device.values_map();
         let v_bitmap = vm.get("2000H").unwrap().clone();
         
-        v_bitmap.set_bit(1, true); // Stop
-        v_bitmap.set_bit(2, false); // Run
+        v_bitmap.set_bit(0, false); // Stop
+        v_bitmap.set_bit(1, true); // Run
         
         self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn stop(&self) ->  Result<(), DeviceError> {
-        self.set_speed(0)?;
+        let vm = self.device.values_map();
+        let v_bitmap = vm.get("2000H").unwrap().clone();
+        
+        v_bitmap.set_bit(0, true); // Stop
+        v_bitmap.set_bit(1, false); // Run
+
+        self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {

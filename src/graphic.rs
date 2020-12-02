@@ -37,9 +37,9 @@ impl Graphic {
             series: Vec::new(),
             view_port: ViewPort {
                 end: chrono::Local::now(),
-                start: chrono::Local::now() - Duration::seconds(20*60),
+                start: chrono::Local::now() - Duration::seconds(2*60),
                 min_value: -10_f32, 
-                max_value: 300_f32,
+                max_value: 5000_f32,
             },
             grid_cache: Default::default(),
             lines_cache: Default::default(),
@@ -70,7 +70,7 @@ impl Graphic {
         _ => {}
         }
     }
-    pub fn append_value(&mut self, value: log::LogValue) {
+    pub fn append_log_value(&mut self, value: log::LogValue) {
         let hash = value.hash;
         for ser in self.series.iter_mut() {
             if ser.name == hash {
@@ -82,6 +82,26 @@ impl Graphic {
                 });
 //                 dbg!(&dt);
                 self.view_port.set_end(dt);
+//                 dbg!(&self.view_port);
+                if cfg!(feature = "plotters") {
+//                     self.update_svg();
+                } else {
+                    self.lines_cache.clear();
+                }
+                return;
+            }
+        }
+    }
+    
+    pub fn append_value(&mut self, name: &str, value: impl Into<DatePoint> ) {
+        let value = value.into();
+        let dt = value.dt;
+//         dbg!(name, &value);
+        for ser in self.series.iter_mut() {
+            if ser.name == name {
+                ser.points.push(value);
+                self.view_port.set_end(dt);
+                 self.view_port.set_end(dt);
 //                 dbg!(&self.view_port);
                 if cfg!(feature = "plotters") {
 //                     self.update_svg();
@@ -267,9 +287,27 @@ struct LineSeries {
 }
 
 #[derive(Debug, Clone)]
-struct DatePoint {
+pub struct DatePoint {
     dt: DateTime,
     value: f32
+}
+
+impl DatePoint {
+    pub fn from_value(value: f32) -> Self {
+        Self {
+            dt: chrono::Local::now(),
+            value: value,
+        }
+    }
+}
+
+impl From<f32> for DatePoint {
+    fn from(value: f32) -> DatePoint {
+        Self {
+            dt: chrono::Local::now(),
+            value: value,
+        }
+    }
 }
 
 trait VecDatePoint {

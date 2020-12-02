@@ -9,10 +9,12 @@ use iced::{
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Value, ModbusValues};
+use crate::graphic::{self, Graphic};
 
 pub struct TestInvertor {
     ui: UI,
     invertor: Invertor,
+    graph: Graphic,
     values: Vec<DeviceValue>,
     speed: u16,
     direct: DvijDirect,
@@ -34,13 +36,22 @@ pub enum Message {
     SpeedChanged(u16),
     DirectChanged(DvijDirect),
     Update,
+    
+    GraphicMessage(graphic::Message),
 }
 
 impl TestInvertor {
     pub fn new(ip_address: String) -> Self {
         let invertor = Invertor::new(init::make_invertor(ip_address).into());
+        let dev = invertor.device();
+        let values = dev.values_map();
+//         let names: Vec<_> = values.iter()
+//             .filter(|(_k, v)| v.is_read_only())
+//             .map(|(k, _v)| &k[..]).collect();
+        let names = vec!["Выходной ток (A)", "Температура радиатора", "Выходная частота (H)", "Выходное напряжение (E)"];
         Self {
-            values: make_values(invertor.device().values_map()),
+            values: make_values(values),
+            graph: Graphic::series(&names),
             invertor: invertor,
             speed: 10_u16,
             direct: DvijDirect::FWD,
@@ -73,8 +84,21 @@ impl TestInvertor {
                 use modbus::DeviceError;
                 if let Err(error) = self.invertor.device().update() {
                     self.ui.error = Some(format!("Error: {}", error));
-                } else { self.ui.error = None; }
-            }
+                } else { 
+                    self.ui.error = None; 
+                    
+                    use std::convert::TryFrom;
+                    for v in self.invertor.device().values().iter()
+                        .filter(|v| v.is_read_only()) {
+                        if let Ok(value) = f32::try_from(v.as_ref()) {
+                            self.graph.append_value(v.name(), value);
+                        }
+                    }
+                    self.graph.update_svg();
+                }
+            },
+            
+            Message::GraphicMessage(message) => self.graph.update(message),
         };
     }
     pub fn view(&mut self) -> Element<Message> {
@@ -125,10 +149,16 @@ impl TestInvertor {
         if let Some(ref error) = self.ui.error {
             res = res.push(Text::new(error));
         }
+//         let res = {
+//             let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
+//             scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
+//             res.push(scroll)
+//         };
+
         let res = {
-            let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
-            scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
-            res.push(scroll)
+            let graph = self.graph.view()
+            .map(Message::GraphicMessage);
+            res.push(graph)
         };
         
         res.into()

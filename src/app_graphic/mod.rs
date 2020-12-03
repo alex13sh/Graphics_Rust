@@ -60,7 +60,7 @@ impl Application for GraphicsApp {
             for _ in 0..1000 {
                 if self.log_value_index+1<self.log_js.values.len() {
                     self.log_value_index += 1;
-                    self.graph.append_value(self.log_js.values[self.log_value_index].clone());
+                    self.graph.append_log_value(self.log_js.values[self.log_value_index].clone());
                 }
             }
             #[cfg(feature = "plotters")] {self.graph.update_svg();}

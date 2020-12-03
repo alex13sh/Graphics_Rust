@@ -30,3 +30,6 @@ members = [
 
 [features]
 default = ["plotters"]
+
+# [profile.release]
+# debug = true

@@ -9,10 +9,12 @@ use iced::{
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Value, ModbusValues};
+use crate::graphic::{self, Graphic};
 
 pub struct TestInvertor {
     ui: UI,
     invertor: Invertor,
+    graph: Graphic,
     values: Vec<DeviceValue>,
     speed: u16,
     direct: DvijDirect,
@@ -34,13 +36,23 @@ pub enum Message {
     SpeedChanged(u16),
     DirectChanged(DvijDirect),
     Update,
+    RebuildSVG,
+    
+    GraphicMessage(graphic::Message),
 }
 
 impl TestInvertor {
     pub fn new(ip_address: String) -> Self {
         let invertor = Invertor::new(init::make_invertor(ip_address).into());
+        let dev = invertor.device();
+        let values = dev.values_map();
+//         let names: Vec<_> = values.iter()
+//             .filter(|(_k, v)| v.is_read_only())
+//             .map(|(k, _v)| &k[..]).collect();
+        let names = vec!["Выходной ток (A)", "Температура радиатора", "Выходная частота (H)", "Выходное напряжение (E)"];
         Self {
-            values: make_values(invertor.device().values_map()),
+            values: make_values(values),
+            graph: Graphic::series(&names),
             invertor: invertor,
             speed: 10_u16,
             direct: DvijDirect::FWD,
@@ -49,8 +61,12 @@ impl TestInvertor {
     }
     
     pub fn subscription(&self) -> Subscription<Message> {
-        time::every(std::time::Duration::from_millis(500))
-            .map(|_| Message::Update)
+        Subscription::batch(vec![
+            time::every(std::time::Duration::from_millis(200))
+            .map(|_| Message::Update),
+            time::every(std::time::Duration::from_millis(1000))
+            .map(|_| Message::RebuildSVG),
+        ])
     }
 
     #[allow(unused_must_use)]
@@ -63,7 +79,7 @@ impl TestInvertor {
                 self.speed = speed;
                 if let Err(error) = self.invertor.set_speed(speed) {
                     self.ui.error = Some(format!("Error: {}", error));
-                } else { self.ui.error = Some("Not error".into()); }
+                } else { self.ui.error = None; }
             },
             Message::DirectChanged(direct) => {
                 self.invertor.set_direct(direct);
@@ -73,8 +89,25 @@ impl TestInvertor {
                 use modbus::DeviceError;
                 if let Err(error) = self.invertor.device().update() {
                     self.ui.error = Some(format!("Error: {}", error));
-                } else { self.ui.error = None; }
-            }
+                } else { 
+                    self.ui.error = None; 
+                    
+                    use std::convert::TryFrom;
+                    let values = self.invertor.device().values();
+                    let values = values.iter()
+                        .filter(|v| v.is_read_only())
+                        .map(|v| 
+                            if let Ok(value) = f32::try_from(v.as_ref()) {
+                                (&v.name()[..], value)
+                            } else {(&v.name()[..], -1.0)}
+                        ).collect();
+                    self.graph.append_values(values);
+//                     self.graph.update_svg();
+                }
+            },
+            Message::RebuildSVG => self.graph.update_svg(),
+            
+            Message::GraphicMessage(message) => self.graph.update(message),
         };
     }
     pub fn view(&mut self) -> Element<Message> {
@@ -125,10 +158,16 @@ impl TestInvertor {
         if let Some(ref error) = self.ui.error {
             res = res.push(Text::new(error));
         }
+//         let res = {
+//             let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
+//             scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
+//             res.push(scroll)
+//         };
+
         let res = {
-            let mut scroll = Scrollable::new(&mut self.ui.scroll_value);
-            scroll = self.values.iter_mut().fold(scroll, |scroll, v| scroll.push(v.view()));
-            res.push(scroll)
+            let graph = self.graph.view()
+            .map(Message::GraphicMessage);
+            res.push(graph)
         };
         
         res.into()
@@ -160,13 +199,13 @@ impl DeviceValue {
     
     fn view(&mut self) -> Element<Message> {
         use std::convert::{TryInto, TryFrom};
-        let mut txt: String = self.value.name().chars().take(20).collect();
-        if self.value.name().chars().nth(20).is_some() {
+        let mut txt: String = self.value.name().chars().take(30).collect();
+        if self.value.name().chars().nth(30).is_some() {
             txt = txt + "...";
         }
         Text::new(format!("{:0>4X}) name: {}; value: {:?}", 
             self.value.address(), txt, 
-            f32::try_from(self.value.as_ref()))).size(14) // {:0>4})
+            f32::try_from(self.value.as_ref()))).size(18) // {:0>4})
             .into()
     }
 }

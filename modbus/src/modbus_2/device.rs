@@ -139,12 +139,10 @@ impl ModbusContext {
         }
     }
     pub fn update(&mut self) -> Result<(), DeviceError> {
-//         let ranges = self.get_ranges_value(8, true);
         use tokio_modbus::client::sync::Reader;
         for r in &self.ranges_address {
-//             use tokio_modbus::prelude::*;
             let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
-            println!("Ranges ({:?}) is '{:?}'", r, buff);
+//             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
             for (adr, v) in r.clone().zip(itr_buff) {
                 if let Some(val) = self.values.get_mut(&adr) {
@@ -165,7 +163,6 @@ impl ModbusContext {
         let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
         values.sort_by(|a, b| a.address().cmp(&b.address()));
         let values = values;
-//         dbg!(&values);
         
         let mut itr = values.into_iter();
         let v = itr.next().unwrap();

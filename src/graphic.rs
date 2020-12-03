@@ -65,62 +65,39 @@ impl Graphic {
     pub fn update(&mut self, message: Message) {
         match message {
         Message::AppendValues(/*dt,*/ values) => {
-            self.append_values(values);
+//             self.append_values(values);
         },
         _ => {}
         }
     }
     pub fn append_log_value(&mut self, value: log::LogValue) {
         let hash = value.hash;
-        for ser in self.series.iter_mut() {
-            if ser.name == hash {
-//                 dbg!(&value.date_time);
-                let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
-                ser.points.push(DatePoint{
-                    dt: dt,
-                    value: value.value
-                });
-//                 dbg!(&dt);
-                self.view_port.set_end(dt);
-//                 dbg!(&self.view_port);
-                if cfg!(feature = "plotters") {
-//                     self.update_svg();
-                } else {
-                    self.lines_cache.clear();
-                }
-                return;
-            }
-        }
+        let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
+        let dp = DatePoint{ dt: dt, value: value.value };
+        self.append_value(&hash, dp);
     }
     
     pub fn append_value(&mut self, name: &str, value: impl Into<DatePoint> ) {
         let value = value.into();
         let dt = value.dt;
-//         dbg!(name, &value);
-        for ser in self.series.iter_mut() {
-            if ser.name == name {
-                ser.points.push(value);
-                self.view_port.set_end(dt);
-                 self.view_port.set_end(dt);
-//                 dbg!(&self.view_port);
-                if cfg!(feature = "plotters") {
-//                     self.update_svg();
-                } else {
-                    self.lines_cache.clear();
-                }
-                return;
-            }
+        if let Some(ref mut ser) = self.series.iter_mut().find(|ser| ser.name == name) {
+            ser.points.push(value);
+            self.view_port.set_end(dt);
+            #[cfg(not( feature = "plotters"))] self.lines_cache.clear();
         }
     }
     
-    pub fn append_values(&mut self, values: Vec<f32>) {
-        for (s, v) in self.series.iter_mut().zip(values.into_iter()) {
-            s.points.append_value(v);
+    pub fn append_values(&mut self, values: Vec<(&str, f32)>) {
+        let dt = chrono::Local::now();
+        for (name, value) in values {
+            if let Some(ref mut ser) = self.series.iter_mut().find(|ser| ser.name == name) {
+                ser.points.push(DatePoint{dt: dt, value: value});
+            }
         }
-//         dbg!(&self.series);
-        #[cfg(feature = "plotters")] self.update_svg();
-        #[cfg(not(feature = "plotters"))] self.lines_cache.clear();
-        self.view_port.set_end(chrono::Local::now());
+        
+        #[cfg(      feature = "plotters")] self.update_svg();
+        #[cfg(not( feature = "plotters"))] self.lines_cache.clear();
+        self.view_port.set_end(dt);
 //         dbg!(&self.view_port.start);
     }
     

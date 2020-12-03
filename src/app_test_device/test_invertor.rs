@@ -60,7 +60,7 @@ impl TestInvertor {
     }
     
     pub fn subscription(&self) -> Subscription<Message> {
-        time::every(std::time::Duration::from_millis(500))
+        time::every(std::time::Duration::from_millis(100))
             .map(|_| Message::Update)
     }
 
@@ -88,13 +88,16 @@ impl TestInvertor {
                     self.ui.error = None; 
                     
                     use std::convert::TryFrom;
-                    for v in self.invertor.device().values().iter()
-                        .filter(|v| v.is_read_only()) {
-                        if let Ok(value) = f32::try_from(v.as_ref()) {
-                            self.graph.append_value(v.name(), value);
-                        }
-                    }
-                    self.graph.update_svg();
+                    let values = self.invertor.device().values();
+                    let values = values.iter()
+                        .filter(|v| v.is_read_only())
+                        .map(|v| 
+                            if let Ok(value) = f32::try_from(v.as_ref()) {
+                                (&v.name()[..], value)
+                            } else {(&v.name()[..], -1.0)}
+                        ).collect();
+                    self.graph.append_values(values);
+//                     self.graph.update_svg();
                 }
             },
             

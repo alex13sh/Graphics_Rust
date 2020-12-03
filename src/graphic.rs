@@ -95,7 +95,7 @@ impl Graphic {
             }
         }
         
-        #[cfg(      feature = "plotters")] self.update_svg();
+//         #[cfg(      feature = "plotters")] self.update_svg();
         #[cfg(not( feature = "plotters"))] self.lines_cache.clear();
         self.view_port.set_end(dt);
 //         dbg!(&self.view_port.start);

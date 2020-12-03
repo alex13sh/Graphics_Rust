@@ -36,6 +36,7 @@ pub enum Message {
     SpeedChanged(u16),
     DirectChanged(DvijDirect),
     Update,
+    RebuildSVG,
     
     GraphicMessage(graphic::Message),
 }
@@ -60,8 +61,12 @@ impl TestInvertor {
     }
     
     pub fn subscription(&self) -> Subscription<Message> {
-        time::every(std::time::Duration::from_millis(100))
-            .map(|_| Message::Update)
+        Subscription::batch(vec![
+            time::every(std::time::Duration::from_millis(200))
+            .map(|_| Message::Update),
+            time::every(std::time::Duration::from_millis(1000))
+            .map(|_| Message::RebuildSVG),
+        ])
     }
 
     #[allow(unused_must_use)]
@@ -100,6 +105,7 @@ impl TestInvertor {
 //                     self.graph.update_svg();
                 }
             },
+            Message::RebuildSVG => self.graph.update_svg(),
             
             Message::GraphicMessage(message) => self.graph.update(message),
         };

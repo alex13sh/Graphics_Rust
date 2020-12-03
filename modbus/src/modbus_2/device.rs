@@ -142,7 +142,7 @@ impl ModbusContext {
         use tokio_modbus::client::sync::Reader;
         for r in &self.ranges_address {
             let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
-            println!("Ranges ({:?}) is '{:?}'", r, buff);
+//             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
             for (adr, v) in r.clone().zip(itr_buff) {
                 if let Some(val) = self.values.get_mut(&adr) {

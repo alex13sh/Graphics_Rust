@@ -129,7 +129,7 @@ pub struct ValueArc (Arc<Value>);
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ModbusValues(HashMap<String, Arc<Value>>);
 
 impl ModbusValues {

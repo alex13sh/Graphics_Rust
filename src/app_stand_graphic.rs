@@ -1,13 +1,25 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button,
+    Column,
     Length,
 };
+
+use crate::graphic::{self, Graphic};
+use modbus::{Value, ModbusValues};
+use modbus::init;
+use modbus::invertor::{Invertor, DvijDirect}; // Device
+use modbus::{Device, DigitIO};
+
 
 pub struct App {
     ui: UI,
     
     is_started: bool,
+    
+    values: ModbusValues,
+    invertor: Invertor,
+//     digit_io: DigitIO,
 }
 
 #[derive(Default)]
@@ -29,11 +41,21 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-    
+        let invertor = Invertor::new(init::make_invertor("192.168.1.5".into()).into());
+        let dev = invertor.device();
+        let mut values = ModbusValues::new();
+        for (k,v) in dev.values_map().iter()
+            .filter(|(_k,v)| v.is_read_only()) {
+            values.insert(k.clone(), v.clone());
+        }
+        
         (
             Self {
                 ui: UI::default(),
                 is_started: false,
+                
+                values: values,
+                invertor: invertor,
             },
             Command::none()
         )
@@ -57,17 +79,12 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
 //         let content = Text::new("Пустое окно");
 
-        let label = if self.is_started {"Stop"} else {"Start"};
-        let label = Text::new(label).size(16);
-//         let is_started = self.is_started;
-        let button =
-            Button::new(&mut self.ui.start, label).style(style::Button::Check {
-                checked: self.is_started,
-            })
-            .on_press(Message::ToggleStart(!self.is_started))
-            .padding(8);
+        let content = self.values.iter().fold(
+            Column::new(),
+            |row, (_k, value)| row.push(Text::new(value.name()))
+        );
         
-        Container::new(button)
+        Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(10)

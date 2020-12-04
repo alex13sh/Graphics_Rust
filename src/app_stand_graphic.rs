@@ -90,10 +90,7 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
 //         let content = Text::new("Пустое окно");
 
-        let content = self.values.iter().fold(
-            Column::new(),
-            |row, (k, _value)| row.push(Text::new(k))
-        );
+        let content = self.view_list_value();
         
         Container::new(content)
             .width(Length::Fill)
@@ -105,6 +102,40 @@ impl Application for App {
     }
 }
 
+impl App {
+    fn view_list_value(&self) -> Element<Message> {
+        let mut lst = Column::new().spacing(20);
+        
+        lst = lst.push(self.owen_analog.values_map().iter()
+            .filter(|(_k, value)| value.is_read_only())
+            .filter_map(|(k, _v)| k.strip_suffix("/value_float"))
+            .fold(
+                Column::new(),
+                |lst, name| lst.push(Text::new(name))
+            )
+        );
+        
+        lst = lst.push(self.digit_io.device().values_map().iter()
+            .filter(|(_k, value)| value.is_read_only())
+            .filter_map(|(k, _v)| k.strip_suffix("/value"))
+            .fold(
+                Column::new(),
+                |lst, name| lst.push(Text::new(name))
+            )
+        );
+        
+        lst = lst.push(self.invertor.device().values_map().iter()
+            .filter(|(_k, value)| value.is_read_only())
+            .map(|(k, _v)| k)
+            .fold(
+                Column::new(),
+                |lst, name| lst.push(Text::new(name))
+            )
+        );
+        
+        lst.into()
+    }
+}
 
 mod style {
     use iced::{button, Background, Color, Vector};

@@ -19,7 +19,7 @@ pub struct App {
     
     values: ModbusValues,
     invertor: Invertor,
-//     digit_io: DigitIO,
+    digit_io: DigitIO,
 }
 
 #[derive(Default)]
@@ -42,9 +42,12 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let invertor = Invertor::new(init::make_invertor("192.168.1.5".into()).into());
-        let dev = invertor.device();
+        let dev_invertor = invertor.device();
+        let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
+        let dev_digit_io = digit_io.device();
         let mut values = ModbusValues::new();
-        for (k,v) in dev.values_map().iter()
+        for (k,v) in dev_invertor.values_map().iter()
+            .chain(dev_digit_io.values_map().iter())
             .filter(|(_k,v)| v.is_read_only()) {
             values.insert(k.clone(), v.clone());
         }
@@ -56,6 +59,7 @@ impl Application for App {
                 
                 values: values,
                 invertor: invertor,
+                digit_io: digit_io,
             },
             Command::none()
         )
@@ -81,7 +85,7 @@ impl Application for App {
 
         let content = self.values.iter().fold(
             Column::new(),
-            |row, (_k, value)| row.push(Text::new(value.name()))
+            |row, (k, _value)| row.push(Text::new(k))
         );
         
         Container::new(content)

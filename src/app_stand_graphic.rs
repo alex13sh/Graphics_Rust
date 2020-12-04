@@ -46,10 +46,10 @@ impl Application for App {
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
         let dev_digit_io = digit_io.device();
         let mut values = ModbusValues::new();
-        for (k,v) in dev_invertor.values_map().iter()
-            .chain(dev_digit_io.values_map().iter())
-            .filter(|(_k,v)| v.is_read_only()) {
-            values.insert(k.clone(), v.clone());
+        for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
+            .chain(dev_digit_io.values_map().iter().map(|v|("DigitIO", v)))
+            .filter(|(dev, (_k,v))| v.is_read_only()) {
+            values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         
         (

@@ -15,15 +15,22 @@ pub(crate) fn tst() {
     dbg!(d);
 }
 
-pub(crate) fn init_devices() -> Vec<Device> {
+pub(crate) fn init_devices() -> Vec<Device> {    
+    vec![
+    make_owen_analog("192.168.1.5".into()),
+    make_io_digit("192.168.1.3".into()),
+    make_invertor("192.168.1.5".into()),
+    ]
+}
+
+pub fn make_owen_analog(ip_address: String) -> Device {
     use SensorAnalogType::*;
     use ValueGroup::*;
     
-    let d = vec![
     Device {
         name: "Input Analog".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIP("192.168.1.5".into()),
+        address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
             Sensor {
                 name: "Температура Ротора".into(),
@@ -69,11 +76,7 @@ pub(crate) fn init_devices() -> Vec<Device> {
             },
         ]),
         values: None,
-    },
-    make_io_digit("192.168.1.3".into()),
-    make_invertor("192.168.1.5".into()),
-    ];
-    return d;
+    }
 }
 
 pub fn make_io_digit(ip_address: String) -> Device {

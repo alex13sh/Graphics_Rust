@@ -46,9 +46,12 @@ impl Application for App {
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
         let dev_digit_io = digit_io.device();
         let mut values = ModbusValues::new();
+        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.5".into()).into();
+        
         for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
             .chain(dev_digit_io.values_map().iter().map(|v|("DigitIO", v)))
-            .filter(|(dev, (_k,v))| v.is_read_only()) {
+            .chain(dev_owen_analog.values_map().iter().map(|v|("Analog", v)))
+            .filter(|(_dev, (_k,v))| v.is_read_only()) {
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         
@@ -60,6 +63,7 @@ impl Application for App {
                 values: values,
                 invertor: invertor,
                 digit_io: digit_io,
+                owen_analog: dev_owen_analog,
             },
             Command::none()
         )

@@ -37,9 +37,7 @@ fn test_speed() -> std::io::Result<()> {
     Ok(())
 }
 
-mod csv;
-
 fn main() {
-    csv::test_read_csv_1("/home/alex13sh/.local/share/graphicmodbus/log/sessions_1.csv")
+    log::csv::test_read_csv_1("./log/sessions_1.csv")
         .unwrap();
 }

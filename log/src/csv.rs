@@ -24,6 +24,7 @@ where
  }
  
  pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {
+    let file_path = super::get_file_path(file_path);
     let file = File::open(file_path)?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)

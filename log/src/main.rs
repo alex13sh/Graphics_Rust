@@ -1,6 +1,6 @@
 use log::*;
 
-fn main() -> std::io::Result<()> {
+fn main_1() -> std::io::Result<()> {
 //     convert_log_file("values_14_09_2020__13_24_19_668.json", "log/", "new_log/")
     let js = open_json_file("values_14_09_2020__13_24_19_668.json");
     let hashs = js.get_all_hash();
@@ -35,4 +35,11 @@ fn test_speed() -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+mod csv;
+
+fn main() {
+    csv::test_read_csv_1("/home/alex13sh/.local/share/graphicmodbus/log/sessions_1.csv")
+        .unwrap();
 }

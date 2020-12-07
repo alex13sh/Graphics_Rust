@@ -120,13 +120,7 @@ impl App {
         ];
         
         let _values_map = self.owen_analog.values_map();
-        lst = lst.push(values_name.into_iter()
-//             .filter_map(|(k, _v)| k.strip_suffix("/value_float"))
-            .fold(
-                Column::new(),
-                |lst, name| lst.push(Self::view_value(name.into()))
-            )
-        );
+        lst = lst.push( Self::view_values(values_name, |name| format!("Analog/{}/value_float", name)));
         
         let values_name = vec![
             "Клапан 24В",
@@ -134,13 +128,7 @@ impl App {
             "Насос",
         ];
         let _values_map = self.digit_io.device().values_map();
-        lst = lst.push(values_name.into_iter()
-//             .filter_map(|(k, _v)| k.strip_suffix("/value"))
-            .fold(
-                Column::new(),
-                |lst, name| lst.push(Self::view_value(name.into()))
-            )
-        );
+        lst = lst.push( Self::view_values(values_name, |name| format!("DigitIO/{}/value", name)));
         
         let values_name = vec![
             "Заданная частота (F)",
@@ -149,16 +137,22 @@ impl App {
             "Температура радиатора",
         ];
         let _values_map = self.invertor.device().values_map();
-        lst = lst.push(values_name.into_iter()
-//             .filter(|(_k, value)| value.is_read_only())
-//             .map(|(k, _v)| k)
-            .fold(
-                Column::new(),
-                |lst, name| lst.push(Self::view_value(name.into()))
-            )
-        );
+        lst = lst.push( Self::view_values(values_name, |name| format!("Invertor/{}", name)));
         
         lst.into()
+    }
+    
+    fn view_values<'a, F>(names: Vec<&str>, value_key: F) -> Element<'a, Message> 
+    where F: Fn(&str) -> String
+    {
+        names.into_iter()
+            .fold(Column::new(),
+            |lst, name| {
+//                     let name = name.into();
+                let name: String = value_key(name);
+                lst.push(Self::view_value(name))
+            }
+        ).into()
     }
     
     fn view_value<'a>(text: String) -> Element<'a, Message> {

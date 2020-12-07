@@ -108,49 +108,57 @@ impl App {
         let mut lst = Column::new()
         .spacing(20);
 //         .width(Length::Units(200));
-    
-        let values_name = vec![
-            "Температура Ротора",
-            "Температура Статора",
-            "Температура Пер.Под.",
-            "Температура Зад.Под.",
+        {
+            let values_name = vec![
+                "Температура Ротора",
+                "Температура Статора",
+                "Температура Пер.Под.",
+                "Температура Зад.Под.",
+                
+                "Давление -1_1 V",
+                "Вибрация 4_20 A",
+            ];
             
-            "Давление -1_1 V",
-            "Вибрация 4_20 A",
-        ];
+            let values_map = self.owen_analog.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
+        };
+        {
+            let values_name = vec![
+                "Клапан 24В",
+                "Клапан 2",
+                "Насос",
+            ];
+            let dev = self.digit_io.device();
+            let values_map = dev.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
+        };
         
-        let _values_map = self.owen_analog.values_map();
-        lst = lst.push( Self::view_values(values_name, |name| format!("Analog/{}/value_float", name)));
-        
-        let values_name = vec![
-            "Клапан 24В",
-            "Клапан 2",
-            "Насос",
-        ];
-        let _values_map = self.digit_io.device().values_map();
-        lst = lst.push( Self::view_values(values_name, |name| format!("DigitIO/{}/value", name)));
-        
-        let values_name = vec![
-            "Заданная частота (F)",
-            "Выходная частота (H)",
-            "Выходной ток (A)",
-            "Температура радиатора",
-        ];
-        let _values_map = self.invertor.device().values_map();
-        lst = lst.push( Self::view_values(values_name, |name| format!("Invertor/{}", name)));
+        {
+            let values_name = vec![
+                "Заданная частота (F)",
+                "Выходная частота (H)",
+                "Выходной ток (A)",
+                "Температура радиатора",
+            ];
+            let dev = self.invertor.device();
+            let values_map = dev.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}", name)));
+        };
         
         lst.into()
     }
     
-    fn view_values<'a, F>(names: Vec<&str>, value_key: F) -> Element<'a, Message> 
+    fn view_map_values<'a, F>(names: Vec<&str>, map: &ModbusValues, value_key: F) -> Element<'a, Message> 
     where F: Fn(&str) -> String
     {
         names.into_iter()
             .fold(Column::new(),
             |lst, name| {
-//                     let name = name.into();
-                let name: String = value_key(name);
-                lst.push(Self::view_value(name))
+                let key = value_key(name);
+                let name = name.into();
+                if let Some(value) = map.get(&key) {
+                    lst.push(Self::view_value(name))
+                } else {lst}
             }
         ).into()
     }

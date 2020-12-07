@@ -102,7 +102,7 @@ impl Graphic {
     }
     
     #[cfg(not(feature = "plotters"))]
-    pub fn view(&mut self) -> Element<Message> {
+    pub fn view<'a>(&mut self) -> Element<'a, Message> {
         Canvas::new(self)
             .width(Length::Units(1000))
             .height(Length::Units(1000))
@@ -161,7 +161,7 @@ impl Graphic {
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
     }
     #[cfg(feature = "plotters")]
-    pub fn view(&mut self) -> Element<Message> {
+    pub fn view<'a>(&mut self) -> Element<'a, Message> {
         let content: Element<Message> = if let Some(handle) = self.plotters_svg.clone() {
             Svg::new(handle)
             .width(Length::Fill)
@@ -173,8 +173,8 @@ impl Graphic {
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(20)
-            .center_x()
-            .center_y()
+//             .center_x()
+//             .center_y()
             .into()
     }
 }

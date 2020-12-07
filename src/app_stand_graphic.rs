@@ -1,7 +1,7 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button,
-    Column,
+    Column, Row,
     Length,
 };
 
@@ -18,6 +18,7 @@ use std::sync::Arc;
 pub struct App {
     ui: UI,
     
+    graph: Graphic,
     is_started: bool,
     
     values: BTreeMap<String, Arc<Value>>,
@@ -37,6 +38,7 @@ pub enum Message {
     GraphicUpdate,
     ToggleStart(bool),
     
+    GraphicMessage(graphic::Message),
 }
 
 impl Application for App {
@@ -59,9 +61,13 @@ impl Application for App {
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         
+        let value_names: Vec<_> = Self::get_values_name_map().into_iter()
+            .flat_map(|(_k,v)| v)
+            .collect();
         (
             Self {
                 ui: UI::default(),
+                graph: Graphic::series(&value_names),
                 is_started: false,
                 
                 values: values,
@@ -77,12 +83,12 @@ impl Application for App {
         String::from("GraphicsApp - Iced")
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(1000))
+        time::every(std::time::Duration::from_millis(5000))
             .map(|_| Message::GraphicUpdate)
     }
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-        Message::GraphicUpdate => {},
+        Message::GraphicUpdate => self.graph.update_svg(),
         Message::ToggleStart(start) => self.is_started = start,
         _ => {}
         };
@@ -91,14 +97,19 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
 //         let content = Text::new("Пустое окно");
 
-        let content = self.view_list_value();
+        let graph = self.graph.view()
+            .map(Message::GraphicMessage);
+            
+        let content = Row::new()
+            .push(self.view_list_value())
+            .push(graph);
         
         Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(10)
             .center_x()
-            .center_y()
+//             .center_y()
             .style(style::MyContainer)
             .into()
     }
@@ -134,7 +145,7 @@ impl App {
         map
     }
 
-    fn view_list_value(&self) -> Element<Message> {
+    fn view_list_value<'a>(&self) -> Element<'a, Message> {
     
         let mut lst = Column::new()
         .spacing(20);

@@ -104,14 +104,16 @@ impl Application for App {
 
 impl App {
     fn view_list_value(&self) -> Element<Message> {
-        let mut lst = Column::new().spacing(20);
+        let mut lst = Column::new()
+        .spacing(20);
+//         .width(Length::Units(200));
         
         lst = lst.push(self.owen_analog.values_map().iter()
             .filter(|(_k, value)| value.is_read_only())
             .filter_map(|(k, _v)| k.strip_suffix("/value_float"))
             .fold(
                 Column::new(),
-                |lst, name| lst.push(Text::new(name))
+                |lst, name| lst.push(Self::view_value(name.into()))
             )
         );
         
@@ -120,7 +122,7 @@ impl App {
             .filter_map(|(k, _v)| k.strip_suffix("/value"))
             .fold(
                 Column::new(),
-                |lst, name| lst.push(Text::new(name))
+                |lst, name| lst.push(Self::view_value(name.into()))
             )
         );
         
@@ -129,11 +131,18 @@ impl App {
             .map(|(k, _v)| k)
             .fold(
                 Column::new(),
-                |lst, name| lst.push(Text::new(name))
+                |lst, name| lst.push(Self::view_value(name.into()))
             )
         );
         
         lst.into()
+    }
+    
+    fn view_value<'a>(text: String) -> Element<'a, Message> {
+        Text::new(
+            format!("Name: {}\nValue: {}", text, 0.0)
+        ).size(16)
+        .into()
     }
 }
 

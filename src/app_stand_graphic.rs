@@ -98,6 +98,7 @@ impl Application for App {
             .padding(10)
             .center_x()
             .center_y()
+            .style(style::MyContainer)
             .into()
     }
 }
@@ -183,7 +184,7 @@ impl App {
 }
 
 mod style {
-    use iced::{button, Background, Color, Vector};
+    use iced::{button, container, Background, Color, Vector};
 
     pub enum Button {
         Check { checked: bool },
@@ -226,6 +227,16 @@ mod style {
                 },
                 shadow_offset: active.shadow_offset + Vector::new(0.0, 1.0),
                 ..active
+            }
+        }
+    }
+
+    pub(super) struct MyContainer;
+    impl container::StyleSheet for MyContainer {
+        fn style(&self) -> container::Style {
+            container::Style {
+                background: Some(Background::Color([0.2, 0.2, 0.2].into())),
+                .. Default::default()
             }
         }
     }

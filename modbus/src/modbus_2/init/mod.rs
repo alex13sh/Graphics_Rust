@@ -114,7 +114,7 @@ pub fn make_io_digit(ip_address: String) -> Device {
             Value {
                 name: "Битовая маска состояния выходов".into(), // DO1 - DO8
                 address: 468,
-                direct: ValueDirect::Read,
+                direct: ValueDirect::Read(None),
                 size: ValueSize::UINT8,
             },
             Value {
@@ -157,7 +157,7 @@ pub fn make_invertor(ip_address: String) -> Device {
             let add_simple_value_read = |p: u16, adr: u16, name: &str| Value {
                 name: name.into(),
                 address: p*256+adr,
-                direct: ValueDirect::Read,
+                direct: ValueDirect::Read(None),
                 size: ValueSize::UINT16,
             };
             
@@ -292,20 +292,20 @@ pub fn make_invertor(ip_address: String) -> Device {
             
             let add_simple_value_read = |adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
-                direct: ValueDirect::Read, size: ValueSize::UINT16,
+                direct: ValueDirect::Read(None), size: ValueSize::UINT16,
             };
             // Part 21 ReadOnly
             reg.append(&mut vec![
                 Value {
                     name: "Код ошибки".into(), // Pr.06-17 - 06.22
                     address: 0x2100,
-                    direct: ValueDirect::Read, // interval
+                    direct: ValueDirect::Read(None), // interval
                     size: ValueSize::UINT16, // UINT32
                 },
                 Value {
                     name: "2119H".into(),
                     address: 0x2119,
-                    direct: ValueDirect::Read,
+                    direct: ValueDirect::Read(None),
                     size: ValueSize::BitMap (vec![
                         add_simple_value_bit(0, "Команда FWD"),
                         add_simple_value_bit(1, "Состояние привода"),

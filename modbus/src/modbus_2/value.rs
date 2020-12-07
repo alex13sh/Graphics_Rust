@@ -32,12 +32,19 @@ impl Value {
         self.address
     }
     pub fn is_read_only(&self) -> bool {
-        if let ValueDirect::Read = self.direct {
+        if let ValueDirect::Read(_) = self.direct {
             true
         } else {
             false 
         }
     }
+    pub fn get_error(&self) -> Option<crate::ValueError> {
+        match self.direct {
+        ValueDirect::Read(err) => err,
+        ValueDirect::Write => None,
+        }
+    }
+    
     pub(super) fn update_value(&self, value: u32) {
         self.value.set(value);
     }

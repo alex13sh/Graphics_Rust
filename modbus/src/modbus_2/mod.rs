@@ -10,6 +10,7 @@ pub mod invertor;
 pub mod owen_digit_io;
 
 pub use value::*;
+pub use init::ValueError;
 pub use sensor::*;
 pub use device::*;
 pub use invertor::*;

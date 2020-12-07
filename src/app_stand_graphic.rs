@@ -104,31 +104,54 @@ impl Application for App {
 
 impl App {
     fn view_list_value(&self) -> Element<Message> {
+    
         let mut lst = Column::new()
         .spacing(20);
 //         .width(Length::Units(200));
+    
+        let values_name = vec![
+            "Температура Ротора",
+            "Температура Статора",
+            "Температура Пер.Под.",
+            "Температура Зад.Под.",
+            
+            "Давление -1_1 V",
+            "Вибрация 4_20 A",
+        ];
         
-        lst = lst.push(self.owen_analog.values_map().iter()
-            .filter(|(_k, value)| value.is_read_only())
-            .filter_map(|(k, _v)| k.strip_suffix("/value_float"))
+        let _values_map = self.owen_analog.values_map();
+        lst = lst.push(values_name.into_iter()
+//             .filter_map(|(k, _v)| k.strip_suffix("/value_float"))
             .fold(
                 Column::new(),
                 |lst, name| lst.push(Self::view_value(name.into()))
             )
         );
         
-        lst = lst.push(self.digit_io.device().values_map().iter()
-            .filter(|(_k, value)| value.is_read_only())
-            .filter_map(|(k, _v)| k.strip_suffix("/value"))
+        let values_name = vec![
+            "Клапан 24В",
+            "Клапан 2",
+            "Насос",
+        ];
+        let _values_map = self.digit_io.device().values_map();
+        lst = lst.push(values_name.into_iter()
+//             .filter_map(|(k, _v)| k.strip_suffix("/value"))
             .fold(
                 Column::new(),
                 |lst, name| lst.push(Self::view_value(name.into()))
             )
         );
         
-        lst = lst.push(self.invertor.device().values_map().iter()
-            .filter(|(_k, value)| value.is_read_only())
-            .map(|(k, _v)| k)
+        let values_name = vec![
+            "Заданная частота (F)",
+            "Выходная частота (H)",
+            "Выходной ток (A)",
+            "Температура радиатора",
+        ];
+        let _values_map = self.invertor.device().values_map();
+        lst = lst.push(values_name.into_iter()
+//             .filter(|(_k, value)| value.is_read_only())
+//             .map(|(k, _v)| k)
             .fold(
                 Column::new(),
                 |lst, name| lst.push(Self::view_value(name.into()))

@@ -12,6 +12,7 @@ use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Device, DigitIO};
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct App {
@@ -104,43 +105,56 @@ impl Application for App {
 }
 
 impl App {
+
+    fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
+        let mut map = HashMap::new();
+        map.insert("Analog", vec![
+            "Температура Ротора",
+            "Температура Статора",
+            "Температура Пер.Под.",
+            "Температура Зад.Под.",
+            
+            "Давление -1_1 V",
+            "Вибрация 4_20 A",
+        ]);
+        
+        map.insert("DigitIO", vec![
+            "Клапан 24В",
+            "Клапан 2",
+            "Насос",
+        ]);
+        
+        map.insert("Invertor", vec![
+            "Заданная частота (F)",
+            "Выходная частота (H)",
+            "Выходной ток (A)",
+            "Температура радиатора",
+        ]);
+        
+        map
+    }
+
     fn view_list_value(&self) -> Element<Message> {
     
         let mut lst = Column::new()
         .spacing(20);
 //         .width(Length::Units(200));
+        let values_name_map = Self::get_values_name_map();
         {
-            let values_name = vec![
-                "Температура Ротора",
-                "Температура Статора",
-                "Температура Пер.Под.",
-                "Температура Зад.Под.",
-                
-                "Давление -1_1 V",
-                "Вибрация 4_20 A",
-            ];
+            let values_name = &values_name_map[&"Analog"];
             
             let values_map = self.owen_analog.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
         };
         {
-            let values_name = vec![
-                "Клапан 24В",
-                "Клапан 2",
-                "Насос",
-            ];
+            let values_name = &values_name_map[&"DigitIO"];
             let dev = self.digit_io.device();
             let values_map = dev.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
         };
         
         {
-            let values_name = vec![
-                "Заданная частота (F)",
-                "Выходная частота (H)",
-                "Выходной ток (A)",
-                "Температура радиатора",
-            ];
+            let values_name = &values_name_map[&"Invertor"];
             let dev = self.invertor.device();
             let values_map = dev.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}", name)));
@@ -149,13 +163,13 @@ impl App {
         lst.into()
     }
     
-    fn view_map_values<'a, F>(names: Vec<&str>, map: &ModbusValues, value_key: F) -> Element<'a, Message> 
+    fn view_map_values<'a, F>(names: &Vec<&str>, map: &ModbusValues, value_key: F) -> Element<'a, Message> 
     where F: Fn(&str) -> String
     {
         pub use std::convert::TryFrom;
         names.into_iter()
             .fold(Column::new(),
-            |lst, name| {
+            |lst, &name| {
                 let key = value_key(name);
                 let name = name.into();
                 if let Some(value) = map.get(&key) {

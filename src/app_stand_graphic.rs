@@ -6,7 +6,7 @@ use iced::{
 };
 
 use crate::graphic::{self, Graphic};
-use modbus::{Value, ModbusValues};
+use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Device, DigitIO};
@@ -151,22 +151,33 @@ impl App {
     fn view_map_values<'a, F>(names: Vec<&str>, map: &ModbusValues, value_key: F) -> Element<'a, Message> 
     where F: Fn(&str) -> String
     {
+        pub use std::convert::TryFrom;
         names.into_iter()
             .fold(Column::new(),
             |lst, name| {
                 let key = value_key(name);
                 let name = name.into();
                 if let Some(value) = map.get(&key) {
-                    lst.push(Self::view_value(name))
+                    let err = value.get_error();
+                    let value = f32::try_from(value.as_ref()).unwrap();
+                    lst.push(Self::view_value(name, value, err))
                 } else {lst}
             }
         ).into()
     }
     
-    fn view_value<'a>(text: String) -> Element<'a, Message> {
+    fn view_value<'a>(text: String, value: f32, err: Option<ValueError>) -> Element<'a, Message> {
+        let color = match err {
+            Some(err) if err.yellow <= value => 
+                [1.0, 1.0, 0.0],
+            Some(err) if err.red <= value =>
+                [1.0, 0.0, 0.0],
+            Some(_) | None => [0.0, 0.8, 0.0],
+        };
         Text::new(
-            format!("Name: {}\nValue: {}", text, 0.0)
+            format!("Name: {}\nValue: {}", text, value)
         ).size(16)
+        .color(color)
         .into()
     }
 }

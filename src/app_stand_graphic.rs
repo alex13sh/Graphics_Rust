@@ -25,11 +25,14 @@ pub struct App {
     invertor: Invertor,
     digit_io: DigitIO,
     owen_analog: Device,
+    
+    klapans: [bool; 3],
 }
 
 #[derive(Default)]
 struct UI {
     start: button::State,
+    klapan: [button::State; 3],
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +40,7 @@ pub enum Message {
     ModbusUpdate,
     GraphicUpdate,
     ToggleStart(bool),
+    ToggleKlapan(usize, bool),
     
     GraphicMessage(graphic::Message),
 }
@@ -74,6 +78,8 @@ impl Application for App {
                 invertor: invertor,
                 digit_io: digit_io,
                 owen_analog: dev_owen_analog,
+                
+                klapans: [false; 3],
             },
             Command::none()
         )
@@ -90,6 +96,7 @@ impl Application for App {
         match message {
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ToggleStart(start) => self.is_started = start,
+        Message::ToggleKlapan(ind, check) => self.klapans[ind] = check,
         _ => {}
         };
         Command::none()
@@ -100,16 +107,41 @@ impl Application for App {
         let graph = self.graph.view()
             .map(Message::GraphicMessage);
             
-        let content = Row::new()
+        let row = Row::new()
             .push(self.view_list_value())
             .push(graph);
+        
+        let klapan_names = &Self::get_values_name_map()[&"DigitIO"];
+        let klapans = self.klapans.iter()
+            .zip(self.ui.klapan.iter_mut());
+//         let ui = &mut self.ui;
+        let controls_klapan = klapan_names.into_iter()
+            .zip(0..)
+            .zip(klapans)
+            .fold(Row::new().spacing(20).height(Length::Fill),
+                |row, ((&name, ind), (&check, pb))| 
+                row.push(Button::new(pb, Text::new(name))
+                .style(style::Button::Check{checked: check})
+                .on_press(Message::ToggleKlapan(ind, !check)))
+            );
+        
+        let controls = Column::new()
+            .push(controls_klapan);
+//             .push(controls_invertor);
+            
+        let content: Element<_> = Column::new()
+            .push(row)
+            .push(controls)
+            .into();
+            
+        let content = content.explain([0.0, 0.0, 0.0]);
         
         Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(10)
             .center_x()
-//             .center_y()
+            .center_y()
             .style(style::MyContainer)
             .into()
     }

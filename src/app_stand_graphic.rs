@@ -1,6 +1,6 @@
 use iced::{
     Application, executor, Command, Subscription, time,
-    Element, Container, Text, button, Button,
+    Element, Container, Text, button, Button, slider, Slider,
     Column, Row, Space,
     Length,
 };
@@ -20,6 +20,7 @@ pub struct App {
     
     graph: Graphic,
     is_started: bool,
+    speed: u16,
     
     values: BTreeMap<String, Arc<Value>>,
     invertor: Invertor,
@@ -33,6 +34,7 @@ pub struct App {
 struct UI {
     start: button::State,
     klapan: [button::State; 3],
+    speed: slider::State,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +43,9 @@ pub enum Message {
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
+    
+    SpeedChanged(u16),
+    SetSpeed(u16),
     
     GraphicMessage(graphic::Message),
 }
@@ -73,6 +78,7 @@ impl Application for App {
                 ui: UI::default(),
                 graph: Graphic::series(&value_names),
                 is_started: false,
+                speed: 0,
                 
                 values: values,
                 invertor: invertor,
@@ -95,8 +101,13 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
         Message::GraphicUpdate => self.graph.update_svg(),
+        
         Message::ToggleStart(start) => self.is_started = start,
         Message::ToggleKlapan(ind, check) => self.klapans[ind] = check,
+        
+        Message::SpeedChanged(speed) => self.speed = speed,
+        Message::SetSpeed(speed) => {},
+        
         _ => {}
         };
         Command::none()
@@ -132,15 +143,27 @@ impl Application for App {
                 controls_klapan
             };
             let invertor = {
-                let elm_start = Button::new(&mut self.ui.start, 
+                let start = Button::new(&mut self.ui.start, 
                     if !self.is_started { Text::new("Start") }
                     else {Text::new("Start")}
                 ).style(style::Button::Check{
                     checked: self.is_started
                 }).on_press(Message::ToggleStart(!self.is_started));
                 
-    //             elm_start.into(
-                elm_start
+                let slider = Slider::new(
+                    &mut self.ui.speed,
+                    0..=24_000,
+                    self.speed,
+                    Message::SpeedChanged
+                ).on_release(Message::SetSpeed(self.speed))
+                .step(6_000);
+                
+                Column::new().spacing(5)
+                    .push(
+                        Row::new().spacing(20)
+                            .push(Text::new(format!("Speed: {:0>5}", self.speed)))
+                            .push(slider)
+                    ).push(start)
             };
             
             Column::new()

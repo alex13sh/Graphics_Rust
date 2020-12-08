@@ -32,8 +32,8 @@ pub enum Message {
 
 impl Graphic {
 
-    pub fn new() -> Self {        
-        Self {
+    pub fn new() -> Self {
+        let mut res = Self {
             series: Vec::new(),
             view_port: ViewPort {
                 end: chrono::Local::now(),
@@ -44,7 +44,9 @@ impl Graphic {
             grid_cache: Default::default(),
             lines_cache: Default::default(),
             plotters_svg:  Default::default(),
-        }
+        };
+        res.update_svg();
+        res
     }
     
     pub fn series(names: &[&str]) -> Self {

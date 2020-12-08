@@ -108,28 +108,18 @@ impl Application for App {
             .map(Message::GraphicMessage);
             
         let row = Row::new()
+            .spacing(20)
             .push(self.view_list_value())
             .push(graph);
         
-        let klapan_names = &Self::get_values_name_map()[&"DigitIO"];
-        let klapans = self.klapans.iter()
-            .zip(self.ui.klapan.iter_mut());
-//         let ui = &mut self.ui;
-        let controls_klapan = klapan_names.into_iter()
-            .zip(0..)
-            .zip(klapans)
-            .fold(Row::new().spacing(20).height(Length::Fill),
-                |row, ((&name, ind), (&check, pb))| 
-                row.push(Button::new(pb, Text::new(name))
-                .style(style::Button::Check{checked: check})
-                .on_press(Message::ToggleKlapan(ind, !check)))
-            );
+        let controls_klapan = self.view_control_klapans();
         
         let controls = Column::new()
             .push(controls_klapan);
 //             .push(controls_invertor);
             
         let content: Element<_> = Column::new()
+            .spacing(20)
             .push(row)
             .push(controls)
             .into();
@@ -237,6 +227,25 @@ impl App {
         ).size(16)
         .color(color)
         .into()
+    }
+    
+    
+    fn view_control_klapans<'a>(&'a mut self) -> Element<'a, Message> {
+        let klapan_names = &Self::get_values_name_map()[&"DigitIO"];
+        let klapans = self.klapans.iter()
+            .zip(self.ui.klapan.iter_mut());
+//         let ui = &mut self.ui;
+        let controls_klapan = klapan_names.into_iter()
+            .zip(0..)
+            .zip(klapans)
+            .fold(Row::new().spacing(20).height(Length::Fill),
+                |row, ((&name, ind), (&check, pb))| 
+                row.push(Button::new(pb, Text::new(name))
+                .style(style::Button::Check{checked: check})
+                .on_press(Message::ToggleKlapan(ind, !check)))
+            );
+        
+        controls_klapan.into()
     }
 }
 

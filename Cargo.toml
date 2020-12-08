@@ -29,7 +29,9 @@ members = [
 ]
 
 [features]
-default = ["plotters"]
+default = ["plotters", "test"]
+
+test = ["modbus/test"]
 
 # [profile.release]
 # debug = true

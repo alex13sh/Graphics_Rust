@@ -124,6 +124,7 @@ pub(super) struct ModbusContext {
 
 impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        if cfg!(not(feature = "test")) {
         if let DeviceAddress::TcpIP(txt) = address {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
@@ -137,6 +138,7 @@ impl ModbusContext {
         } else {
             None
         }
+        } else {None}
     }
     pub fn update(&mut self) -> Result<(), DeviceError> {
         use tokio_modbus::client::sync::Reader;

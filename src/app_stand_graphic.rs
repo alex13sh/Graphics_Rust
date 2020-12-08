@@ -32,7 +32,7 @@ pub struct App {
 
 #[derive(Default)]
 struct UI {
-    start: button::State,
+    start: ui_button_start::State,
     klapan: [button::State; 3],
     speed: slider::State,
 }
@@ -48,6 +48,7 @@ pub enum Message {
     SetSpeed(u16),
     
     GraphicMessage(graphic::Message),
+    ButtonStart(ui_button_start::Message),
 }
 
 impl Application for App {
@@ -101,8 +102,12 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
         Message::GraphicUpdate => self.graph.update_svg(),
+        Message::ButtonStart(message) => self.ui.start.update(message),
         
-        Message::ToggleStart(start) => self.is_started = start,
+        Message::ToggleStart(start) => {
+            self.is_started = start;
+            self.ui.start = Default::default();
+        },
         Message::ToggleKlapan(ind, check) => self.klapans[ind] = check,
         
         Message::SpeedChanged(speed) => self.speed = speed,
@@ -143,12 +148,17 @@ impl Application for App {
                 controls_klapan
             };
             let invertor = {
-                let start = Button::new(&mut self.ui.start, 
-                    if !self.is_started { Text::new("Start") }
-                    else {Text::new("Start")}
-                ).style(style::Button::Check{
-                    checked: self.is_started
-                }).on_press(Message::ToggleStart(!self.is_started));
+                let is_started = self.is_started;
+                let start = self.ui.start.view(
+                    self.is_started,
+//                     Message::ToggleStart(!self.is_started)
+                ).map(move |message| {
+                    if let ui_button_start::Message::ToggleStart(start) = message {
+                        Message::ToggleStart(start)
+                    } else {
+                        Message::ButtonStart(message)
+                    }
+                });
                 
                 let slider = Slider::new(
                     &mut self.ui.speed,
@@ -340,6 +350,87 @@ mod style {
             container::Style {
                 background: Some(Background::Color([0.2, 0.2, 0.2].into())),
                 .. Default::default()
+            }
+        }
+    }
+}
+
+mod ui_button_start {
+    use super::*;
+    
+    pub enum State {
+        Start {
+            start: button::State,
+        },
+        Confirm {
+            confirm: button::State,
+            cancel: button::State,
+        },
+    }
+    
+    #[derive(Debug, Clone)]
+    pub enum Message {
+        TryStart,
+        Confirm,
+        Cancel,
+        ToggleStart(bool),
+    }
+    
+    impl Default for State {
+        fn default() -> State {
+            State::Start {
+                start: Default::default(),
+            }
+        }
+    }
+    
+    impl State {
+        pub fn update(&mut self, message: Message) {
+            match self {
+            Self::Start {..} => if let Message::TryStart = message {
+                *self = Self::Confirm {
+                    confirm: Default::default(),
+                    cancel: Default::default(),
+                }
+            },
+            Self::Confirm {..} => {
+                *self = Self::Start {
+                    start: Default::default(),
+                };
+            },
+            _ => {}
+            };
+        }
+        
+        pub fn view(&mut self, is_started: bool) -> Element<Message> {
+            match self {
+            Self::Start {start} => {
+                let pb = Button::new(start, 
+                    if !is_started { Text::new("Start") }
+                    else {Text::new("Stop")}
+                ).style(style::Button::Check{
+                    checked: is_started
+                });
+                let pb = if !is_started {
+                    pb.on_press(Message::TryStart)
+                } else {
+                    pb.on_press(Message::ToggleStart(false))
+                };
+                
+                pb.into()
+            }, Self::Confirm {confirm, cancel} => {
+                let pb_cancel = Button::new(cancel, 
+                    Text::new("Отмена")
+                ).on_press(Message::Cancel);
+                let pb_start = Button::new(confirm, 
+                    Text::new("Запустить")
+                ).on_press(Message::ToggleStart(true));
+                
+                Row::new().spacing(50)
+                    .push(pb_cancel)
+                    .push(pb_start)
+                    .into()
+            }
             }
         }
     }

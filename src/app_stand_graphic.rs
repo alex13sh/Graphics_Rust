@@ -101,17 +101,27 @@ impl Application for App {
     }
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
+        Message::ModbusUpdate  => {
+            // Analog Update
+            // DigitIO Update
+            // Invertor Update
+            // Append Values 
+        },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
         
         Message::ToggleStart(start) => {
             self.is_started = start;
             self.ui.start = Default::default();
+            // Invertor SetSpeed
+            // Invertor Start | Stop
         },
-        Message::ToggleKlapan(ind, check) => self.klapans[ind] = check,
-        
+        Message::ToggleKlapan(ind, check) => {
+            self.klapans[ind] = check;
+            // DigitIO turn_clapan
+        },
         Message::SpeedChanged(speed) => self.speed = speed,
-        Message::SetSpeed(speed) => {},
+//         Message::SetSpeed(speed) => {},
         
         _ => {}
         };
@@ -165,7 +175,8 @@ impl Application for App {
                     0..=24_000,
                     self.speed,
                     Message::SpeedChanged
-                ).on_release(Message::SetSpeed(self.speed))
+                )
+//                 .on_release(Message::SetSpeed(self.speed))
                 .step(6_000);
                 
                 Column::new().spacing(5)
@@ -189,7 +200,7 @@ impl Application for App {
             .push(controls)
             .into();
             
-        let content = content.explain([0.0, 0.0, 0.0]);
+//         let content = content.explain([0.0, 0.0, 0.0]);
         
         Container::new(content)
             .width(Length::Fill)

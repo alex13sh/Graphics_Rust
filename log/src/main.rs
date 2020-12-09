@@ -3,7 +3,9 @@ use log::*;
 type MyResult = Result<(), Box<dyn std::error::Error>>;
 
 fn main() -> MyResult {
-    convert_json_old_new()
+    convert_json_old_new()?;
+    convert_json2csv()?;
+    Ok(())
 }
 
 // За 11 секунд и 30-40 мб озу
@@ -58,6 +60,22 @@ fn convert_json_old_new() -> MyResult {
 
     for name in names {
         convert_log_file(name.to_str().unwrap(), "log/", "tmp/")?;
+    }
+    
+    Ok(())
+}
+
+fn convert_json2csv() -> MyResult {
+    use convert::*;
+    
+    let tmp_path = get_file_path("csv/");
+    let paths = get_file_list("tmp");
+    let names = paths.iter()
+        .filter_map(|path| path.file_stem())
+        .filter(|name| !tmp_path.join(name).with_extension("csv").exists());
+        
+    for name in names {
+        convert::json2csv(name.to_str().unwrap(), "tmp/", "csv/")?;
     }
     
     Ok(())

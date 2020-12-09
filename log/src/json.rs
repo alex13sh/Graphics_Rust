@@ -6,8 +6,8 @@ use super::LogValue;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SourceJsonLog {
-    start: String,
-    finish: String,
+    start: Option<String>,
+    finish: Option<String>,
     v_dt: Vec<String>,
     v_hash: Vec<String>,
     v_value: Vec<i32>,
@@ -50,8 +50,8 @@ pub mod convert {
     
     fn convert_log(source_log: SourceJsonLog) -> NewJsonLog {
         NewJsonLog {
-            start: source_log.start,
-            finish: source_log.finish,
+            start: source_log.start.unwrap_or("".into()),
+            finish: source_log.finish.unwrap_or("".into()),
             values: source_log.v_dt.into_iter()
                 .zip(source_log.v_hash.into_iter())
                 .zip(source_log.v_value.into_iter())

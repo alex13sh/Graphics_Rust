@@ -10,7 +10,7 @@ pub enum ValueGroup {
         pin: u8,
         interval: u16,
     //     pub range: std::Range, 
-        value_error: ValueError,
+        value_error: super::ValueError,
         sensor_type: SensorType,
     },
     GroupPin {
@@ -21,23 +21,6 @@ pub enum ValueGroup {
     Group {
         name: String,
         values: Vec<Value>,
-    }
-}
-
-#[derive(Default, Debug)]
-pub struct ValueError {
-    pub yellow: f32,
-    pub red: f32
-}
-
-impl From<(f32, f32)> for ValueError {
-    fn from((y, r): (f32, f32)) -> Self {
-        Self {yellow: y, red: r}
-    }
-}
-impl From<(i32, i32)> for ValueError {
-    fn from((y, r): (i32, i32)) -> Self {
-        Self {yellow: y as f32, red: r as f32}
     }
 }
 

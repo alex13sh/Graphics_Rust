@@ -124,6 +124,7 @@ pub(super) struct ModbusContext {
 
 impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        if cfg!(not(feature = "test")) {
         if let DeviceAddress::TcpIP(txt) = address {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
@@ -137,6 +138,7 @@ impl ModbusContext {
         } else {
             None
         }
+        } else {None}
     }
     pub fn update(&mut self) -> Result<(), DeviceError> {
         use tokio_modbus::client::sync::Reader;
@@ -263,8 +265,8 @@ impl DeviceType<Device> {
         match *self {
         Self::OwenAnalog => {
             match s {
-            SensorInit::Sensor{pin, ..} => {
-                values = create_values_owen_analog(pin);
+            SensorInit::Sensor{pin, value_error, ..} => {
+                values = create_values_owen_analog(pin, value_error);
 //                 value = values.get("value").unwrap_or(&None)).clone();
                 value = None;
                 
@@ -301,10 +303,10 @@ impl DeviceType<Device> {
     }
 }
 
-fn create_values_owen_analog(pin: u8) -> ModbusValues {
+fn create_values_owen_analog(pin: u8, err: crate::ValueError) -> ModbusValues {
     let mut v = Vec::new();
     let pin = pin as u16;
-    v.push(Value::new("value_float", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read));
+    v.push(Value::new("value_float", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read(Some(err))));
     v.push(Value::new("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write)); // "Тип датчика"
     v.push(Value::new("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write)); // "положение десятичной точки"
     v.push(Value::new("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write));
@@ -319,7 +321,7 @@ fn create_values_owen_digital(pin: u8, output: bool) -> ModbusValues {
     if pin>=1 && pin<=8 && !output {v.push(Value::new("type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Дополнительный режим"
     if pin>=1 && pin<=12 {v.push(Value::new("filter", 96 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Фильтр"
     if pin>=1 && pin<=8 && !output {v.push(Value::new("interval", 128 +(pin-1), ValueSize::UINT16, ValueDirect::Write));} // "Дополнительный режим"
-    if pin>=1 && pin<=12 {v.push(Value::new("value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read));} // "Значение входа в дополнительном режиме"
+    if pin>=1 && pin<=12 {v.push(Value::new("value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read(None)));} // "Значение входа в дополнительном режиме"
     if pin>=1 && pin<=8 && !output {v.push(Value::new("reset_value", 224 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));} // "Сброс значения дополнительного режима"
     if pin>=9 && pin<=12 {v.push(Value::new("reset_counter", 232 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write));} // "Сброс значения счётчика импульсв"
     

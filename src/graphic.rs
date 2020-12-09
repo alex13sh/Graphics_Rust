@@ -32,8 +32,8 @@ pub enum Message {
 
 impl Graphic {
 
-    pub fn new() -> Self {        
-        Self {
+    pub fn new() -> Self {
+        let mut res = Self {
             series: Vec::new(),
             view_port: ViewPort {
                 end: chrono::Local::now(),
@@ -44,7 +44,9 @@ impl Graphic {
             grid_cache: Default::default(),
             lines_cache: Default::default(),
             plotters_svg:  Default::default(),
-        }
+        };
+        res.update_svg();
+        res
     }
     
     pub fn series(names: &[&str]) -> Self {
@@ -102,7 +104,7 @@ impl Graphic {
     }
     
     #[cfg(not(feature = "plotters"))]
-    pub fn view(&mut self) -> Element<Message> {
+    pub fn view<'a>(&mut self) -> Element<'a, Message> {
         Canvas::new(self)
             .width(Length::Units(1000))
             .height(Length::Units(1000))
@@ -115,7 +117,7 @@ impl Graphic {
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (800, 600)).into_drawing_area();
+        let root_area = SVGBackend::with_string(&mut svg_text, (1600, 800)).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let mut cc = ChartBuilder::on(&root_area)
             .x_label_area_size(50)
@@ -161,21 +163,21 @@ impl Graphic {
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
     }
     #[cfg(feature = "plotters")]
-    pub fn view(&mut self) -> Element<Message> {
+    pub fn view<'a>(&mut self) -> Element<'a, Message> {
         let content: Element<Message> = if let Some(handle) = self.plotters_svg.clone() {
             Svg::new(handle)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
         } else {iced::Text::new("Not SVG").into()};
-//         svg.into()
-        Container::new(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(20)
-            .center_x()
-            .center_y()
-            .into()
+        content.into()
+//         Container::new(content)
+//             .width(Length::Fill)
+//             .height(Length::Fill)
+//             .padding(20)
+// //             .center_x()
+// //             .center_y()
+//             .into()
     }
 }
 

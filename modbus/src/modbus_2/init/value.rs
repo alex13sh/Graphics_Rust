@@ -8,9 +8,26 @@ pub struct Value {
     pub size: ValueSize,
 }
 
+#[derive(Default, Debug, Clone, Copy)]
+pub struct ValueError {
+    pub yellow: f32,
+    pub red: f32
+}
+
+impl From<(f32, f32)> for ValueError {
+    fn from((y, r): (f32, f32)) -> Self {
+        Self {yellow: y, red: r}
+    }
+}
+impl From<(i32, i32)> for ValueError {
+    fn from((y, r): (i32, i32)) -> Self {
+        Self {yellow: y as f32, red: r as f32}
+    }
+}
+
 #[derive(Debug, Copy, Clone)]
 pub enum ValueDirect {
-    Read, // (interval)
+    Read(Option<ValueError>), // (interval)
     Write
 }
 

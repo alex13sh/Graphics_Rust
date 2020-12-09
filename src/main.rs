@@ -10,10 +10,12 @@ mod graphic;
 
 mod app_test_device;
 mod app_graphic;
+mod app_stand_graphic;
 
 fn main() {
     println!("Hello World");
-    app_graphic::GraphicsApp::run(Settings::default());
+//     app_graphic::GraphicsApp::run(Settings::default());
+    app_stand_graphic::App::run(Settings::default());
 //     app_test_device::TestDeviceApp::run(Settings { 
 //         window: window::Settings {
 //             //size: (600, 500), //

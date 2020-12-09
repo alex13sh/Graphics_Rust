@@ -1,26 +1,19 @@
- use std::fs::File;
- use std::error::Error;
- use serde::{de, Deserialize, Deserializer};
+use std::fs::File;
+use std::error::Error;
  
-type DateTime = chrono::DateTime<chrono::Local>;
-type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
-use chrono::Duration;
-use chrono::NaiveDateTime;
+// type DateTime = chrono::DateTime<chrono::Local>;
+// type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
+// use chrono::Duration;
 
-fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
-}
+use crate::naive_date_time_from_str;
 
+use serde::{Deserialize, Serialize};
  #[derive(Debug, Deserialize)]
  pub struct SessionTime {
     #[serde(deserialize_with = "naive_date_time_from_str")]
-    start: NaiveDateTime,
+    start: crate::NaiveDateTime,
     #[serde(deserialize_with = "naive_date_time_from_str")]
-    finish: NaiveDateTime,
+    finish: crate::NaiveDateTime,
  }
  
  pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {

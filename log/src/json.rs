@@ -37,7 +37,11 @@ fn convert_log(source_log: SourceJsonLog) -> NewJsonLog {
         values: source_log.v_dt.into_iter()
             .zip(source_log.v_hash.into_iter())
             .zip(source_log.v_value.into_iter())
-            .map(|((dt, hash), value)| LogValue{date_time: dt, hash: hash, value: f32::from_bits(value as u32)})
+            .map(|((dt, hash), value)| LogValue{
+                date_time: crate::NaiveDateTime::parse_from_str(&dt, "%Y-%m-%dT%H:%M:%S%.f").unwrap(),
+                hash: hash, 
+                value: f32::from_bits(value as u32)}
+            )
             .collect()
     }
 }

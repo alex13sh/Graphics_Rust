@@ -1,15 +1,21 @@
 
-use std::path::PathBuf;
+pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
 pub use chrono::{NaiveDateTime, SecondsFormat};
 
 pub mod json;
 pub mod csv;
-pub use json::*;
+
+#[cfg(feature = "convert")]
+pub mod convert;
+
+// pub use json::*;
 // pub use csv::*;
 
-pub(crate) fn get_file_path(file_name: &str) -> PathBuf {
+pub(crate) type MyResult = Result<(), Box<dyn std::error::Error>>;
+
+pub fn get_file_path(file_name: &str) -> PathBuf {
     let mut path = if let Some(project_dirs) =
         directories::ProjectDirs::from("rs", "modbus", "GraphicModbus")
     {

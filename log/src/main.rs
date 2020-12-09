@@ -1,15 +1,13 @@
 use log::*;
 
-fn main_1() -> std::io::Result<()> {
-//     convert_log_file("values_14_09_2020__13_24_19_668.json", "log/", "new_log/")
-    let js = open_json_file("values_14_09_2020__13_24_19_668.json");
-    let hashs = js.get_all_hash();
-    dbg!(hashs.len(), hashs);
-    Ok(())
+type MyResult = Result<(), Box<dyn std::error::Error>>;
+
+fn main() -> MyResult {
+    convert_json_old_new()
 }
 
 // За 11 секунд и 30-40 мб озу
-fn test_speed() -> std::io::Result<()> {
+fn test_speed() -> MyResult {
     let paths = vec![
         "values_27_08_2020__13_08_30_042.json",
         "values_07_09_2020__13_02_37_096.json",
@@ -31,13 +29,50 @@ fn test_speed() -> std::io::Result<()> {
     ];
     for _ in 1..10 {
         for path in &paths {
-            convert_log_file(path, "Log/", "test_log")?;
+            json::convert::convert_log_file(path, "Log/", "test_log")?;
         }
     }
     Ok(())
 }
 
-fn main() {
-    log::csv::test_read_csv_1("./log/sessions_1.csv")
+fn json_get_all_hash() -> MyResult {
+    let js = json::open_json_file("values_14_09_2020__13_24_19_668.json");
+    let hashs = js.get_all_hash();
+    dbg!(hashs.len(), hashs);
+    Ok(())
+}
+
+fn read_csv() {
+    csv::test_read_csv_1("./log/sessions_1.csv")
         .unwrap();
+}
+
+fn convert_json_old_new() -> MyResult {
+    use json::convert::*;
+    
+    let paths = get_file_list("log");
+    let names: Vec<_> = paths.iter()
+        .filter_map(|path| path.file_name())
+        .collect();
+//     dbg!(names);
+    for name in names {
+        convert_log_file(name.to_str().unwrap(), "log/", "tmp/")?;
+    }
+    
+    Ok(())
+}
+
+fn get_file_list(dir: impl Into<PathBuf>) -> Vec<PathBuf> {
+    let dir = dir.into();
+    let dir_str = dir.to_str().unwrap();
+    let path = get_file_path(dir_str);
+    let paths = std::fs::read_dir(path).unwrap();
+//     dbg!(paths);
+    paths.filter_map(|res| res.ok())
+    .map(|dir| dir.path())
+    .filter(|path| 
+        if let Some(ext) = path.extension() {
+            ext == "json"
+        } else {false}
+    ).collect()
 }

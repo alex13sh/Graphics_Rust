@@ -12,3 +12,8 @@ serde_json = "1.0"
 csv = "1.1.5"
 directories = "2.0"
 chrono = "0.4"
+
+[features]
+default = ["convert"]
+
+convert = []

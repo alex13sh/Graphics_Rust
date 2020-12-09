@@ -50,11 +50,12 @@ fn read_csv() {
 fn convert_json_old_new() -> MyResult {
     use json::convert::*;
     
+    let tmp_path = get_file_path("tmp/");
     let paths = get_file_list("log");
-    let names: Vec<_> = paths.iter()
+    let names = paths.iter()
         .filter_map(|path| path.file_name())
-        .collect();
-//     dbg!(names);
+        .filter(|name| !tmp_path.join(name).exists());
+
     for name in names {
         convert_log_file(name.to_str().unwrap(), "log/", "tmp/")?;
     }

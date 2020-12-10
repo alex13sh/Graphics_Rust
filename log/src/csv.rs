@@ -9,7 +9,7 @@ use std::error::Error;
 use crate::{naive_date_time_from_str, naive_date_time_to_str};
 
 use serde::{Deserialize, Serialize};
- #[derive(Debug, Serialize, Deserialize)]
+ #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionTime {
     #[serde(serialize_with = "naive_date_time_to_str")]
     #[serde(deserialize_with = "naive_date_time_from_str")]

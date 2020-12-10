@@ -75,7 +75,8 @@ impl Graphic {
         for ser in self.series.iter_mut() {
             if ser.name == hash {
 //                 dbg!(&value.date_time);
-                let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
+//                 let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
+                    let dt: DateTime  = value.date_time.into();
                 ser.points.push(DatePoint{
                     dt: dt,
                     value: value.value
@@ -141,15 +142,16 @@ impl Graphic {
             let points = self.view_port.get_slice_points(&s.points);
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
-            let mut f = |ls| if s.name == "82dc5b4c30" {
+            let ls = LineSeries::new(
+                itr.map(|p| (p.dt, p.value)),
+                &Palette99::pick(c),
+            );
+            let ser = if s.name == "82dc5b4c30" {
                  cc.draw_secondary_series(ls)
             } else {
                 cc.draw_series(ls)
-            };
-            f(LineSeries::new(
-                itr.map(|p| (p.dt, p.value)),
-                &Palette99::pick(c),
-            )).unwrap()
+            }.unwrap();
+            ser
             .label(&s.name)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }

@@ -90,7 +90,7 @@ fn convert_session() -> MyResult {
     let sessions = csv::read_session(&session_path_1).ok_or("")?;
     let sessions: Vec<_> = sessions.into_iter()
         .map(|mut s| {
-            s.set_fileName(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
+            s.set_file_name(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
                 .to_string().replace("_.", "_"));
             s
         })

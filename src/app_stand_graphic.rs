@@ -96,15 +96,35 @@ impl Application for App {
         String::from("GraphicsApp - Iced")
     }
     fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(5000))
-            .map(|_| Message::GraphicUpdate)
+        Subscription::batch(vec![
+            time::every(std::time::Duration::from_millis(500))
+            .map(|_| Message::ModbusUpdate),
+            time::every(std::time::Duration::from_millis(1000))
+            .map(|_| Message::GraphicUpdate),
+        ])
     }
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
         Message::ModbusUpdate  => {
-            // Analog Update
-            // DigitIO Update
-            // Invertor Update
+            let devices = [&self.owen_analog, 
+                &self.digit_io.device(), &self.invertor.device()];
+                
+            for d in &devices {
+                if let Ok(_) = d.update() {
+                    let values = d.values();
+                    let values = {
+                        use std::convert::TryFrom;
+                        values.iter()
+                        .filter(|v| v.is_read_only())
+                        .map(|v| 
+                            if let Ok(value) = f32::try_from(v.as_ref()) {
+                                (&v.name()[..], value)
+                            } else {(&v.name()[..], -1.0)}
+                        ).collect()
+                    };
+                    self.graph.append_values(values);
+                }
+            }
             // Append Values 
         },
         Message::GraphicUpdate => self.graph.update_svg(),

@@ -3,8 +3,9 @@ use log::*;
 type MyResult = Result<(), Box<dyn std::error::Error>>;
 
 fn main() -> MyResult {
-    convert_json_old_new()?;
-    convert_json2csv()?;
+//     convert_json_old_new()?;
+//     convert_json2csv()?;
+    test_read_csv_2()?;
     Ok(())
 }
 
@@ -94,4 +95,12 @@ fn get_file_list(dir: impl Into<PathBuf>) -> Vec<PathBuf> {
             ext == "json"
         } else {false}
     ).collect()
+}
+
+fn test_read_csv_2() -> MyResult {
+    let tmp_path = get_file_path("csv/");
+    
+    let values = csv::read_values(tmp_path.join("values_07_09_2020__16_42_09_399.csv")).ok_or("")?;
+    dbg!(values);
+    Ok(())
 }

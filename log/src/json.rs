@@ -56,7 +56,7 @@ pub mod convert {
                 .zip(source_log.v_hash.into_iter())
                 .zip(source_log.v_value.into_iter())
                 .map(|((dt, hash), value)| log::LogValue{
-                    date_time: crate::NaiveDateTime::parse_from_str(&dt, "%Y-%m-%dT%H:%M:%S%.f").unwrap(),
+                    date_time: crate::DateTime::parse_from_str(&dt, "%Y-%m-%dT%H:%M:%S%.f").unwrap(),
                     hash: hash, 
                     value: f32::from_bits(value as u32)}
                 )

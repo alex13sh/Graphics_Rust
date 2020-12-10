@@ -6,17 +6,17 @@ use std::error::Error;
 // type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
 // use chrono::Duration;
 
-use crate::{naive_date_time_from_str, naive_date_time_to_str};
+use crate::{date_time_from_str, date_time_to_str};
 
 use serde::{Deserialize, Serialize};
  #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionTime {
-    #[serde(serialize_with = "naive_date_time_to_str")]
-    #[serde(deserialize_with = "naive_date_time_from_str")]
-    pub start: crate::NaiveDateTime,
-    #[serde(serialize_with = "naive_date_time_to_str")]
-    #[serde(deserialize_with = "naive_date_time_from_str")]
-    pub finish: crate::NaiveDateTime,
+    #[serde(serialize_with = "date_time_to_str")]
+    #[serde(deserialize_with = "date_time_from_str")]
+    pub start: crate::DateTime,
+    #[serde(serialize_with = "date_time_to_str")]
+    #[serde(deserialize_with = "date_time_from_str")]
+    pub finish: crate::DateTime,
     pub file_name: Option<String>,
     
     #[serde(skip)]

@@ -2,7 +2,10 @@
 pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
-pub use chrono::{NaiveDateTime, SecondsFormat};
+pub use chrono::{SecondsFormat};
+type DateTimeLocal = chrono::DateTime<chrono::Local>;
+type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
+type DateTime = DateTimeFix;
 
 pub mod json;
 pub mod csv;
@@ -31,23 +34,23 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogValue {
-    #[serde(deserialize_with = "naive_date_time_from_str")]
-    #[serde(serialize_with = "naive_date_time_to_str")]
-    pub date_time: NaiveDateTime,
+    #[serde(deserialize_with = "date_time_from_str")]
+    #[serde(serialize_with = "date_time_to_str")]
+    pub date_time: DateTimeFix,
     pub hash: String,
     pub value: f32,
 }
 
 use serde::{de, Deserializer, Serializer};
-pub(crate) fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
+pub(crate) fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTimeFix, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
+    DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
 }
 
-pub(crate) fn naive_date_time_to_str<S>(dt: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
+pub(crate) fn date_time_to_str<S>(dt: &DateTimeFix, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

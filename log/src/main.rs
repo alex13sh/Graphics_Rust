@@ -87,16 +87,15 @@ fn convert_session() -> MyResult {
     let session_path_1 = get_file_path("log/sessions_1.csv");
     let session_path_2 = get_file_path("csv/sessions.csv");
     
-    let sessions = csv::read_session(session_path_1).ok_or("")?;
+    let sessions = csv::read_session(&session_path_1).ok_or("")?;
     let sessions: Vec<_> = sessions.into_iter()
-        .map(|s| csv::SessionTime {
-            start: s.start,
-            finish: s.finish,
-            fileName: Some(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
-                .to_string().replace("_.", "_")),
+        .map(|mut s| {
+            s.set_fileName(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
+                .to_string().replace("_.", "_"));
+            s
         })
         .collect();
-    csv::write_session(session_path_2, sessions)?;
+    csv::write_session(&session_path_2, sessions)?;
     Ok(())
 }
 
@@ -118,7 +117,7 @@ fn get_file_list(dir: impl Into<PathBuf>) -> Vec<PathBuf> {
 fn test_read_csv_2() -> MyResult {
     let tmp_path = get_file_path("csv/");
     
-    let values = csv::read_values(tmp_path.join("values_07_09_2020__16_42_09_399.csv")).ok_or("")?;
+    let values = csv::read_values(&tmp_path.join("values_07_09_2020__16_42_09_399.csv")).ok_or("")?;
     dbg!(values);
     Ok(())
 }

@@ -18,8 +18,17 @@ pub struct SessionTime {
     #[serde(deserialize_with = "naive_date_time_from_str")]
     pub finish: crate::NaiveDateTime,
     pub fileName: Option<String>,
+    
+    #[serde(skip)]
+    pub values: Option<Vec<crate::LogValue>>,
 }
  
+impl SessionTime {
+    pub fn set_fileName(&mut self, fileName: String) {
+        self.fileName = Some(fileName);
+    }
+}
+
 pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {
     let file_path = super::get_file_path(file_path);
     let file = File::open(file_path)?;
@@ -35,7 +44,7 @@ pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
  
-pub fn write_values(fileName: PathBuf, values: Vec<crate::LogValue>) -> crate::MyResult {
+pub fn write_values(fileName: &PathBuf, values: Vec<crate::LogValue>) -> crate::MyResult {
     let file = File::create(fileName)?;
     let mut wrt = csv::WriterBuilder::new()
         .has_headers(true)
@@ -49,7 +58,7 @@ pub fn write_values(fileName: PathBuf, values: Vec<crate::LogValue>) -> crate::M
     Ok(())
 }
 
-pub fn read_values(fileName: PathBuf) -> Option<Vec<crate::LogValue>> {
+pub fn read_values(fileName: &PathBuf) -> Option<Vec<crate::LogValue>> {
     let file = File::open(fileName).ok()?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -62,7 +71,7 @@ pub fn read_values(fileName: PathBuf) -> Option<Vec<crate::LogValue>> {
     )
 }
 
-pub fn write_session(fileName: PathBuf, session: Vec<SessionTime>) -> crate::MyResult {
+pub fn write_session(fileName: &PathBuf, session: Vec<SessionTime>) -> crate::MyResult {
     let file = File::create(fileName)?;
     let mut wrt = csv::WriterBuilder::new()
         .has_headers(true)
@@ -76,7 +85,7 @@ pub fn write_session(fileName: PathBuf, session: Vec<SessionTime>) -> crate::MyR
     Ok(())
 }
 
-pub fn read_session(fileName: PathBuf) -> Option<Vec<SessionTime>> {
+pub fn read_session(fileName: &PathBuf) -> Option<Vec<SessionTime>> {
     let file = File::open(fileName).ok()?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -87,4 +96,14 @@ pub fn read_session(fileName: PathBuf) -> Option<Vec<SessionTime>> {
         .filter_map(|res| res.ok())
         .collect()
     )
+}
+
+pub fn read_session_full(fileName: &PathBuf) -> Option<Vec<SessionTime>> {
+    let mut sessions = read_session(&fileName)?;
+    for s in &mut sessions {
+        if let Some(ref s_fileName) = s.fileName {
+            s.values = read_values(&fileName.with_file_name(s_fileName));
+        }
+    }
+    Some(sessions)
 }

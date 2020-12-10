@@ -9,6 +9,6 @@ pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResul
     let mut file = File::open(path)?;
     file.read_to_string(&mut contents);
     let js: crate::json::NewJsonLog = serde_json::from_str(&contents)?;
-    crate::csv::write_values(path_to, js.values)?;
+    crate::csv::write_values(&path_to, js.values)?;
     Ok(())
 }

@@ -74,7 +74,7 @@ impl Graphic {
     }
     pub fn append_log_value(&mut self, value: log::LogValue) {
         let hash = value.hash;
-        let dt = DateTimeFix::parse_from_rfc3339(&(value.date_time+"+03:00")).unwrap().into();
+        let dt: DateTime  = value.date_time.into();
         let dp = DatePoint{ dt: dt, value: value.value };
         self.append_value(&hash, dp);
     }

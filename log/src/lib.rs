@@ -1,11 +1,24 @@
 
-use std::path::PathBuf;
+pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
+pub use chrono::{SecondsFormat};
+type DateTimeLocal = chrono::DateTime<chrono::Local>;
+type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
+type DateTime = DateTimeFix;
 
-use serde_json::{Result, Value};
+pub mod json;
+pub mod csv;
 
-fn get_file_path(file_name: &str) -> PathBuf {
+#[cfg(feature = "convert")]
+pub mod convert;
+
+// pub use json::*;
+// pub use csv::*;
+
+pub(crate) type MyResult = Result<(), Box<dyn std::error::Error>>;
+
+pub fn get_file_path(file_name: &str) -> PathBuf {
     let mut path = if let Some(project_dirs) =
         directories::ProjectDirs::from("rs", "modbus", "GraphicModbus")
     {
@@ -18,76 +31,98 @@ fn get_file_path(file_name: &str) -> PathBuf {
 }
 
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, Debug)]
-struct SourceJsonLog {
-    start: String,
-    finish: String,
-    v_dt: Vec<String>,
-    v_hash: Vec<String>,
-    v_value: Vec<i32>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct NewJsonLog {
-    pub start: String,
-    pub finish: String,
-    pub values: Vec<LogValue>,
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogValue {
-    pub date_time: String,
+    #[serde(deserialize_with = "date_time_from_str")]
+    #[serde(serialize_with = "date_time_to_str")]
+    pub date_time: DateTimeFix,
     pub hash: String,
     pub value: f32,
 }
 
-use std::collections::HashSet;
-impl NewJsonLog {
-    pub fn get_all_hash(&self) -> HashSet<String> {
-        self.values.iter().fold(HashSet::new(), |mut hashs, val| {
-            hashs.insert(val.hash.clone());
-            hashs
-        })
+use serde::{de, Deserializer, Serializer};
+pub(crate) fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTimeFix, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
+}
+
+pub(crate) fn date_time_to_str<S>(dt: &DateTimeFix, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+//     let s = dt.to_rfc3339_opts(SecondsFormat::Millis, false);
+    let s = dt.format("%Y-%m-%dT%H:%M:%S%.f").to_string();
+    serializer.serialize_str(&s)
+}
+
+enum LoggerType {
+    Json {
+        sessions: Vec<json::NewJsonLog>,
+    },
+    CSV {
+        sessions: Vec<csv::SessionTime>,
+    },
+}
+
+struct Logger {
+    log_type: LoggerType,
+    
+}
+
+impl Logger {
+    pub fn open_json() -> Self {
+        Logger {
+            log_type: LoggerType::Json {
+                sessions: Vec::new(),
+            },
+        }
     }
-}
-
-fn convert_log(source_log: SourceJsonLog) -> NewJsonLog {
-    NewJsonLog {
-        start: source_log.start,
-        finish: source_log.finish,
-        values: source_log.v_dt.into_iter()
-            .zip(source_log.v_hash.into_iter())
-            .zip(source_log.v_value.into_iter())
-            .map(|((dt, hash), value)| LogValue{date_time: dt, hash: hash, value: f32::from_bits(value as u32)})
-            .collect()
+    pub fn open_csv() -> Self {
+        let sessions_path = get_file_path("csv/session.csv");
+        Logger {
+            log_type: LoggerType::CSV {
+                sessions: csv::read_session_full(&sessions_path)
+                    .unwrap_or(Vec::new()),
+            },
+        }
     }
-}
-
-pub fn convert_log_file(file_name: &str, from_dir: &str, to_dir: &str) -> std::io::Result<()> {
-//     let file_name = "values_14_09_2020__13_24_19_668.json";
-    let path = get_file_path(&(from_dir.to_owned() + file_name));
-    println!("Path: {:?}", path);
     
-    let mut contents = String::new();
-    let mut file = File::open(path)?;
-    file.read_to_string(&mut contents);
-    let js: SourceJsonLog = serde_json::from_str(&contents)?;
-    let js = convert_log(js);
-//     dbg!(&js);
+    pub fn get_last_values(&self) -> Option<&Vec<crate::LogValue>> {
+        match self.log_type {
+        LoggerType::CSV {ref sessions} => sessions.last()?.values.as_ref(),
+        LoggerType::Json {ref sessions} => Some(&sessions.last()?.values),
+        _ => None,
+        }
+    }
     
-    let contents = serde_json::to_string_pretty(&js)?;
-    let path = get_file_path(&(to_dir.to_owned() + file_name)); // "new_log/"
-    let mut file = File::create(path)?;
-    file.write_all(contents.as_ref());
-    
-    Ok(())
-}
-
-pub fn open_json_file(file_name: &str) -> NewJsonLog {
-    let path = get_file_path(&("new_log/".to_owned() + file_name));
-    println!("Path: {:?}", path);
-    let mut contents = String::new();
-    let mut file = File::open(path).expect("Файл не найден");
-    file.read_to_string(&mut contents);
-    serde_json::from_str(&contents).expect("Error Json Parse")
+    pub fn new_session(&mut self, values: &Vec<crate::LogValue>) {
+        if values.len() < 2 {return;}
+        let start = values.first().unwrap().date_time;
+        let finish = values.last().unwrap().date_time;
+        
+        match self.log_type {
+        LoggerType::CSV {ref mut sessions} => {
+            let s = csv::SessionTime {
+                start: start,
+                finish: finish,
+                file_name: Some(start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
+                    .to_string().replace("_.", "_")),
+                values: Some(values.clone()),
+            };
+            csv::write_values(&get_file_path("csv").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
+            sessions.push(s);
+            csv::write_session(&get_file_path("csv/session.csv"), sessions.clone());
+        },
+//         LoggerType::Json {ref mut sessions} => sessions.push(json::NewJsonLog {
+//             start: start,
+//             finish: finish,
+//             values: values.clone(),
+//         }),
+        _ => {}
+        }
+    }
 }

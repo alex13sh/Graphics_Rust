@@ -10,7 +10,7 @@ use crate::graphic;
 
 pub struct GraphicsApp {
     graph: graphic::Graphic,
-    log_js: log::NewJsonLog,
+    log_js: log::json::NewJsonLog,
 //     log_value_iter: &dyn Iterator<Item=log::LogValue>,
     log_value_index: usize,
 }
@@ -28,7 +28,7 @@ impl Application for GraphicsApp {
     type Message = GraphicsAppMessage;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let js = log::open_json_file("values_27_08_2020__13_08_30_042.json");
+        let js = log::json::open_json_file("values_27_08_2020__13_08_30_042.json");
         dbg!(js.values.len());
         let hashs = js.get_all_hash();
         let hashs: Vec<_> = hashs.iter().map(|s| &s[..]).collect();

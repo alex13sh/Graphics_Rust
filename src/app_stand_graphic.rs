@@ -139,7 +139,7 @@ impl Application for App {
             .push(graph);
         
         let controls = {
-            let klapans = {
+            let klapans = if self.digit_io.device().is_connect() {
                 let klapan_names = &Self::get_values_name_map()[&"DigitIO"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
@@ -155,9 +155,10 @@ impl Application for App {
                     );
                 
     //             controls_klapan.into()
-                controls_klapan
-            };
-            let invertor = {
+                Element::from(controls_klapan)
+            } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
+            
+            let invertor: Element<_> = if self.invertor.device().is_connect() {
                 let is_started = self.is_started;
                 let start = self.ui.start.view(
                     self.is_started,
@@ -185,6 +186,10 @@ impl Application for App {
                             .push(Text::new(format!("Speed: {:0>5}", self.speed)))
                             .push(slider)
                     ).push(start)
+                    .into()
+            } else {
+                Text::new("Инвертор не подключен")
+                    .into()
             };
             
             Column::new()
@@ -208,7 +213,7 @@ impl Application for App {
             .padding(10)
             .center_x()
             .center_y()
-            .style(style::MyContainer)
+            .style(style::MainContainer)
             .into()
     }
 }
@@ -277,7 +282,7 @@ impl App {
     {
         pub use std::convert::TryFrom;
         names.into_iter()
-            .fold(Column::new(),
+            .fold(Column::new().width(Length::Units(200)),
             |lst, &name| {
                 let key = value_key(name);
                 let name = name.into();
@@ -298,11 +303,15 @@ impl App {
                 [1.0, 0.0, 0.0],
             Some(_) | None => [0.0, 0.8, 0.0],
         };
-        Text::new(
+        let text = Text::new(
             format!("Name: {}\nValue: {}", text, value)
         ).size(16)
-        .color(color)
-        .into()
+        .color(color);
+        
+        Container::new(text)
+            .width(Length::Fill)
+            .style(style::ValueContainer)
+            .into()
     }
     
 }
@@ -355,11 +364,21 @@ mod style {
         }
     }
 
-    pub(super) struct MyContainer;
-    impl container::StyleSheet for MyContainer {
+    pub(super) struct MainContainer;
+    impl container::StyleSheet for MainContainer {
         fn style(&self) -> container::Style {
             container::Style {
-                background: Some(Background::Color([0.2, 0.2, 0.2].into())),
+                background: Some(Background::Color([0.8, 0.8, 0.8].into())),
+                .. Default::default()
+            }
+        }
+    }
+    
+    pub(super) struct ValueContainer;
+    impl container::StyleSheet for ValueContainer {
+        fn style(&self) -> container::Style {
+            container::Style {
+                background: Some(Background::Color([0.3, 0.3, 0.3].into())),
                 .. Default::default()
             }
         }

@@ -6,15 +6,18 @@ use std::error::Error;
 // type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
 // use chrono::Duration;
 
-use crate::naive_date_time_from_str;
+use crate::{naive_date_time_from_str, naive_date_time_to_str};
 
 use serde::{Deserialize, Serialize};
- #[derive(Debug, Deserialize)]
+ #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionTime {
+    #[serde(serialize_with = "naive_date_time_to_str")]
     #[serde(deserialize_with = "naive_date_time_from_str")]
-    start: crate::NaiveDateTime,
+    pub start: crate::NaiveDateTime,
+    #[serde(serialize_with = "naive_date_time_to_str")]
     #[serde(deserialize_with = "naive_date_time_from_str")]
-    finish: crate::NaiveDateTime,
+    pub finish: crate::NaiveDateTime,
+    pub fileName: Option<String>,
 }
  
 pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {
@@ -47,6 +50,33 @@ pub fn write_values(fileName: PathBuf, values: Vec<crate::LogValue>) -> crate::M
 }
 
 pub fn read_values(fileName: PathBuf) -> Option<Vec<crate::LogValue>> {
+    let file = File::open(fileName).ok()?;
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .delimiter(b';')
+        .from_reader(file);
+    
+    Some(rdr.deserialize()
+        .filter_map(|res| res.ok())
+        .collect()
+    )
+}
+
+pub fn write_session(fileName: PathBuf, session: Vec<SessionTime>) -> crate::MyResult {
+    let file = File::create(fileName)?;
+    let mut wrt = csv::WriterBuilder::new()
+        .has_headers(true)
+        .delimiter(b';')
+        .from_writer(file);
+    
+    for s in session {
+        wrt.serialize(s)?;
+    }
+    
+    Ok(())
+}
+
+pub fn read_session(fileName: PathBuf) -> Option<Vec<SessionTime>> {
     let file = File::open(fileName).ok()?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)

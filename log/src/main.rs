@@ -5,7 +5,8 @@ type MyResult = Result<(), Box<dyn std::error::Error>>;
 fn main() -> MyResult {
 //     convert_json_old_new()?;
 //     convert_json2csv()?;
-    test_read_csv_2()?;
+//     test_read_csv_2()?;
+    convert_session()?;
     Ok(())
 }
 
@@ -79,6 +80,23 @@ fn convert_json2csv() -> MyResult {
         convert::json2csv(name.to_str().unwrap(), "tmp/", "csv/")?;
     }
     
+    Ok(())
+}
+
+fn convert_session() -> MyResult {
+    let session_path_1 = get_file_path("log/sessions_1.csv");
+    let session_path_2 = get_file_path("csv/sessions.csv");
+    
+    let sessions = csv::read_session(session_path_1).ok_or("")?;
+    let sessions: Vec<_> = sessions.into_iter()
+        .map(|s| csv::SessionTime {
+            start: s.start,
+            finish: s.finish,
+            fileName: Some(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
+                .to_string().replace("_.", "_")),
+        })
+        .collect();
+    csv::write_session(session_path_2, sessions)?;
     Ok(())
 }
 

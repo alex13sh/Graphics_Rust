@@ -29,7 +29,7 @@ members = [
 ]
 
 [features]
-default = ["plotters", "test"]
+default = ["plotters"] #, "test"]
 
 test = ["modbus/test"]
 

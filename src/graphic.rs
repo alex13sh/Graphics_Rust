@@ -117,7 +117,7 @@ impl Graphic {
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (1600, 800)).into_drawing_area();
+        let root_area = SVGBackend::with_string(&mut svg_text, (1600*2/4, 800*2/4)).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let mut cc = ChartBuilder::on(&root_area)
             .x_label_area_size(50)

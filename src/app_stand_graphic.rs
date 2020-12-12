@@ -25,7 +25,7 @@ pub struct App {
     values: BTreeMap<String, Arc<Value>>,
     invertor: Invertor,
     digit_io: DigitIO,
-    owen_analog: Device,
+    owen_analog: Arc<Device>,
     
     klapans: [bool; 3],
 }
@@ -61,7 +61,7 @@ impl Application for App {
         let dev_invertor = invertor.device();
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
         let dev_digit_io = digit_io.device();
-        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.5".into()).into();
+        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.11".into()).into();
         
         let mut values = BTreeMap::new();
         for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
@@ -84,7 +84,7 @@ impl Application for App {
                 values: values,
                 invertor: invertor,
                 digit_io: digit_io,
-                owen_analog: dev_owen_analog,
+                owen_analog: Arc::new(dev_owen_analog),
                 
                 klapans: [false; 3],
             },

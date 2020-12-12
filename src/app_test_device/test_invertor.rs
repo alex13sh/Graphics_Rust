@@ -73,13 +73,16 @@ impl TestInvertor {
     pub fn update(&mut self, message: Message) {
 //                 println!("update");
         match message {
-            Message::Start => self.invertor.start().unwrap(),
-            Message::Stop => self.invertor.stop().unwrap(),
+            Message::Start => if self.invertor.device().is_connect() {
+                self.invertor.set_speed(self.speed).unwrap();
+                self.invertor.start().unwrap();
+            },
+            Message::Stop => {self.invertor.stop();},
             Message::SpeedChanged(speed) => {
                 self.speed = speed;
-                if let Err(error) = self.invertor.set_speed(speed) {
-                    self.ui.error = Some(format!("Error: {}", error));
-                } else { self.ui.error = None; }
+//                 if let Err(error) = self.invertor.set_speed(speed) {
+//                     self.ui.error = Some(format!("Error: {}", error));
+//                 } else { self.ui.error = None; }
             },
             Message::DirectChanged(direct) => {
                 self.invertor.set_direct(direct);
@@ -122,14 +125,14 @@ impl TestInvertor {
             .push(Text::new(self.invertor.device().name()))
             .push(Text::new(format!("Values: {}", self.invertor.device().values_map().len())))
             ;
-        res = if self.invertor.device().is_connect() {
+        res = if !self.invertor.device().is_connect() {
             let slider = {
                 let slider = Slider::new(
                     &mut self.ui.speed_slider,
-                    0..=5000/10,
-                    self.speed/10,
-                    |speed| Message::SpeedChanged(speed*10),
-                );
+                    0..=10_000,
+                    self.speed,
+                    Message::SpeedChanged,
+                ).step(1_000);
                 let speed_out = self.invertor.get_hz_out_value().value();
                 Row::new()
                     .spacing(20)

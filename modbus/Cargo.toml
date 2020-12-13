@@ -20,6 +20,11 @@ features = ["tcp", "sync"]
 optional = true
 version = "*"
 
+[dependencies.modbus-rs]
+package = "modbus"
+optional = true
+version = "*"
+
 [features]
-default = ["libmodbus-rs"]
+default = ["modbus-rs"]
 test = []

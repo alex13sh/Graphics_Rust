@@ -86,8 +86,8 @@ impl ValueSize {
     pub fn size(&self) -> u8 {
         use ValueSize::*;
         match self {
-        INT8 | UINT8 | INT16 | UINT16 => 1,
-        INT32 | UINT32 | FLOAT => 2,
+        INT8 | UINT8 | INT16 | UINT16 | UInt16Map(_) => 1,
+        INT32 | UINT32 | FLOAT | FloatMap(_) => 2,
         BitMap(_) => 1,
         }
     }
@@ -111,12 +111,14 @@ impl TryFrom<&Value> for f32 {
     fn try_from(val: &Value) -> Result<f32, Self::Error> {
         match val.size {
         ValueSize::FLOAT => Ok(f32::from_bits(val.value.get())),
+        ValueSize::FloatMap(f) => Ok(f(f32::from_bits(val.value.get()))),
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16
         | ValueSize::INT16
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value.get() as f32),
+        ValueSize::UInt16Map(f) => Ok(f(val.value.get())),
         _ => Err(()),
         }
     }

@@ -152,13 +152,13 @@ pub fn make_invertor(ip_address: String) -> Device {
                 name: name.into(),
                 address: p*256+adr,
                 direct: ValueDirect::Write,
-                size: ValueSize::UINT16,
+                size: ValueSize::UInt16Map(|v| v as f32/100_f32),
             };
             let add_simple_value_read = |p: u16, adr: u16, name: &str| Value {
                 name: name.into(),
                 address: p*256+adr,
                 direct: ValueDirect::Read(None),
-                size: ValueSize::UINT16,
+                size: ValueSize::UInt16Map(|v| v as f32/100_f32),
             };
             
             let mut reg = vec![

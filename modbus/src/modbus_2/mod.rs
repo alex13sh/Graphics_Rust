@@ -16,7 +16,8 @@ pub use device::*;
 pub use invertor::*;
 pub use owen_digit_io::DigitIO;
 
-use tokio_modbus::client::sync::Context as ModbusContext;
+mod modbus_context_1;
+use modbus_context_1::ModbusContext;
 
 // #[test]
 pub(crate) fn tst() {

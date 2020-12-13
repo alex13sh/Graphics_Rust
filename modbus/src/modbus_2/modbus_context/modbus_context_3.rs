@@ -10,9 +10,9 @@ use super::device::{
     get_ranges_value, convert_modbusvalues_to_hashmap_address,
 };
 
-pub(super) struct ModbusContext {
+pub(crate) struct ModbusContext {
     ctx: Box<dyn Client>,
-    pub(super) values: HashMap<u16, Arc<Value>>,
+    pub(crate) values: HashMap<u16, Arc<Value>>,
     ranges_address: Vec<std::ops::RangeInclusive<u16>>,
 }
 
@@ -56,7 +56,7 @@ impl ModbusContext {
         Ok(())
     }
     
-    pub(super) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
+    pub(crate) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
 //         let v = self.values.get(address).unwrap().clone();
         
         match v.size.size() {
@@ -69,7 +69,7 @@ impl ModbusContext {
         };
         Ok(())
     }
-    pub(super) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
+    pub(crate) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
 //         let v = self.values.get(address).unwrap().clone();
         
         match v.size.size() {

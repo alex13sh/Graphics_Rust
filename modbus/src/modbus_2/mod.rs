@@ -16,19 +16,8 @@ pub use device::*;
 pub use invertor::*;
 pub use owen_digit_io::DigitIO;
 
-#[cfg(feature = "tokio-modbus")]
-mod modbus_context_1;
-#[cfg(feature = "libmodbus-rs")]
-mod modbus_context_2;
-#[cfg(feature = "modbus-rs")]
-mod modbus_context_3;
-
-#[cfg(feature = "tokio-modbus")]
-use modbus_context_1::ModbusContext;
-#[cfg(feature = "libmodbus-rs")]
-use modbus_context_2::ModbusContext;
-#[cfg(feature = "modbus-rs")]
-use modbus_context_3::ModbusContext;
+mod modbus_context;
+use modbus_context::ModbusContext;
 
 // #[test]
 pub(crate) fn tst() {

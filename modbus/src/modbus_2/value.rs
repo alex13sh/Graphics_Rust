@@ -38,7 +38,7 @@ impl Value {
             false 
         }
     }
-    pub fn get_error(&self) -> Option<crate::ValueError> {
+    pub fn get_error(&self) -> Option<super::ValueError> {
         match self.direct {
         ValueDirect::Read(err) => err,
         ValueDirect::Write => None,

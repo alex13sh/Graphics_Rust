@@ -1,11 +1,14 @@
 use tokio_modbus::client::sync::Context;
 
-use super::{Value, ModbusValues, ModbusSensors};
-use super::init::{DeviceType, DeviceAddress};
+use super::{Value, ModbusValues};
+use super::init::DeviceAddress;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::device::DeviceError;
+use super::device::{
+    DeviceError,
+    get_ranges_value, convert_modbusvalues_to_hashmap_address,
+};
 
 pub(super) struct ModbusContext {
     ctx: Context,
@@ -23,8 +26,8 @@ impl ModbusContext {
             
             Some(ModbusContext {
                 ctx: sync::tcp::connect(socket_addr).ok()?,
-                ranges_address: super::device::get_ranges_value(&values, 8, true),
-                values: super::device::convert_modbusvalues_to_hashmap_address(values),
+                ranges_address: get_ranges_value(&values, 8, true),
+                values: convert_modbusvalues_to_hashmap_address(values),
             })
         } else {
             None

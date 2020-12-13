@@ -16,7 +16,9 @@ pub use device::*;
 pub use invertor::*;
 pub use owen_digit_io::DigitIO;
 
+#[cfg(feature = "tokio-modbus")]
 mod modbus_context_1;
+#[cfg(feature = "tokio-modbus")]
 use modbus_context_1::ModbusContext;
 
 // #[test]

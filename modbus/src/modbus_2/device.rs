@@ -32,34 +32,6 @@ impl Device {
         &self.name
     }
     
-    pub fn get_ranges_value(&self, empty_space: u8, read_only: bool) -> Vec<std::ops::Range<u16>> {
-        let empty_space = empty_space as u16;
-        
-        let mut adrs: Vec<_> = self.values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-        if adrs.len() == 0 {
-            return Vec::new();
-        }
-        adrs.sort();
-        let adrs = adrs;
-//         dbg!(&adrs);
-        
-        let mut itr = adrs.into_iter();
-        let adr = itr.next().unwrap();
-        let mut res = vec![std::ops::Range { start: adr, end: adr }];
-        let mut last_range = res.last_mut().unwrap();
-        
-        for adr in itr {
-//             let end = last_range.end;
-            if last_range.end +empty_space < adr {
-                let r = std::ops::Range { start: adr, end: adr };
-                res.push(r);
-            } else {
-                last_range.end = adr;
-            }
-            last_range = res.last_mut().unwrap();
-        }
-        res
-    }
     pub fn update(&self) -> Result<(), DeviceError> {
         self.context()?.borrow_mut().update()?;
         Ok(())
@@ -263,4 +235,36 @@ impl std::iter::FromIterator<Sensor> for ModbusSensors {
 
 pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> HashMap<u16, Arc<Value>> {
     values.iter().map(|v| (v.1.address(), v.1.clone())).collect()
+}
+
+pub(super) fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
+    let empty_space = empty_space as u16;
+    if values.len() == 0 {
+        return Vec::new();
+    }
+    
+//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+    let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
+    values.sort_by(|a, b| a.address().cmp(&b.address()));
+    let values = values;
+    
+    let mut itr = values.into_iter();
+    let v = itr.next().unwrap();
+    let adr = v.address();
+    let end = adr + v.size() as u16;
+    let mut res = vec![std::ops::Range { start: adr, end: end }];
+    let mut last_range = res.last_mut().unwrap();
+    
+    for v in itr {
+        let adr = v.address();
+        let end = adr + v.size() as u16 -1;
+        if last_range.end +empty_space < adr {
+            let r = std::ops::Range { start: adr, end: end };
+            res.push(r);
+        } else {
+            last_range.end = end;
+        }
+        last_range = res.last_mut().unwrap();
+    }
+    res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
 }

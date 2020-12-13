@@ -23,7 +23,7 @@ impl ModbusContext {
             
             Some(ModbusContext {
                 ctx: sync::tcp::connect(socket_addr).ok()?,
-                ranges_address: Self::get_ranges_value(&values, 8, true),
+                ranges_address: super::device::get_ranges_value(&values, 8, true),
                 values: super::device::convert_modbusvalues_to_hashmap_address(values),
             })
         } else {
@@ -45,37 +45,6 @@ impl ModbusContext {
             }
         }
         Ok(())
-    }
-    fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
-        let empty_space = empty_space as u16;
-        if values.len() == 0 {
-            return Vec::new();
-        }
-        
-//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-        let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
-        values.sort_by(|a, b| a.address().cmp(&b.address()));
-        let values = values;
-        
-        let mut itr = values.into_iter();
-        let v = itr.next().unwrap();
-        let adr = v.address();
-        let end = adr + v.size() as u16;
-        let mut res = vec![std::ops::Range { start: adr, end: end }];
-        let mut last_range = res.last_mut().unwrap();
-        
-        for v in itr {
-            let adr = v.address();
-            let end = adr + v.size() as u16 -1;
-            if last_range.end +empty_space < adr {
-                let r = std::ops::Range { start: adr, end: end };
-                res.push(r);
-            } else {
-                last_range.end = end;
-            }
-            last_range = res.last_mut().unwrap();
-        }
-        res.into_iter().map(|r| std::ops::RangeInclusive::new(r.start, r.end)).collect()
     }
     
     pub(super) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {

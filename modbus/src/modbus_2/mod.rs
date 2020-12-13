@@ -16,7 +16,8 @@ pub use device::*;
 pub use invertor::*;
 pub use owen_digit_io::DigitIO;
 
-use tokio_modbus::client::sync::Context as ModbusContext;
+mod modbus_context;
+use modbus_context::ModbusContext;
 
 // #[test]
 pub(crate) fn tst() {
@@ -25,10 +26,10 @@ pub(crate) fn tst() {
     let d = init::init_devices();
     let devices: Vec<_> = d.into_iter().map(|d| Device::from(d)).collect();
     dbg!(&devices);
-    for d in devices {
-        let r = d.get_ranges_value(8, true);
-        dbg!(r);
-    }
+//     for d in devices {
+//         let r = d.get_ranges_value(8, true);
+//         dbg!(r);
+//     }
 
 }
 

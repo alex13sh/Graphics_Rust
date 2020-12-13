@@ -7,10 +7,24 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio-modbus = { version = "*", default-features = false, features = ["tcp", "sync"] }
 derivative = "2.1.1"
 thiserror = "1.0"
 
-[features]
+[dependencies.tokio-modbus]
+optional = true
+version = "*"
+default-features = false
+features = ["tcp", "sync"]
 
+[dependencies.libmodbus-rs]
+optional = true
+version = "*"
+
+[dependencies.modbus-rs]
+package = "modbus"
+optional = true
+version = "*"
+
+[features]
+default = ["modbus-rs"]
 test = []

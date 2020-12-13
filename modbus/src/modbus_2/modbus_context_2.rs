@@ -40,11 +40,20 @@ impl ModbusContext {
             self.ctx.read_registers(*r.start(), cnt, &mut buff)?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
-            for (adr, v) in r.clone().zip(itr_buff) {
+            let mut itr_zip = r.clone().zip(itr_buff);
+            while let Some((adr, v)) = itr_zip.next() {
+//             for (adr, v) in itr_zip {
                 if let Some(val) = self.values.get_mut(&adr) {
                     val.update_value(v as u32);
+                    if val.size() == 1 {
+                        val.update_value(v as u32);
+                    } else if val.size() == 2 {
+                        if let Some((_, v2)) = itr_zip.next() {
+                            let value: u32 = ((v2 as u32) << 16) | v as u32;
+                            val.update_value(value);
+                        }
+                    }
                 }
-                
             }
         }
         Ok(())

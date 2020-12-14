@@ -1,5 +1,5 @@
 // use std::hash::{Hash, Hasher};
-pub use super::init::{ValueDirect, ValueSize};
+pub use super::init::{ValueDirect, ValueSize, Log};
 pub use super::init::Value as ValueInit;
 
 use std::cell::Cell;
@@ -13,6 +13,7 @@ pub struct Value {
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
+    log: Option<Log>,
 }
 
 impl Value {
@@ -22,6 +23,7 @@ impl Value {
             address: address,
             direct: direct,
             size: size,
+            log: None,
             value: Cell::new(0),
         }
     }
@@ -56,6 +58,7 @@ impl Value {
             value: Cell::new(value),
             direct: self.direct,
             size: self.size.clone(),
+            log: self.log.clone(),
         }
     }
     pub fn value(&self) -> u32 {
@@ -100,6 +103,7 @@ impl From<ValueInit> for Value {
             address: v.address,
             direct: v.direct,
             size: v.size,
+            log: v.log,
             value: Cell::new(0),
         }
     }

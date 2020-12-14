@@ -6,6 +6,7 @@ pub struct Value {
     pub address: u16,
     pub direct: ValueDirect,
     pub size: ValueSize,
+    pub log: Option<Log>,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -64,4 +65,19 @@ pub struct ValueBit {
     pub name: String,
     pub bit_num: u8,
     pub bit_size: u8,
+}
+
+#[derive(Debug, Clone)]
+pub struct Log {
+    pub hash: String,       // HEX
+    pub full_name: String, // DeviceName/SensorName/ValueName
+}
+
+impl Log {
+    pub fn hash(hash: &str) -> Option<Log> {
+        Some(Log {
+            hash: hash.into(),
+            full_name: "".into(),
+        })
+    }
 }

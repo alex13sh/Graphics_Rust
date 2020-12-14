@@ -116,12 +116,14 @@ pub fn make_io_digit(ip_address: String) -> Device {
                 address: 468,
                 direct: ValueDirect::Read(None),
                 size: ValueSize::UINT8,
+                log: Log::hash("308e553d36"),
             },
             Value {
                 name: "Битовая маска установки состояния выходов".into(),
                 address: 470,
                 direct: ValueDirect::Write,
                 size: ValueSize::UINT8,
+                log: None,
             },
         ]),
     }
@@ -153,12 +155,14 @@ pub fn make_invertor(ip_address: String) -> Device {
                 address: p*256+adr,
                 direct: ValueDirect::Write,
                 size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                log: None,
             };
-            let add_simple_value_read = |p: u16, adr: u16, name: &str| Value {
+            let add_simple_value_read = |hash: &str, p: u16, adr: u16, name: &str| Value {
                 name: name.into(),
                 address: p*256+adr,
                 direct: ValueDirect::Read(None),
                 size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                log: Log::hash(hash),
             };
             
             let mut reg = vec![
@@ -217,8 +221,8 @@ pub fn make_invertor(ip_address: String) -> Device {
             
             // Part 5
             reg.append(&mut vec![
-                add_simple_value_read(5, 31, "Наработка двигателя (мин)"),
-                add_simple_value_read(5, 32, "Наработка двигателя (дни)"),
+                add_simple_value_read("ac4e9ff84c", 5, 31, "Наработка двигателя (мин)"),
+                add_simple_value_read("b735f11d88", 5, 32, "Наработка двигателя (дни)"),
             ]);
             
             // Part 9 
@@ -271,12 +275,14 @@ pub fn make_invertor(ip_address: String) -> Device {
                             bit_size: 2, 
                         }, 
                     ]),
+                    log: None,
                 },
                 Value {
                     name: "Команда задания частоты".into(),
                     address: 0x2001,
                     direct: ValueDirect::Write,
                     size: ValueSize::UINT16,
+                    log: None,
                 },
                 Value {
                     name: "2002H".into(),
@@ -287,12 +293,14 @@ pub fn make_invertor(ip_address: String) -> Device {
                         add_simple_value_bit(1, "Сброс ошибки"),
                         add_simple_value_bit(2, "Внешняя пауза"),
                     ]),
+                    log: None,
                 },
             ]);
             
-            let add_simple_value_read = |adr: u16, name: &str| Value {
+            let add_simple_value_read = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
                 direct: ValueDirect::Read(None), size: ValueSize::UINT16,
+                log: Log::hash(hash),
             };
             // Part 21 ReadOnly
             reg.append(&mut vec![
@@ -301,6 +309,7 @@ pub fn make_invertor(ip_address: String) -> Device {
                     address: 0x2100,
                     direct: ValueDirect::Read(None), // interval
                     size: ValueSize::UINT16, // UINT32
+                    log: None,
                 },
                 Value {
                     name: "2119H".into(),
@@ -317,14 +326,15 @@ pub fn make_invertor(ip_address: String) -> Device {
                         add_simple_value_bit(10, "Управление приводом через интерфейс"),
                         add_simple_value_bit(12, "Копирование параметров из пульта разрешено"),
                     ]),
+                    log: None,
                 },
-                add_simple_value_read(0x2102, "Заданная частота (F)"),
-                add_simple_value_read(0x2103, "Выходная частота (H)"),
-                add_simple_value_read(0x2104, "Выходной ток (A)"),
-                add_simple_value_read(0x2106, "Выходное напряжение (E)"),
-                add_simple_value_read(0x2109, "Значение счётчика"),
-                add_simple_value_read(0x211B, "Максимальная установленная частота"),
-                add_simple_value_read(0x220F, "Температура радиатора"),
+                add_simple_value_read("4c12e17ba3", 0x2102, "Заданная частота (F)"),
+                add_simple_value_read("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
+                add_simple_value_read("5146ba6795", 0x2104, "Выходной ток (A)"),
+                add_simple_value_read("5369886757", 0x2106, "Выходное напряжение (E)"),
+//                 add_simple_value_read(0x2109, "Значение счётчика"),
+//                 add_simple_value_read(0x211B, "Максимальная установленная частота"),
+                add_simple_value_read("5b28faeb8d", 0x220F, "Температура радиатора"),
             ]);
             
             Some(reg)

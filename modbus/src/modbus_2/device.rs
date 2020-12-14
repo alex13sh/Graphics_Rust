@@ -7,7 +7,7 @@ use super::{Value, ModbusValues, ModbusSensors};
 use super::init::{DeviceType, DeviceAddress};
 use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
-use super::init::{ValueDirect, ValueSize};
+use super::init::{ValueDirect, ValueSize, SensorType};
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -138,9 +138,13 @@ impl DeviceType<Device> {
         match *self {
         Self::OwenAnalog => {
             match s {
-            SensorInit::Sensor{pin, value_error, ..} => {
-                values = create_values_owen_analog(pin, value_error);
-//                 value = values.get("value").unwrap_or(&None)).clone();
+            SensorInit::Sensor{pin, value_error, ref sensor_type, ..} => {
+                let val_size = if let SensorType::Davl(_) = sensor_type {
+                    ValueSize::FloatMap(|v|10_f32.powf(v*10.0-5.5))
+                } else {ValueSize::FLOAT};
+                values = create_values_owen_analog(pin, value_error, val_size);
+//                 value = values.get("value_float").unwrap_or(&None)).clone();
+                
                 value = None;
                 
             },
@@ -176,10 +180,10 @@ impl DeviceType<Device> {
     }
 }
 
-fn create_values_owen_analog(pin: u8, err: super::ValueError) -> ModbusValues {
+fn create_values_owen_analog(pin: u8, err: super::ValueError, val_size: ValueSize) -> ModbusValues {
     let mut v = Vec::new();
     let pin = pin as u16;
-    v.push(Value::new("value_float", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read(Some(err))));
+    v.push(Value::new("value_float", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err))));
     v.push(Value::new("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write)); // "Тип датчика"
     v.push(Value::new("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write)); // "положение десятичной точки"
     v.push(Value::new("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write));

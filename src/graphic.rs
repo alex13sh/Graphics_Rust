@@ -118,14 +118,16 @@ impl Graphic {
     pub fn update_svg(&mut self) {
         use plotters::prelude::*;
         use std::collections::HashMap;
+        use std::ops::{Deref, DerefMut};
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (800, 400)).into_drawing_area();
+        let root_area = SVGBackend::with_string(&mut svg_text, (1200, 600)).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
+        let (upper, lower) = root_area.split_vertically(300);
         
-        let cc_build = |graphic_name, range_1, range_2| {
-            ChartBuilder::on(&root_area)
+        let cc_build = |on, graphic_name, range_1| {
+            ChartBuilder::on(on)
             .x_label_area_size(45)
             .y_label_area_size(40)
             .margin_right(10)
@@ -136,16 +138,23 @@ impl Graphic {
                 self.view_port.start..self.view_port.end, 
                 range_1
             ).unwrap()
-            .set_secondary_coord(self.view_port.start..self.view_port.end,
-            range_2)};
-            
-        let mut cc = cc_build("Температуры",
-            self.view_port.min_value..self.view_port.max_value,
-            (0.001_f32..1000.0f32).log_scale());
-        cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+            };
         
-        let mut cc_map = HashMap::new();
-        cc_map.insert(String::from("Температуры"), cc);
+//         let mut cc_map = HashMap::new();
+        
+        let mut cc_temp = cc_build(&upper, "Температуры",
+            self.view_port.min_value..self.view_port.max_value)
+        .set_secondary_coord(self.view_port.start..self.view_port.end,
+            (0.001_f32..1000.0f32).log_scale());
+        cc_temp.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+//         cc_map.insert(String::from("Температуры"), cc_temp.deref());
+        
+        let mut cc_speed = cc_build(&lower, "Скорость",
+            self.view_port.min_value..self.view_port.max_value)
+            .set_secondary_coord(self.view_port.start..self.view_port.end,
+            self.view_port.min_value..self.view_port.max_value);
+            cc_speed.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+//         cc_map.insert(String::from("Скорость"), cc_speed.deref());
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
             let points = self.view_port.get_slice_points(&s.points);
@@ -155,18 +164,30 @@ impl Graphic {
                 itr.map(|p| (p.dt, p.value)),
                 &Palette99::pick(c),
             );
-            let cc = cc_map.get_mut(&s.graphic_name).unwrap();
-            let ser = if s.graphic_second {
-                cc.draw_secondary_series(ls)
-            } else {
-                cc.draw_series(ls)
-            }.unwrap();
+            let ser = match s.graphic_name.deref() {
+            "Температуры" => {
+                let cc = &mut cc_temp;
+                if s.graphic_second {
+                    cc.draw_secondary_series(ls)
+                } else {
+                    cc.draw_series(ls)
+                }.unwrap()
+            }, "Скорость" | _ => {
+                let cc = &mut cc_speed;
+                if s.graphic_second {
+                    cc.draw_secondary_series(ls)
+                } else {
+                    cc.draw_series(ls)
+                }.unwrap()
+            },
+            };
             ser
             .label(&s.name)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
         
-        for (k, mut cc) in cc_map.into_iter() {
+        let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
+        for mut cc in lst {
             cc.configure_series_labels()
             .background_style(&WHITE.mix(0.8))
             .border_style(&BLACK)

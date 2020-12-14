@@ -85,6 +85,9 @@ impl Application for App {
             "Invertor/Температура радиатора",
         ];
         graphic.add_series("Температуры", false, &temp_value_names);
+        
+        graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
+        graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A/value_float"]);
         (
             Self {
                 ui: UI::default(),

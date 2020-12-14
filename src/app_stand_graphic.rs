@@ -207,7 +207,7 @@ impl Application for App {
                     Message::SpeedChanged
                 )
 //                 .on_release(Message::SetSpeed(self.speed))
-                .step(6_000);
+                .step(3_000);
                 
                 Column::new().spacing(5)
                     .push(
@@ -272,6 +272,8 @@ impl App {
             "Выходная частота (H)",
             "Выходной ток (A)",
             "Температура радиатора",
+            "Наработка двигателя (дни)",
+            "Наработка двигателя (мин)",
         ]);
         
         map
@@ -326,15 +328,15 @@ impl App {
     
     fn view_value<'a>(text: String, value: f32, err: Option<ValueError>) -> Element<'a, Message> {
         let color = match err {
-            Some(err) if err.yellow <= value => 
-                [1.0, 1.0, 0.0],
             Some(err) if err.red <= value =>
                 [1.0, 0.0, 0.0],
+            Some(err) if err.yellow <= value => 
+                [1.0, 1.0, 0.0],
             Some(_) | None => [0.0, 0.8, 0.0],
         };
         let text = Text::new(
             format!("{}\nValue: {:.2}", text, value)
-        ).size(16)
+        ).size(20)
         .color(color);
         
         Container::new(text)

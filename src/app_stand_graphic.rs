@@ -71,13 +71,16 @@ impl Application for App {
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         
+        let mut graphic = Graphic::new();
         let value_names: Vec<_> = values.keys().into_iter()
             .map(|k| k.as_str())
             .collect();
+//             dbg!(&value_names);
+        graphic.add_series("graphic", false, &value_names);
         (
             Self {
                 ui: UI::default(),
-                graph: Graphic::series(&value_names),
+                graph: graphic,
                 is_started: false,
                 speed: 0,
                 

@@ -49,19 +49,22 @@ impl Graphic {
         res
     }
     
-    pub fn series(names: &[&str]) -> Self {
-        let mut series = Vec::new();
+    pub fn add_series(&mut self, graphic_name: &str, second: bool, names: &[&str]) {
         for name in names {
-            series.push(LineSeries{
+            self.series.push(LineSeries{
                 name: (*name).into(),
+                graphic_name: graphic_name.into(),
+                graphic_second: second,
                 color: iced_native::Color::default(),
                 points: Vec::new()
             });
         };
-        Self {
-            series: series, 
-            .. Self::new()
-        }
+    }
+    
+    pub fn series(names: &[&str]) -> Self {
+        let mut graphic = Self::new();
+        graphic.add_series("", false, names);
+        graphic
     }
     
     pub fn update(&mut self, message: Message) {
@@ -144,7 +147,7 @@ impl Graphic {
                 itr.map(|p| (p.dt, p.value)),
                 &Palette99::pick(c),
             );
-            let ser = if s.name == "82dc5b4c30" {
+            let ser = if s.graphic_second {
                  cc.draw_secondary_series(ls)
             } else {
                 cc.draw_series(ls)
@@ -261,6 +264,8 @@ impl canvas::Program<Message> for Graphic {
 #[derive(Default, Debug)]
 struct LineSeries {
     name: String,
+    graphic_name: String,
+    graphic_second: bool,
     color: iced_native::Color,
     points: Vec<DatePoint>,
 }

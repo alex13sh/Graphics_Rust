@@ -117,27 +117,35 @@ impl Graphic {
     #[cfg(feature = "plotters")]
     pub fn update_svg(&mut self) {
         use plotters::prelude::*;
+        use std::collections::HashMap;
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (1600*2/4, 800*2/4)).into_drawing_area();
+        let root_area = SVGBackend::with_string(&mut svg_text, (800, 400)).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
-        let mut cc = ChartBuilder::on(&root_area)
-            .x_label_area_size(50)
-            .y_label_area_size(50)
-            .margin_right(30)
+        
+        let cc_build = |graphic_name, range_1, range_2| {
+            ChartBuilder::on(&root_area)
+            .x_label_area_size(45)
+            .y_label_area_size(40)
+            .margin_right(10)
             .caption(
-                "Graphic", // date name
-                ("sans-serif", 40).into_font(),
-            )
-            .build_ranged(
+                graphic_name, // date name
+                ("sans-serif", 20).into_font(),
+            ).build_ranged(
                 self.view_port.start..self.view_port.end, 
-                self.view_port.min_value..self.view_port.max_value
+                range_1
             ).unwrap()
             .set_secondary_coord(self.view_port.start..self.view_port.end,
-            (0.001_f32..1000.0f32).log_scale());
+            range_2)};
             
+        let mut cc = cc_build("Температуры",
+            self.view_port.min_value..self.view_port.max_value,
+            (0.001_f32..1000.0f32).log_scale());
         cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+        
+        let mut cc_map = HashMap::new();
+        cc_map.insert(String::from("Температуры"), cc);
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
             let points = self.view_port.get_slice_points(&s.points);
@@ -147,8 +155,9 @@ impl Graphic {
                 itr.map(|p| (p.dt, p.value)),
                 &Palette99::pick(c),
             );
+            let cc = cc_map.get_mut(&s.graphic_name).unwrap();
             let ser = if s.graphic_second {
-                 cc.draw_secondary_series(ls)
+                cc.draw_secondary_series(ls)
             } else {
                 cc.draw_series(ls)
             }.unwrap();
@@ -157,10 +166,12 @@ impl Graphic {
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
         
-        cc.configure_series_labels()
+        for (k, mut cc) in cc_map.into_iter() {
+            cc.configure_series_labels()
             .background_style(&WHITE.mix(0.8))
             .border_style(&BLACK)
             .draw().unwrap();
+        }
         }
 //         dbg!(svg_text.len());
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));

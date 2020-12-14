@@ -76,7 +76,15 @@ impl Application for App {
             .map(|k| k.as_str())
             .collect();
 //             dbg!(&value_names);
-        graphic.add_series("graphic", false, &value_names);
+
+        let temp_value_names = [
+            "Analog/Температура Ротора/value_float",
+            "Analog/Температура Статора/value_float",
+            "Analog/Температура Пер.Под./value_float",
+            "Analog/Температура Зад.Под./value_float",
+            "Invertor/Температура радиатора",
+        ];
+        graphic.add_series("Температуры", false, &temp_value_names);
         (
             Self {
                 ui: UI::default(),

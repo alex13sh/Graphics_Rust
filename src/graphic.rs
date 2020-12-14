@@ -39,7 +39,7 @@ impl Graphic {
                 end: chrono::Local::now(),
                 start: chrono::Local::now() - Duration::seconds(2*60),
                 min_value: -10_f32, 
-                max_value: 5000_f32,
+                max_value: 100_f32,
             },
             grid_cache: Default::default(),
             lines_cache: Default::default(),

@@ -71,8 +71,8 @@ impl Application for App {
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         
-        let value_names: Vec<_> = Self::get_values_name_map().into_iter()
-            .flat_map(|(_k,v)| v)
+        let value_names: Vec<_> = values.keys().into_iter()
+            .map(|k| k.as_str())
             .collect();
         (
             Self {
@@ -111,22 +111,18 @@ impl Application for App {
                 &self.digit_io.device(), &self.invertor.device()];
                 
             for d in &devices {
-                if let Ok(_) = d.update() {
-                    let values = d.values();
-                    let values = {
-                        use std::convert::TryFrom;
-                        values.iter()
-                        .filter(|v| v.is_read_only())
-                        .map(|v| 
-                            if let Ok(value) = f32::try_from(v.as_ref()) {
-                                (&v.name()[..], value)
-                            } else {(&v.name()[..], -1.0)}
-                        ).collect()
-                    };
-                    self.graph.append_values(values);
-                }
+                d.update();
             }
-            // Append Values 
+            let values = {
+                use std::convert::TryFrom;
+                self.values.iter()
+                .map(|(k, v)| 
+                    if let Ok(value) = f32::try_from(v.as_ref()) {
+                        (&k[..], value)
+                    } else {(&v.name()[..], -1.0)}
+                ).collect()
+            };
+            self.graph.append_values(values);
         },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),

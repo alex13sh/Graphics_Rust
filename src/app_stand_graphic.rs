@@ -81,12 +81,16 @@ impl Application for App {
                 is_started: false,
                 speed: 0,
                 
+                klapans: {
+                    let f = |num: u8| {digit_io.get_turn_clapan(num).unwrap()};
+                    [f(1), f(2), f(3)]
+                },
+                
                 values: values,
                 invertor: invertor,
                 digit_io: digit_io,
                 owen_analog: Arc::new(dev_owen_analog),
                 
-                klapans: [false; 3],
             },
             Command::none()
         )
@@ -136,9 +140,12 @@ impl Application for App {
             // Invertor SetSpeed
             // Invertor Start | Stop
         },
-        Message::ToggleKlapan(ind, check) => {
-            self.klapans[ind] = check;
-            // DigitIO turn_clapan
+        Message::ToggleKlapan(ind, enb) => {
+            let device = &self.digit_io;
+            let num = (ind+1) as u8;
+            device.turn_clapan(num, enb).unwrap();
+//             let enb = device.get_turn_clapan(num).unwrap();
+            self.klapans[ind as usize] = enb;
         },
         Message::SpeedChanged(speed) => self.speed = speed,
 //         Message::SetSpeed(speed) => {},
@@ -302,7 +309,7 @@ impl App {
     {
         pub use std::convert::TryFrom;
         names.into_iter()
-            .fold(Column::new().width(Length::Units(200)),
+            .fold(Column::new().width(Length::Units(200)).spacing(2),
             |lst, &name| {
                 let key = value_key(name);
                 let name = name.into();
@@ -324,7 +331,7 @@ impl App {
             Some(_) | None => [0.0, 0.8, 0.0],
         };
         let text = Text::new(
-            format!("Name: {}\nValue: {}", text, value)
+            format!("{}\nValue: {:.2}", text, value)
         ).size(16)
         .color(color);
         

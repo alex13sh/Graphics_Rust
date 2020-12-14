@@ -120,6 +120,12 @@ impl Graphic {
         use std::collections::HashMap;
         use std::ops::{Deref, DerefMut};
         
+//         let dt_range = self.view_port.start..self.view_port.end;
+        let dlt_time_f32 = |dt: DateTime| (dt - self.view_port.start)
+            .to_std().unwrap().as_secs_f32();
+        let seconds_range = 0_f32..dlt_time_f32(self.view_port.end);
+//         dbg!(&seconds_range);
+        
         let mut svg_text = String::new();
         {
         let root_area = SVGBackend::with_string(&mut svg_text, 
@@ -127,7 +133,8 @@ impl Graphic {
 //             (600, 1300)
         ).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
-        let (upper, lower) = root_area.split_vertically(300);
+//         let (upper, lower) = root_area.split_vertically(300);
+        let (left, right) = root_area.split_horizontally(900);
         
         let cc_build = |on, graphic_name, range_1| {
             ChartBuilder::on(on)
@@ -138,23 +145,23 @@ impl Graphic {
                 graphic_name, // date name
                 ("sans-serif", 20).into_font(),
             ).build_ranged(
-                self.view_port.start..self.view_port.end, 
+                seconds_range.clone(), 
                 range_1
             ).unwrap()
             };
         
 //         let mut cc_map = HashMap::new();
         
-        let mut cc_temp = cc_build(&upper, "Температуры",
+        let mut cc_temp = cc_build(&right, "Температуры",
             self.view_port.min_value..self.view_port.max_value)
-        .set_secondary_coord(self.view_port.start..self.view_port.end,
+        .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
         cc_temp.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
         
-        let mut cc_speed = cc_build(&lower, "Скорость",
+        let mut cc_speed = cc_build(&left, "Скорость",
             self.view_port.min_value..self.view_port.max_value)
-            .set_secondary_coord(self.view_port.start..self.view_port.end,
+            .set_secondary_coord(seconds_range.clone(),
             self.view_port.min_value..self.view_port.max_value);
             cc_speed.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
 //         cc_map.insert(String::from("Скорость"), cc_speed.deref());
@@ -164,7 +171,7 @@ impl Graphic {
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
             let ls = LineSeries::new(
-                itr.map(|p| (p.dt, p.value)),
+                itr.map(|p| (dlt_time_f32(p.dt), p.value)),
                 &Palette99::pick(c),
             );
             let ser = match s.graphic_name.deref() {

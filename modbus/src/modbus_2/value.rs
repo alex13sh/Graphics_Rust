@@ -1,5 +1,5 @@
 // use std::hash::{Hash, Hasher};
-pub use super::init::{ValueDirect, ValueSize};
+pub use super::init::{ValueDirect, ValueSize, Log};
 pub use super::init::Value as ValueInit;
 
 use std::cell::Cell;
@@ -13,6 +13,7 @@ pub struct Value {
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
+    log: Option<Log>,
 }
 
 impl Value {
@@ -22,6 +23,7 @@ impl Value {
             address: address,
             direct: direct,
             size: size,
+            log: None,
             value: Cell::new(0),
         }
     }
@@ -56,6 +58,7 @@ impl Value {
             value: Cell::new(value),
             direct: self.direct,
             size: self.size.clone(),
+            log: self.log.clone(),
         }
     }
     pub fn value(&self) -> u32 {
@@ -86,8 +89,8 @@ impl ValueSize {
     pub fn size(&self) -> u8 {
         use ValueSize::*;
         match self {
-        INT8 | UINT8 | INT16 | UINT16 => 1,
-        INT32 | UINT32 | FLOAT => 2,
+        INT8 | UINT8 | INT16 | UINT16 | UInt16Map(_) => 1,
+        INT32 | UINT32 | FLOAT | FloatMap(_) => 2,
         BitMap(_) => 1,
         }
     }
@@ -100,6 +103,7 @@ impl From<ValueInit> for Value {
             address: v.address,
             direct: v.direct,
             size: v.size,
+            log: v.log,
             value: Cell::new(0),
         }
     }
@@ -111,12 +115,14 @@ impl TryFrom<&Value> for f32 {
     fn try_from(val: &Value) -> Result<f32, Self::Error> {
         match val.size {
         ValueSize::FLOAT => Ok(f32::from_bits(val.value.get())),
+        ValueSize::FloatMap(f) => Ok(f(f32::from_bits(val.value.get()))),
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16
         | ValueSize::INT16
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value.get() as f32),
+        ValueSize::UInt16Map(f) => Ok(f(val.value.get())),
         _ => Err(()),
         }
     }

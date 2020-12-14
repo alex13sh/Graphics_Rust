@@ -95,7 +95,7 @@ impl Graphic {
     pub fn append_values(&mut self, values: Vec<(&str, f32)>) {
         let dt = chrono::Local::now();
         for (name, value) in values {
-            if let Some(ref mut ser) = self.series.iter_mut().find(|ser| ser.name == name) {
+            if let Some(ref mut ser) = self.series.iter_mut().find(|ser| name.contains(&ser.name)) {
                 ser.points.push(DatePoint{dt: dt, value: value});
             }
         }
@@ -122,7 +122,10 @@ impl Graphic {
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (1200, 600)).into_drawing_area();
+        let root_area = SVGBackend::with_string(&mut svg_text, 
+            (1200, 600)
+//             (600, 1300)
+        ).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (upper, lower) = root_area.split_vertically(300);
         

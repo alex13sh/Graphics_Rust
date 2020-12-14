@@ -78,16 +78,16 @@ impl Application for App {
 //             dbg!(&value_names);
 
         let temp_value_names = [
-            "Analog/Температура Ротора/value_float",
-            "Analog/Температура Статора/value_float",
-            "Analog/Температура Пер.Под./value_float",
-            "Analog/Температура Зад.Под./value_float",
+            "Analog/Температура Ротора",
+            "Analog/Температура Статора",
+            "Analog/Температура Пер.Под.",
+            "Analog/Температура Зад.Под.",
             "Invertor/Температура радиатора",
         ];
         graphic.add_series("Температуры", false, &temp_value_names);
         
         graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
-        graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A/value_float"]);
+        graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A"]);
         (
             Self {
                 ui: UI::default(),

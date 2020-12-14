@@ -27,7 +27,7 @@ pub struct App {
     digit_io: DigitIO,
     owen_analog: Arc<Device>,
     
-    klapans: [bool; 3],
+    klapans: [bool; 2],
 }
 
 #[derive(Default)]
@@ -81,10 +81,7 @@ impl Application for App {
                 is_started: false,
                 speed: 0,
                 
-                klapans: {
-                    let f = |num: u8| {digit_io.get_turn_clapan(num).unwrap()};
-                    [f(1), f(2), f(3)]
-                },
+                klapans: [false; 2],
                 
                 values: values,
                 invertor: invertor,
@@ -142,10 +139,19 @@ impl Application for App {
         },
         Message::ToggleKlapan(ind, enb) => {
             let device = &self.digit_io;
-            let num = (ind+1) as u8;
-            device.turn_clapan(num, enb).unwrap();
-//             let enb = device.get_turn_clapan(num).unwrap();
             self.klapans[ind as usize] = enb;
+            self.klapans[1-ind as usize] = false;
+            match ind {
+            0 => {
+                device.turn_clapan(1, false).unwrap();
+                device.turn_clapan(2, enb).unwrap();
+                device.turn_clapan(3, enb).unwrap();
+            }, 1 => {
+                device.turn_clapan(1, enb).unwrap();
+                device.turn_clapan(2, false).unwrap();
+                device.turn_clapan(3, false).unwrap();
+            }, _ => {}
+            }
         },
         Message::SpeedChanged(speed) => self.speed = speed,
 //         Message::SetSpeed(speed) => {},
@@ -167,11 +173,11 @@ impl Application for App {
         
         let controls = {
             let klapans = if self.digit_io.device().is_connect() {
-                let klapan_names = &Self::get_values_name_map()[&"DigitIO"];
+                let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
         //         let ui = &mut self.ui;
-                let controls_klapan = klapan_names.into_iter()
+                let controls_klapan = klapan_names.iter()
                     .zip(0..)
                     .zip(klapans)
                     .fold(Row::new().spacing(20),

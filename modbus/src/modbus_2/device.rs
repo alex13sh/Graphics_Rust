@@ -7,7 +7,7 @@ use super::{Value, ModbusValues, ModbusSensors};
 use super::init::{DeviceType, DeviceAddress};
 use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
-use super::init::{ValueDirect, ValueSize, SensorType};
+use super::init::{ValueDirect, ValueSize, SensorType, Log};
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -183,7 +183,9 @@ impl DeviceType<Device> {
 fn create_values_owen_analog(pin: u8, err: super::ValueError, val_size: ValueSize) -> ModbusValues {
     let mut v = Vec::new();
     let pin = pin as u16;
-    v.push(Value::new("value_float", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err))));
+    let mut val = Value::new("value_float", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err)));
+    val.log = Log::hash(&format!("OwenAnalog/{}/value", pin));
+    v.push(val);
     v.push(Value::new("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write)); // "Тип датчика"
     v.push(Value::new("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write)); // "положение десятичной точки"
     v.push(Value::new("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write));

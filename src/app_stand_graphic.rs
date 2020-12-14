@@ -28,6 +28,9 @@ pub struct App {
     owen_analog: Arc<Device>,
     
     klapans: [bool; 2],
+    
+    log: log::Logger,
+    log_values: Vec<log::LogValue>,
 }
 
 #[derive(Default)]
@@ -102,6 +105,8 @@ impl Application for App {
                 digit_io: digit_io,
                 owen_analog: Arc::new(dev_owen_analog),
                 
+                log: log::Logger::open_csv(),
+                log_values: Vec::new(),
             },
             Command::none()
         )
@@ -137,6 +142,15 @@ impl Application for App {
                 ).collect()
             };
             self.graph.append_values(values);
+            let mut log_values: Vec<_> = {
+                use std::convert::TryFrom;
+                self.values.iter()
+                .map(|(k, v)| v)
+                .filter(|v| v.is_log())
+                .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+            };
+            self.log_values.append(&mut log_values);
         },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
@@ -261,8 +275,21 @@ impl Application for App {
     }
 }
 
+impl Drop for App {
+    fn drop(&mut self) {
+        self.log_save();
+    }
+}
+
 impl App {
 
+    fn log_save(&mut self) {
+        if self.log_values.len() > 0 {
+            self.log.new_session(&self.log_values);
+            self.log_values = Vec::new();
+        }
+    }
+    
     fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
         let mut map = HashMap::new();
         map.insert("Analog", vec![

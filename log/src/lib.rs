@@ -2,10 +2,26 @@
 pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
-pub use chrono::{SecondsFormat};
+pub use chrono::{SecondsFormat, Offset, FixedOffset, Duration};
+
+#[derive(Clone, std::fmt::Debug)]
+struct MSK;
+impl Offset for MSK {
+    /// Returns the fixed offset from UTC to the local time stored.
+    fn fix(&self) -> FixedOffset {
+        FixedOffset::east(3*60*60)
+    }
+}
+
 type DateTimeLocal = chrono::DateTime<chrono::Local>;
-type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
+type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
+type DateTimeMSK = chrono::DateTime<MSK>;
 type DateTime = DateTimeFix;
+
+pub fn date_time_now() -> DateTime {
+    DateTime::from(chrono::Local::now())
+//         .east(3*60*60)
+}
 
 pub mod json;
 pub mod csv;
@@ -41,13 +57,25 @@ pub struct LogValue {
     pub value: f32,
 }
 
+impl LogValue {
+    pub fn new(hash: String, value: f32) -> Self {
+        dbg!(&hash, &value);
+        LogValue {
+            date_time: date_time_now(),
+            hash: hash,
+            value: value,
+        }
+    }
+}
+
 use serde::{de, Deserializer, Serializer};
 pub(crate) fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTimeFix, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
+    let dt = DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)?;
+    Ok(dt-Duration::hours(3))
 }
 
 pub(crate) fn date_time_to_str<S>(dt: &DateTimeFix, serializer: S) -> Result<S::Ok, S::Error>
@@ -55,7 +83,8 @@ where
     S: Serializer,
 {
 //     let s = dt.to_rfc3339_opts(SecondsFormat::Millis, false);
-    let s = dt.format("%Y-%m-%dT%H:%M:%S%.f").to_string();
+    let s = (*dt+Duration::hours(3))
+    .format("%Y-%m-%dT%H:%M:%S%.f").to_string();
     serializer.serialize_str(&s)
 }
 
@@ -68,7 +97,7 @@ enum LoggerType {
     },
 }
 
-struct Logger {
+pub struct Logger {
     log_type: LoggerType,
     
 }

@@ -99,6 +99,8 @@ impl Application for App {
         
         graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
         graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A"]);
+        graphic.add_series("Ток", true, &["Invertor/Выходной ток (A)"]);
+        
         (
             Self {
                 ui: UI::default(),

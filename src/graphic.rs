@@ -159,14 +159,19 @@ impl Graphic {
         profile!("svg_text");
         let size = if is_log {
             (((seconds_range.end - seconds_range.start) as u32*10).max(800),
-            1000)
+            1500)
         } else {(1200, 600)};
         let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
-        let (a_speed, a_temp) = if is_log {
-            let (upper, lower) = root_area.split_vertically(400);
-            (lower, upper)
-        } else {root_area.split_horizontally(900)};
+        let (a_speed, (a_temp, a_amp)) = if is_log {
+            let (a1, a2) = root_area.split_vertically(400);
+            let (a2, a3) = a2.split_vertically(400);
+            (a3, (a1, a2))
+        } else {
+            let (a1, a2) = root_area.split_horizontally(900);
+            let (a2, a3) = a2.split_vertically(300);
+            (a1, (a2, a3))
+        };
         
         let cc_build = |on, graphic_name, range_1| {
             ChartBuilder::on(on)
@@ -186,28 +191,43 @@ impl Graphic {
         
 //         let mut cc_map = HashMap::new();
         
-        let mut cc_temp = cc_build(&a_temp, "Температуры",
+        let mut cc_temp = {
+            let mut cc = cc_build(&a_temp, "Температуры",
             self.view_port.min_value..self.view_port.max_value)
         .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
-        cc_temp.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
+            cc.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
+            cc};
         
-        let mut cc_speed = cc_build(&a_speed, "Скорость",
+        let mut cc_speed = {
+            let mut cc = cc_build(&a_speed, "Скорость",
             0_f32..25_000_f32)
             .set_secondary_coord(seconds_range.clone(),
             0_f32..25_f32);
-            cc_speed.configure_mesh()
+            cc.configure_mesh()
                 .x_labels(20).y_labels(8)
                 .y_desc("Скорость (об./м)")
                 .y_label_formatter(&|x| format!("{}", *x as u32))
                 .draw().unwrap();
-            cc_speed.configure_secondary_axes()
+            cc.configure_secondary_axes()
                 .x_labels(20).y_labels(10)
                 .y_desc("Вибрация (м/с^2)")
                 .y_label_formatter(&|x| format!("{:2.}", x))
                 .draw().unwrap();
-//         cc_map.insert(String::from("Скорость"), cc_speed.deref());
+                cc};
+                
+        let mut cc_amper = {
+            let mut cc = cc_build(&a_amp, "Ток",
+            0_f32..120_f32);
+//             .set_secondary_coord(seconds_range.clone(), 0_f32..25_f32);
+            cc.configure_mesh()
+                .x_labels(5).y_labels(12)
+//                 .y_desc("Ток (об./м)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
+                .draw().unwrap();
+            cc};
+//   //         cc_map.insert(String::from("Скорость"), cc_speed.deref());
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
             profile!("self.series.iter()");
@@ -245,7 +265,7 @@ impl Graphic {
         }
         
         if is_log {
-            let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
+            let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut(), &mut cc_amper];
             for mut cc in lst {
                 profile!("for mut cc in lst");
                 cc.configure_series_labels()

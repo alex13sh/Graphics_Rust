@@ -138,9 +138,11 @@ impl Graphic {
         
         let cc_build = |on, graphic_name, range_1| {
             ChartBuilder::on(on)
-            .x_label_area_size(45)
+            .x_label_area_size(25)
             .y_label_area_size(40)
-            .margin_right(10)
+            .right_y_label_area_size(40)
+            .margin(5)
+//             .margin_right(20)
             .caption(
                 graphic_name, // date name
                 ("sans-serif", 20).into_font(),
@@ -156,14 +158,23 @@ impl Graphic {
             self.view_port.min_value..self.view_port.max_value)
         .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
-        cc_temp.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+        cc_temp.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
         
         let mut cc_speed = cc_build(&left, "Скорость",
-            self.view_port.min_value..self.view_port.max_value)
+            0_f32..25_000_f32)
             .set_secondary_coord(seconds_range.clone(),
-            self.view_port.min_value..self.view_port.max_value);
-            cc_speed.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+            0_f32..25_f32);
+            cc_speed.configure_mesh()
+                .x_labels(20).y_labels(10)
+                .y_desc("Скорость (об./мин)")
+                .y_label_formatter(&|x| format!("{}k", *x as u32/1000))
+                .draw().unwrap();
+            cc_speed.configure_secondary_axes()
+                .x_labels(20).y_labels(10)
+                .y_desc("Вибрация (м/с^2)")
+                .y_label_formatter(&|x| format!("{:2.}", x))
+                .draw().unwrap();
 //         cc_map.insert(String::from("Скорость"), cc_speed.deref());
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {

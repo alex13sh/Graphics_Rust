@@ -120,8 +120,14 @@ impl Graphic {
         .into()
     }
 
-    #[cfg(feature = "plotters")]
     pub fn update_svg(&mut self) {
+        if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
+            self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
+        }
+    }
+    
+    #[cfg(feature = "plotters")]
+    fn make_svg(&self, start: DateTime, end: DateTime, is_log: bool) -> Option<String> {
         use coarse_prof::profile;
         profile!("update_svg");
         
@@ -138,18 +144,21 @@ impl Graphic {
             };
         let seconds_range = dlt_time_f32(self.view_port.start)..dlt_time_f32(self.view_port.end);
 //         dbg!(&seconds_range);
-        if seconds_range.start >= seconds_range.end {return;}
+        if seconds_range.start >= seconds_range.end {return None;}
         
         let mut svg_text = String::new();
         {
         profile!("svg_text");
-        let root_area = SVGBackend::with_string(&mut svg_text, 
-            (1200, 600)
-//             (600, 1300)
-        ).into_drawing_area();
+        let size = if is_log {
+            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
+            1000)
+        } else {(1200, 600)};
+        let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
-//         let (upper, lower) = root_area.split_vertically(300);
-        let (left, right) = root_area.split_horizontally(900);
+        let (a_speed, a_temp) = if is_log {
+            let (upper, lower) = root_area.split_vertically(200);
+            (lower, upper)
+        } else {root_area.split_horizontally(900)};
         
         let cc_build = |on, graphic_name, range_1| {
             ChartBuilder::on(on)
@@ -169,14 +178,14 @@ impl Graphic {
         
 //         let mut cc_map = HashMap::new();
         
-        let mut cc_temp = cc_build(&right, "Температуры",
+        let mut cc_temp = cc_build(&a_temp, "Температуры",
             self.view_port.min_value..self.view_port.max_value)
         .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
         cc_temp.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
         
-        let mut cc_speed = cc_build(&left, "Скорость",
+        let mut cc_speed = cc_build(&a_speed, "Скорость",
             0_f32..25_000_f32)
             .set_secondary_coord(seconds_range.clone(),
             0_f32..25_f32);
@@ -232,8 +241,7 @@ impl Graphic {
 //             .draw().unwrap();
 //         }
         }
-//         dbg!(svg_text.len());
-        self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
+        Some(svg_text)
     }
     #[cfg(feature = "plotters")]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {

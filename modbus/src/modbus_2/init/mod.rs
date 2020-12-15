@@ -297,6 +297,11 @@ pub fn make_invertor(ip_address: String) -> Device {
                 },
             ]);
             
+            let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str| Value {
+                name: name.into(), address: adr, 
+                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32),
+                log: Log::hash(hash),
+            };
             let add_simple_value_read_100 = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
                 direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32),
@@ -334,7 +339,7 @@ pub fn make_invertor(ip_address: String) -> Device {
                     log: None,
                 },
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)"),
-                add_simple_value_read_100("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
+                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)"),
                 add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),

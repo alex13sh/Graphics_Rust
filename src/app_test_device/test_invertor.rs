@@ -16,7 +16,7 @@ pub struct TestInvertor {
     invertor: Invertor,
     graph: Graphic,
     values: Vec<DeviceValue>,
-    speed: u16,
+    speed: u32,
     direct: DvijDirect,
 }
 
@@ -33,7 +33,7 @@ struct UI {
 pub enum Message {
     Start,
     Stop,
-    SpeedChanged(u16),
+    SpeedChanged(u32),
     DirectChanged(DvijDirect),
     Update,
     RebuildSVG,
@@ -54,7 +54,7 @@ impl TestInvertor {
             values: make_values(values),
             graph: Graphic::series(&names),
             invertor: invertor,
-            speed: 10_u16,
+            speed: 10_u32,
             direct: DvijDirect::FWD,
             ui: Default::default()
         }

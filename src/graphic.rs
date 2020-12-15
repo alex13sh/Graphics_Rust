@@ -120,6 +120,7 @@ impl Graphic {
         .into()
     }
 
+    #[cfg(feature = "plotters")]
     pub fn update_svg(&mut self) {
         if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
             self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
@@ -142,7 +143,7 @@ impl Graphic {
             } else {
                 0_f32
             };
-        let seconds_range = dlt_time_f32(self.view_port.start)..dlt_time_f32(self.view_port.end);
+        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
 //         dbg!(&seconds_range);
         if seconds_range.start >= seconds_range.end {return None;}
         
@@ -156,7 +157,7 @@ impl Graphic {
         let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (a_speed, a_temp) = if is_log {
-            let (upper, lower) = root_area.split_vertically(200);
+            let (upper, lower) = root_area.split_vertically(400);
             (lower, upper)
         } else {root_area.split_horizontally(900)};
         
@@ -190,9 +191,9 @@ impl Graphic {
             .set_secondary_coord(seconds_range.clone(),
             0_f32..25_f32);
             cc_speed.configure_mesh()
-                .x_labels(20).y_labels(10)
-                .y_desc("Скорость (об./мин)")
-                .y_label_formatter(&|x| format!("{}k", *x as u32/1000))
+                .x_labels(20).y_labels(8)
+                .y_desc("Скорость (об./c)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
                 .draw().unwrap();
             cc_speed.configure_secondary_axes()
                 .x_labels(20).y_labels(10)
@@ -203,7 +204,11 @@ impl Graphic {
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
             profile!("self.series.iter()");
-            let points = self.view_port.get_slice_points(&s.points);
+            let points = if is_log {
+                &s.points
+            } else {
+                self.view_port.get_slice_points(&s.points)
+            };
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
             let ls = LineSeries::new(
@@ -261,6 +266,15 @@ impl Graphic {
 // //             .center_x()
 // //             .center_y()
 //             .into()
+    }
+    
+    pub fn save_svg(&self) {
+        if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
+            use std::io::Write;
+            let mut f = std::fs::File::create("./plot.svg").unwrap();
+            f.write(svg_text.as_bytes());
+            f.flush();
+        }
     }
 }
 

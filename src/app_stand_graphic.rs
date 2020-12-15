@@ -20,7 +20,7 @@ pub struct App {
     
     graph: Graphic,
     is_started: bool,
-    speed: u16,
+    speed: u32,
     
     values: BTreeMap<String, Arc<Value>>,
     invertor: Invertor,
@@ -38,6 +38,8 @@ struct UI {
     start: ui_button_start::State,
     klapan: [button::State; 3],
     speed: slider::State,
+    
+    pb_svg_save: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -47,11 +49,13 @@ pub enum Message {
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
     
-    SpeedChanged(u16),
+    SpeedChanged(u32),
     SetSpeed(u16),
     
     GraphicMessage(graphic::Message),
     ButtonStart(ui_button_start::Message),
+    
+    SaveSvg,
 }
 
 impl Application for App {
@@ -162,6 +166,12 @@ impl Application for App {
             self.ui.start = Default::default();
             // Invertor SetSpeed
             // Invertor Start | Stop
+            if start {
+                self.invertor.start();
+            } else {
+                self.invertor.stop();
+            }
+            self.log_save();
         },
         Message::ToggleKlapan(ind, enb) => {
             let device = &self.digit_io;
@@ -179,9 +189,13 @@ impl Application for App {
             }, _ => {}
             }
         },
-        Message::SpeedChanged(speed) => self.speed = speed,
+        Message::SpeedChanged(speed) => {
+            self.speed = speed;
+//             dbg!((10*speed)/6);
+            self.invertor.set_speed((10*speed)/6);
+        },
 //         Message::SetSpeed(speed) => {},
-        
+        Message::SaveSvg => self.graph.save_svg(),
         _ => {}
         };
         Command::none()
@@ -213,8 +227,12 @@ impl Application for App {
                         .on_press(Message::ToggleKlapan(ind, !check)))
                     );
                 
+                let buttons = controls_klapan.push(
+                    Button::new(&mut self.ui.pb_svg_save, Text::new("Сохранить график"))
+                        .on_press(Message::SaveSvg)
+                    );
     //             controls_klapan.into()
-                Element::from(controls_klapan)
+                Element::from(buttons)
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             
             let invertor: Element<_> = if self.invertor.device().is_connect() {

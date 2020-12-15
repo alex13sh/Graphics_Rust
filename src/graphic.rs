@@ -17,6 +17,7 @@ use chrono::Duration;
 pub struct Graphic {
     series: Vec<LineSeries>, // HashMap
     view_port: ViewPort,
+    dt_start: DateTime,
     
     grid_cache: Cache,
     lines_cache: Cache,
@@ -41,6 +42,7 @@ impl Graphic {
                 min_value: -10_f32, 
                 max_value: 100_f32,
             },
+            dt_start: chrono::Local::now(),
             grid_cache: Default::default(),
             lines_cache: Default::default(),
             plotters_svg:  Default::default(),
@@ -65,6 +67,10 @@ impl Graphic {
         let mut graphic = Self::new();
         graphic.add_series("", false, names);
         graphic
+    }
+    
+    pub fn set_datetime_start(&mut self, dt: DateTime) {
+        self.dt_start = dt;
     }
     
     pub fn update(&mut self, message: Message) {
@@ -124,10 +130,15 @@ impl Graphic {
         use std::ops::{Deref, DerefMut};
         
 //         let dt_range = self.view_port.start..self.view_port.end;
-        let dlt_time_f32 = |dt: DateTime| (dt - self.view_port.start)
-            .to_std().unwrap().as_secs_f32();
-        let seconds_range = 0_f32..dlt_time_f32(self.view_port.end);
+        let dlt_time_f32 = |dt: DateTime| 
+            if let Ok(std) = (dt - self.dt_start).to_std() {
+                std.as_secs_f32()
+            } else {
+                0_f32
+            };
+        let seconds_range = dlt_time_f32(self.view_port.start)..dlt_time_f32(self.view_port.end);
 //         dbg!(&seconds_range);
+        if seconds_range.start >= seconds_range.end {return;}
         
         let mut svg_text = String::new();
         {

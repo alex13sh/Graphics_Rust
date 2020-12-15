@@ -75,6 +75,8 @@ impl Application for App {
         }
         
         let mut graphic = Graphic::new();
+//         graphic.set_datetime_start(chrono::Local::now());
+        
         let value_names: Vec<_> = values.keys().into_iter()
             .map(|k| k.as_str())
             .collect();

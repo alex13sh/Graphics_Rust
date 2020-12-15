@@ -59,7 +59,7 @@ pub struct LogValue {
 
 impl LogValue {
     pub fn new(hash: String, value: f32) -> Self {
-        dbg!(&hash, &value);
+//         dbg!(&hash, &value);
         LogValue {
             date_time: date_time_now(),
             hash: hash,

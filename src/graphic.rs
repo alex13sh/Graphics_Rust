@@ -112,6 +112,12 @@ impl Graphic {
 //         dbg!(&self.view_port.start);
     }
     
+    pub fn reset_values(&mut self) {
+        for mut s in &mut self.series {
+            s.points = Vec::new();
+        }
+    }
+    
     #[cfg(not(feature = "plotters"))]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
         Canvas::new(self)

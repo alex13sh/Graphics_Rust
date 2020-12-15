@@ -40,6 +40,7 @@ struct UI {
     speed: slider::State,
     
     pb_svg_save: button::State,
+    pb_reset: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +57,7 @@ pub enum Message {
     ButtonStart(ui_button_start::Message),
     
     SaveSvg,
+    LogReset,
 }
 
 impl Application for App {
@@ -123,7 +125,7 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(500))
+            time::every(std::time::Duration::from_millis(200))
             .map(|_| Message::ModbusUpdate),
             time::every(std::time::Duration::from_millis(1000))
             .map(|_| Message::GraphicUpdate),
@@ -196,6 +198,10 @@ impl Application for App {
         },
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
+        Message::LogReset => {
+            self.log_values = Vec::new();
+            self.graph.reset_values()
+        },
         _ => {}
         };
         Command::none()
@@ -230,6 +236,9 @@ impl Application for App {
                 let buttons = controls_klapan.push(
                     Button::new(&mut self.ui.pb_svg_save, Text::new("Сохранить график"))
                         .on_press(Message::SaveSvg)
+                    ).push(
+                    Button::new(&mut self.ui.pb_reset, Text::new("Сброс значений"))
+                        .on_press(Message::LogReset)
                     );
     //             controls_klapan.into()
                 Element::from(buttons)

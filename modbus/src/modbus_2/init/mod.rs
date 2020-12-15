@@ -51,7 +51,7 @@ pub fn make_owen_analog(ip_address: String) -> Device {
                 sensor_type: SensorType::Vibra(Amper_4_20),
                 pin: 3,
                 interval: 600,
-                value_error: (3, 5).into(),
+                value_error: (10, 16).into(),
             },
             Sensor {
                 name: "Температура Статора".into(),

@@ -23,6 +23,11 @@ pub fn date_time_now() -> DateTime {
 //         .east(3*60*60)
 }
 
+pub fn date_time_to_string_name(dt: &DateTime) -> String {
+    dt.format("%d_%m_%Y__%H_%M_%S_%.f")
+        .to_string().replace("_.", "_")
+}
+
 pub mod json;
 pub mod csv;
 
@@ -129,6 +134,7 @@ impl Logger {
     }
     
     pub fn new_session(&mut self, values: &Vec<crate::LogValue>) {
+        dbg!();
         if values.len() < 2 {return;}
         let start = values.first().unwrap().date_time;
         let finish = values.last().unwrap().date_time;
@@ -138,8 +144,7 @@ impl Logger {
             let s = csv::SessionTime {
                 start: start,
                 finish: finish,
-                file_name: Some(start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
-                    .to_string().replace("_.", "_")),
+                file_name: Some(format!("value_{}.csv", date_time_to_string_name(&start))),
                 values: Some(values.clone()),
             };
             csv::write_values(&get_file_path("csv").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());

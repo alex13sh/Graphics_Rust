@@ -277,7 +277,7 @@ impl Graphic {
     pub fn save_svg(&self) {
         if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
             use std::io::Write;
-            let mut f = std::fs::File::create("./plot.svg").unwrap();
+            let mut f = std::fs::File::create(format!("./plot/plot_{}.svg", log::date_time_to_string_name(&self.dt_start.into()))).unwrap();
             f.write(svg_text.as_bytes());
             f.flush();
         }

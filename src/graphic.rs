@@ -116,6 +116,9 @@ impl Graphic {
 
     #[cfg(feature = "plotters")]
     pub fn update_svg(&mut self) {
+        use coarse_prof::profile;
+        profile!("update_svg");
+        
         use plotters::prelude::*;
         use std::collections::HashMap;
         use std::ops::{Deref, DerefMut};
@@ -128,6 +131,7 @@ impl Graphic {
         
         let mut svg_text = String::new();
         {
+        profile!("svg_text");
         let root_area = SVGBackend::with_string(&mut svg_text, 
             (1200, 600)
 //             (600, 1300)
@@ -178,6 +182,7 @@ impl Graphic {
 //         cc_map.insert(String::from("Скорость"), cc_speed.deref());
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
+            profile!("self.series.iter()");
             let points = self.view_port.get_slice_points(&s.points);
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
@@ -207,19 +212,22 @@ impl Graphic {
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
         
-        let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
-        for mut cc in lst {
-            cc.configure_series_labels()
-            .background_style(&WHITE.mix(0.8))
-            .border_style(&BLACK)
-            .draw().unwrap();
-        }
+//         let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
+//         for mut cc in lst {
+//             profile!("for mut cc in lst");
+//             cc.configure_series_labels()
+//             .background_style(&WHITE.mix(0.8))
+//             .border_style(&BLACK)
+//             .draw().unwrap();
+//         }
         }
 //         dbg!(svg_text.len());
         self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
     }
     #[cfg(feature = "plotters")]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
+        use coarse_prof::profile;
+        profile!("Graphic view");
         let content: Element<Message> = if let Some(handle) = self.plotters_svg.clone() {
             Svg::new(handle)
             .width(Length::Fill)
@@ -234,6 +242,12 @@ impl Graphic {
 // //             .center_x()
 // //             .center_y()
 //             .into()
+    }
+}
+
+impl Drop for Graphic {
+    fn drop(&mut self) {
+        coarse_prof::write(&mut std::io::stdout()).unwrap();
     }
 }
 

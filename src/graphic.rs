@@ -116,6 +116,7 @@ impl Graphic {
         for mut s in &mut self.series {
             s.points = Vec::new();
         }
+        self.dt_start = chrono::Local::now();
     }
     
     #[cfg(not(feature = "plotters"))]
@@ -198,7 +199,7 @@ impl Graphic {
             0_f32..25_f32);
             cc_speed.configure_mesh()
                 .x_labels(20).y_labels(8)
-                .y_desc("Скорость (об./c)")
+                .y_desc("Скорость (об./м)")
                 .y_label_formatter(&|x| format!("{}", *x as u32))
                 .draw().unwrap();
             cc_speed.configure_secondary_axes()
@@ -243,14 +244,16 @@ impl Graphic {
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
         
-//         let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
-//         for mut cc in lst {
-//             profile!("for mut cc in lst");
-//             cc.configure_series_labels()
-//             .background_style(&WHITE.mix(0.8))
-//             .border_style(&BLACK)
-//             .draw().unwrap();
-//         }
+        if is_log {
+            let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut()];
+            for mut cc in lst {
+                profile!("for mut cc in lst");
+                cc.configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw().unwrap();
+            }
+        }
         }
         Some(svg_text)
     }

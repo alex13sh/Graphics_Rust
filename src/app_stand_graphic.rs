@@ -127,13 +127,14 @@ impl Application for App {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(200))
             .map(|_| Message::ModbusUpdate),
-            time::every(std::time::Duration::from_millis(1000))
+            time::every(std::time::Duration::from_millis(1500))
             .map(|_| Message::GraphicUpdate),
         ])
     }
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
         Message::ModbusUpdate  => {
+            use std::convert::TryFrom;
             let devices = [&self.owen_analog, 
                 &self.digit_io.device(), &self.invertor.device()];
                 
@@ -141,7 +142,6 @@ impl Application for App {
                 d.update();
             }
             let values = {
-                use std::convert::TryFrom;
                 self.values.iter()
                 .map(|(k, v)| 
                     if let Ok(value) = f32::try_from(v.as_ref()) {
@@ -159,6 +159,17 @@ impl Application for App {
                 .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
             };
             self.log_values.append(&mut log_values);
+            
+            let speed_value = self.invertor.get_hz_out_value();
+            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+            if self.is_started == false && speed_value > 5.0 {
+                self.is_started = true;
+                self.reset_values();
+            } else if self.is_started == true && speed_value < 5.0 {
+                self.is_started = false;
+                self.graph.save_svg();
+                self.log_save();
+            }
         },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
@@ -198,10 +209,7 @@ impl Application for App {
         },
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
-        Message::LogReset => {
-            self.log_values = Vec::new();
-            self.graph.reset_values()
-        },
+        Message::LogReset => self.reset_values(),
         _ => {}
         };
         Command::none()
@@ -319,6 +327,11 @@ impl App {
         }
     }
     
+    fn reset_values(&mut self) {
+        self.log_values = Vec::new();
+        self.graph.reset_values()
+    }
+    
     fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
         let mut map = HashMap::new();
         map.insert("Analog", vec![
@@ -361,12 +374,12 @@ impl App {
             let values_map = self.owen_analog.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
         };
-        {
-            let values_name = &values_name_map[&"DigitIO"];
-            let dev = self.digit_io.device();
-            let values_map = dev.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
-        };
+//         {
+//             let values_name = &values_name_map[&"DigitIO"];
+//             let dev = self.digit_io.device();
+//             let values_map = dev.values_map();
+//             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
+//         };
         
         {
             let values_name = &values_name_map[&"Invertor"];

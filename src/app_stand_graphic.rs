@@ -164,10 +164,14 @@ impl Application for App {
             
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+            let vibra_value = self.owen_analog.values_map().get("Вибрация 4_20 A/value_float").unwrap().clone();
+            let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+            
             if self.is_started == false && speed_value > 5.0 {
                 self.is_started = true;
                 self.reset_values();
-            } else if self.is_started == true && speed_value < 5.0 {
+            } else if self.is_started == true 
+                && (speed_value < 2.0 && vibra_value<0.2) {
                 self.is_started = false;
                 self.graph.save_svg();
                 self.log_save();

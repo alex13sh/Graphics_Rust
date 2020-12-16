@@ -13,7 +13,7 @@ pub struct Value {
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
-    log: Option<Log>,
+    pub(super) log: Option<Log>,
 }
 
 impl Value {
@@ -44,6 +44,16 @@ impl Value {
         match self.direct {
         ValueDirect::Read(err) => err,
         ValueDirect::Write => None,
+        }
+    }
+    pub fn is_log(&self) -> bool {
+        self.log.is_some()
+    }
+    pub fn hash(&self) -> String {
+        if let Some(ref log) = self.log {
+            log.hash.clone()
+        } else {
+            "".into()
         }
     }
     

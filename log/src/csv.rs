@@ -72,7 +72,9 @@ pub fn read_values(file_name: &PathBuf) -> Option<Vec<crate::LogValue>> {
 }
 
 pub fn write_session(file_name: &PathBuf, session: Vec<SessionTime>) -> crate::MyResult {
-    let file = File::create(file_name)?;
+    use std::fs::OpenOptions;
+//     let file = File::create(file_name)?;
+    let file = OpenOptions::new().append(true).open(file_name)?;
     let mut wrt = csv::WriterBuilder::new()
         .has_headers(true)
         .delimiter(b';')

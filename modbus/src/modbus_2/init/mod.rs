@@ -51,7 +51,7 @@ pub fn make_owen_analog(ip_address: String) -> Device {
                 sensor_type: SensorType::Vibra(Amper_4_20),
                 pin: 3,
                 interval: 600,
-                value_error: (3, 5).into(),
+                value_error: (10, 16).into(),
             },
             Sensor {
                 name: "Температура Статора".into(),
@@ -154,14 +154,14 @@ pub fn make_invertor(ip_address: String) -> Device {
                 name: name.into(),
                 address: p*256+adr,
                 direct: ValueDirect::Write,
-                size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                size: ValueSize::UInt16Map(|v| v as f32/10_f32),
                 log: None,
             };
             let add_simple_value_read = |hash: &str, p: u16, adr: u16, name: &str| Value {
                 name: name.into(),
                 address: p*256+adr,
                 direct: ValueDirect::Read(None),
-                size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                size: ValueSize::UInt16Map(|v| v as f32/10_f32),
                 log: Log::hash(hash),
             };
             
@@ -297,9 +297,19 @@ pub fn make_invertor(ip_address: String) -> Device {
                 },
             ]);
             
-            let add_simple_value_read = |hash: &str, adr: u16, name: &str| Value {
+            let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
-                direct: ValueDirect::Read(None), size: ValueSize::UINT16,
+                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32),
+                log: Log::hash(hash),
+            };
+            let add_simple_value_read_100 = |hash: &str, adr: u16, name: &str| Value {
+                name: name.into(), address: adr, 
+                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                log: Log::hash(hash),
+            };
+            let add_simple_value_read_10 = |hash: &str, adr: u16, name: &str| Value {
+                name: name.into(), address: adr, 
+                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/10_f32),
                 log: Log::hash(hash),
             };
             // Part 21 ReadOnly
@@ -328,13 +338,13 @@ pub fn make_invertor(ip_address: String) -> Device {
                     ]),
                     log: None,
                 },
-                add_simple_value_read("4c12e17ba3", 0x2102, "Заданная частота (F)"),
-                add_simple_value_read("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
-                add_simple_value_read("5146ba6795", 0x2104, "Выходной ток (A)"),
-                add_simple_value_read("5369886757", 0x2106, "Выходное напряжение (E)"),
+                add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)"),
+                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
+                add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)"),
+                add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),
-                add_simple_value_read("5b28faeb8d", 0x220F, "Температура радиатора"),
+                add_simple_value_read_10("5b28faeb8d", 0x220F, "Температура радиатора"),
             ]);
             
             Some(reg)

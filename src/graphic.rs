@@ -17,6 +17,7 @@ use chrono::Duration;
 pub struct Graphic {
     series: Vec<LineSeries>, // HashMap
     view_port: ViewPort,
+    dt_start: DateTime,
     
     grid_cache: Cache,
     lines_cache: Cache,
@@ -39,8 +40,9 @@ impl Graphic {
                 end: chrono::Local::now(),
                 start: chrono::Local::now() - Duration::seconds(2*60),
                 min_value: -10_f32, 
-                max_value: 5000_f32,
+                max_value: 100_f32,
             },
+            dt_start: chrono::Local::now(),
             grid_cache: Default::default(),
             lines_cache: Default::default(),
             plotters_svg:  Default::default(),
@@ -49,19 +51,26 @@ impl Graphic {
         res
     }
     
-    pub fn series(names: &[&str]) -> Self {
-        let mut series = Vec::new();
+    pub fn add_series(&mut self, graphic_name: &str, second: bool, names: &[&str]) {
         for name in names {
-            series.push(LineSeries{
+            self.series.push(LineSeries{
                 name: (*name).into(),
+                graphic_name: graphic_name.into(),
+                graphic_second: second,
                 color: iced_native::Color::default(),
                 points: Vec::new()
             });
         };
-        Self {
-            series: series, 
-            .. Self::new()
-        }
+    }
+    
+    pub fn series(names: &[&str]) -> Self {
+        let mut graphic = Self::new();
+        graphic.add_series("", false, names);
+        graphic
+    }
+    
+    pub fn set_datetime_start(&mut self, dt: DateTime) {
+        self.dt_start = dt;
     }
     
     pub fn update(&mut self, message: Message) {
@@ -92,7 +101,7 @@ impl Graphic {
     pub fn append_values(&mut self, values: Vec<(&str, f32)>) {
         let dt = chrono::Local::now();
         for (name, value) in values {
-            if let Some(ref mut ser) = self.series.iter_mut().find(|ser| ser.name == name) {
+            if let Some(ref mut ser) = self.series.iter_mut().find(|ser| name.contains(&ser.name)) {
                 ser.points.push(DatePoint{dt: dt, value: value});
             }
         }
@@ -101,6 +110,13 @@ impl Graphic {
         #[cfg(not( feature = "plotters"))] self.lines_cache.clear();
         self.view_port.set_end(dt);
 //         dbg!(&self.view_port.start);
+    }
+    
+    pub fn reset_values(&mut self) {
+        for mut s in &mut self.series {
+            s.points = Vec::new();
+        }
+        self.dt_start = chrono::Local::now();
     }
     
     #[cfg(not(feature = "plotters"))]
@@ -113,57 +129,158 @@ impl Graphic {
 
     #[cfg(feature = "plotters")]
     pub fn update_svg(&mut self) {
+        if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
+            self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
+        }
+    }
+    
+    #[cfg(feature = "plotters")]
+    fn make_svg(&self, start: DateTime, end: DateTime, is_log: bool) -> Option<String> {
+        use coarse_prof::profile;
+        profile!("update_svg");
+        
         use plotters::prelude::*;
+        use std::collections::HashMap;
+        use std::ops::{Deref, DerefMut};
+        
+//         let dt_range = self.view_port.start..self.view_port.end;
+        let dlt_time_f32 = |dt: DateTime| 
+            if let Ok(std) = (dt - self.dt_start).to_std() {
+                std.as_secs_f32()
+            } else {
+                0_f32
+            };
+        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+//         dbg!(&seconds_range);
+        if seconds_range.start >= seconds_range.end {return None;}
         
         let mut svg_text = String::new();
         {
-        let root_area = SVGBackend::with_string(&mut svg_text, (1600, 800)).into_drawing_area();
+        profile!("svg_text");
+        let size = if is_log {
+            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
+            1500)
+        } else {(1200, 600)};
+        let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
-        let mut cc = ChartBuilder::on(&root_area)
-            .x_label_area_size(50)
-            .y_label_area_size(50)
-            .margin_right(30)
+        let (a_speed, (a_temp, a_amp)) = if is_log {
+            let (a1, a2) = root_area.split_vertically(400);
+            let (a2, a3) = a2.split_vertically(400);
+            (a3, (a1, a2))
+        } else {
+            let (a1, a2) = root_area.split_horizontally(900);
+            let (a2, a3) = a2.split_vertically(300);
+            (a1, (a2, a3))
+        };
+        
+        let cc_build = |on, graphic_name, range_1| {
+            ChartBuilder::on(on)
+            .x_label_area_size(25)
+            .y_label_area_size(40)
+            .right_y_label_area_size(40)
+            .margin(5)
+//             .margin_right(20)
             .caption(
-                "Graphic", // date name
-                ("sans-serif", 40).into_font(),
-            )
-            .build_ranged(
-                self.view_port.start..self.view_port.end, 
-                self.view_port.min_value..self.view_port.max_value
+                graphic_name, // date name
+                ("sans-serif", 20).into_font(),
+            ).build_ranged(
+                seconds_range.clone(), 
+                range_1
             ).unwrap()
-            .set_secondary_coord(self.view_port.start..self.view_port.end,
+            };
+        
+//         let mut cc_map = HashMap::new();
+        
+        let mut cc_temp = {
+            let mut cc = cc_build(&a_temp, "Температуры",
+            self.view_port.min_value..self.view_port.max_value)
+        .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
-            
-        cc.configure_mesh().x_labels(5).y_labels(3).draw().unwrap();
+            cc.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
+//         cc_map.insert(String::from("Температуры"), cc_temp.deref());
+            cc};
+        
+        let mut cc_speed = {
+            let mut cc = cc_build(&a_speed, "Скорость",
+            0_f32..25_000_f32)
+            .set_secondary_coord(seconds_range.clone(),
+            0_f32..25_f32);
+            cc.configure_mesh()
+                .x_labels(20).y_labels(8)
+                .y_desc("Скорость (об./м)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
+                .draw().unwrap();
+            cc.configure_secondary_axes()
+                .x_labels(20).y_labels(10)
+                .y_desc("Вибрация (м/с^2)")
+                .y_label_formatter(&|x| format!("{:2.}", x))
+                .draw().unwrap();
+                cc};
+                
+        let mut cc_amper = {
+            let mut cc = cc_build(&a_amp, "Ток",
+            0_f32..120_f32);
+//             .set_secondary_coord(seconds_range.clone(), 0_f32..25_f32);
+            cc.configure_mesh()
+                .x_labels(5).y_labels(12)
+//                 .y_desc("Ток (об./м)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
+                .draw().unwrap();
+            cc};
+//   //         cc_map.insert(String::from("Скорость"), cc_speed.deref());
 //         let color = Palette99::pick(idx).mix(0.9);
         for (s, c) in self.series.iter().filter(|s| s.points.len() >=2 ).zip(0..) {
-            let points = self.view_port.get_slice_points(&s.points);
+            profile!("self.series.iter()");
+            let points = if is_log {
+                &s.points
+            } else {
+                self.view_port.get_slice_points(&s.points)
+            };
 //             let itr = averge_iterator(points, 200);
             let itr = points.iter();
             let ls = LineSeries::new(
-                itr.map(|p| (p.dt, p.value)),
+                itr.map(|p| (dlt_time_f32(p.dt), p.value)),
                 &Palette99::pick(c),
             );
-            let ser = if s.name == "82dc5b4c30" {
-                 cc.draw_secondary_series(ls)
-            } else {
-                cc.draw_series(ls)
-            }.unwrap();
+            let ser = match s.graphic_name.deref() {
+            "Температуры" => {
+                let cc = &mut cc_temp;
+                if s.graphic_second {
+                    cc.draw_secondary_series(ls)
+                } else {
+                    cc.draw_series(ls)
+                }.unwrap()
+            }, "Скорость" | _ => {
+                let cc = &mut cc_speed;
+                if s.graphic_second {
+                    cc.draw_secondary_series(ls)
+                } else {
+                    cc.draw_series(ls)
+                }.unwrap()
+            },
+            };
             ser
             .label(&s.name)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
         
-        cc.configure_series_labels()
-            .background_style(&WHITE.mix(0.8))
-            .border_style(&BLACK)
-            .draw().unwrap();
+        if is_log {
+            let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut(), &mut cc_amper];
+            for mut cc in lst {
+                profile!("for mut cc in lst");
+                cc.configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw().unwrap();
+            }
         }
-//         dbg!(svg_text.len());
-        self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
+        }
+        Some(svg_text)
     }
     #[cfg(feature = "plotters")]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
+        use coarse_prof::profile;
+        profile!("Graphic view");
         let content: Element<Message> = if let Some(handle) = self.plotters_svg.clone() {
             Svg::new(handle)
             .width(Length::Fill)
@@ -178,6 +295,21 @@ impl Graphic {
 // //             .center_x()
 // //             .center_y()
 //             .into()
+    }
+    
+    pub fn save_svg(&self) {
+        if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
+            use std::io::Write;
+            let mut f = std::fs::File::create(format!("./plot/plot_{}.svg", log::date_time_to_string_name(&self.dt_start.into()))).unwrap();
+            f.write(svg_text.as_bytes());
+            f.flush();
+        }
+    }
+}
+
+impl Drop for Graphic {
+    fn drop(&mut self) {
+        coarse_prof::write(&mut std::io::stdout()).unwrap();
     }
 }
 
@@ -261,6 +393,8 @@ impl canvas::Program<Message> for Graphic {
 #[derive(Default, Debug)]
 struct LineSeries {
     name: String,
+    graphic_name: String,
+    graphic_second: bool,
     color: iced_native::Color,
     points: Vec<DatePoint>,
 }

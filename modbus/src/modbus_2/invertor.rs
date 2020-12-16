@@ -63,11 +63,11 @@ impl Invertor {
         self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
         Ok(())
     }
-    pub fn set_speed(&self, hz: u16) ->  Result<(), DeviceError> {
+    pub fn set_speed(&self, hz: u32) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
 //         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();
-        v_set_speed.update_value(hz as u32);
+        v_set_speed.update_value(hz);
         self.device.context()?.borrow_mut().set_value(&v_set_speed)?;
         Ok(())
     }

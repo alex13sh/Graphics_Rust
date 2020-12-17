@@ -447,7 +447,7 @@ mod style {
                     background: Some(Background::Color(
                         Color::from_rgb8(150, 0,0),
                     )),
-                    border_radius: 10,
+                    border_radius: 10_f32,
                     text_color: Color::WHITE,
                     ..button::Style::default()
                 }
@@ -456,7 +456,7 @@ mod style {
                     background: Some(Background::Color(
                         Color::from_rgb8(0, 150, 0),
                     )),
-                    border_radius: 10,
+                    border_radius: 10_f32,
                     text_color: Color::WHITE,
                     ..button::Style::default()
                 }

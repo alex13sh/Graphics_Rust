@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79",  features = ["canvas", "tokio", "svg"] }
-iced_native = { git="https://github.com/hecrj/iced", rev="9ba4cfd23f4620bab93df9616617643604db2c79"}
+iced = { version = "0.2",  features = ["canvas", "tokio", "svg"] }
+iced_native = { version = "0.2"}
 
 chrono = "0.4"
 coarse-prof = {version = "0.2.4", path = "../coarse-prof-0.2.4"}

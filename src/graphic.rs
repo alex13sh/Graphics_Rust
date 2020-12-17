@@ -57,7 +57,7 @@ impl Graphic {
                 name: (*name).into(),
                 graphic_name: graphic_name.into(),
                 graphic_second: second,
-                color: iced_native::Color::default(),
+                color: iced_native::Color::BLACK,
                 points: Vec::new()
             });
         };
@@ -390,7 +390,7 @@ impl canvas::Program<Message> for Graphic {
 //     values: Vec<f32>
 // }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct LineSeries {
     name: String,
     graphic_name: String,

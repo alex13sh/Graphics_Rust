@@ -119,11 +119,11 @@ impl Graphic {
         self.dt_start = chrono::Local::now();
     }
     
-    #[cfg(not(feature = "plotters"))]
-    pub fn view<'a>(&mut self) -> Element<'a, Message> {
+    #[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
+    pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
         Canvas::new(self)
-            .width(Length::Units(1000))
-            .height(Length::Units(1000))
+            .width(Length::Units(1800))
+            .height(Length::Units(900))
         .into()
     }
 
@@ -132,6 +132,7 @@ impl Graphic {
         if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
             self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
         }
+        self.lines_cache.clear();
     }
     
     #[cfg(feature = "plotters")]
@@ -156,6 +157,7 @@ impl Graphic {
         Some(svg_text)
     }
     
+    #[cfg(feature = "plotters")]
     fn update_plotters<B, BE>(&self, back: B,
         seconds_range: core::ops::Range<f32>, is_log: bool) 
         where 
@@ -298,7 +300,7 @@ impl Graphic {
     }
     
     
-    #[cfg(feature = "plotters")]
+    #[cfg(all(feature = "plotters", not(feature = "iced_backend")))]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
         use coarse_prof::profile;
         profile!("Graphic view");
@@ -334,7 +336,7 @@ impl Drop for Graphic {
     }
 }
 
-#[cfg(not(feature = "plotters"))]
+#[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
 impl canvas::Program<Message> for Graphic {
 
     fn update(
@@ -342,11 +344,11 @@ impl canvas::Program<Message> for Graphic {
         _event: Event,
         _bounds: Rectangle,
         _cursor: Cursor,
-    ) -> Option<Message> {
-        None
+    ) -> (iced::canvas::event::Status, Option<Message>) {
+        (iced::canvas::event::Status::Ignored , None)
     }
     
-//     #[cfg(not(feature = "plotters"))]
+    #[cfg(not(feature = "plotters"))]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
 //         dbg!(&self.state.series);
 
@@ -394,7 +396,25 @@ impl canvas::Program<Message> for Graphic {
         
         vec![grid, lines]
     }
-    
+
+    #[cfg(feature = "iced_backend")]
+    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
+        let plot = self.lines_cache.draw(bounds.size(), |frame| {
+            use plotters::prelude::*;
+            let start = self.view_port.start;
+            let end = self.view_port.end;
+            let dlt_time_f32 = |dt: DateTime| 
+                (dt - self.dt_start).to_std()
+                    .and_then(|std| Ok(std.as_secs_f32()))
+                    .unwrap_or(0_f32);
+            let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+            if seconds_range.start >= seconds_range.end {return;}
+            
+            let back = iced_backend::IcedBackend::new(frame).unwrap();
+            self.update_plotters(back, seconds_range, false);
+        });
+        vec![plot]
+    }
 }
 
 // struct Legend {

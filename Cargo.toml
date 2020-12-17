@@ -25,6 +25,7 @@ features = [ "chrono", "line_series", "svg_backend"] # "iced_back"]
 
 [dependencies.iced_backend]
 path = "./src/iced_backend/"
+optional = true
 
 [workspace]
 members = [
@@ -33,7 +34,7 @@ members = [
 ]
 
 [features]
-default = ["plotters"] #, "test"]
+default = ["plotters", "iced_backend"] #, "test"]
 
 test = ["modbus/test"]
 

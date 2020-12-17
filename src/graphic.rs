@@ -136,6 +136,33 @@ impl Graphic {
     
     #[cfg(feature = "plotters")]
     fn make_svg(&self, start: DateTime, end: DateTime, is_log: bool) -> Option<String> {
+        use plotters::prelude::*;
+        let dlt_time_f32 = |dt: DateTime| 
+            (dt - self.dt_start).to_std()
+                .and_then(|std| Ok(std.as_secs_f32()))
+                .unwrap_or(0_f32);
+        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+        if seconds_range.start >= seconds_range.end {return None;}
+        let size = if is_log {
+            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
+            1500)
+        } else {(1200, 600)};
+        
+        let mut svg_text = String::new();
+        {
+            let mut back = SVGBackend::with_string(&mut svg_text, size);
+            self.update_plotters(back, seconds_range, is_log);
+        }
+        Some(svg_text)
+    }
+    
+    fn update_plotters<B, BE>(&self, back: B,
+        seconds_range: core::ops::Range<f32>, is_log: bool) 
+        where 
+            BE: std::error::Error + Send + Sync,
+            B: plotters::prelude::DrawingBackend<ErrorType=BE>,
+        {
+        
         use coarse_prof::profile;
         profile!("update_svg");
         
@@ -150,18 +177,11 @@ impl Graphic {
             } else {
                 0_f32
             };
-        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+//         let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
 //         dbg!(&seconds_range);
-        if seconds_range.start >= seconds_range.end {return None;}
         
-        let mut svg_text = String::new();
-        {
-        profile!("svg_text");
-        let size = if is_log {
-            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
-            1500)
-        } else {(1200, 600)};
-        let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
+                
+        let root_area = back.into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (a_speed, (a_temp, a_amp)) = if is_log {
             let (a1, a2) = root_area.split_vertically(400);
@@ -274,9 +294,10 @@ impl Graphic {
                 .draw().unwrap();
             }
         }
-        }
-        Some(svg_text)
+        
     }
+    
+    
     #[cfg(feature = "plotters")]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
         use coarse_prof::profile;

@@ -23,6 +23,9 @@ optional = true
 default-features = false
 features = [ "chrono", "line_series", "svg_backend"] # "iced_back"]
 
+[dependencies.iced_backend]
+path = "./src/iced_backend/"
+
 [workspace]
 members = [
     "log",

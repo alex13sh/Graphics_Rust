@@ -57,7 +57,7 @@ impl Graphic {
                 name: (*name).into(),
                 graphic_name: graphic_name.into(),
                 graphic_second: second,
-                color: iced_native::Color::default(),
+                color: iced_native::Color::BLACK,
                 points: Vec::new()
             });
         };
@@ -119,11 +119,11 @@ impl Graphic {
         self.dt_start = chrono::Local::now();
     }
     
-    #[cfg(not(feature = "plotters"))]
-    pub fn view<'a>(&mut self) -> Element<'a, Message> {
+    #[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
+    pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
         Canvas::new(self)
-            .width(Length::Units(1000))
-            .height(Length::Units(1000))
+            .width(Length::Units(1800))
+            .height(Length::Units(850))
         .into()
     }
 
@@ -132,10 +132,39 @@ impl Graphic {
         if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
             self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
         }
+        self.lines_cache.clear();
     }
     
     #[cfg(feature = "plotters")]
     fn make_svg(&self, start: DateTime, end: DateTime, is_log: bool) -> Option<String> {
+        use plotters::prelude::*;
+        let dlt_time_f32 = |dt: DateTime| 
+            (dt - self.dt_start).to_std()
+                .and_then(|std| Ok(std.as_secs_f32()))
+                .unwrap_or(0_f32);
+        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+        if seconds_range.start >= seconds_range.end {return None;}
+        let size = if is_log {
+            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
+            1500)
+        } else {(1200, 600)};
+        
+        let mut svg_text = String::new();
+        {
+            let mut back = SVGBackend::with_string(&mut svg_text, size);
+            self.update_plotters(back, seconds_range, is_log);
+        }
+        Some(svg_text)
+    }
+    
+    #[cfg(feature = "plotters")]
+    fn update_plotters<B, BE>(&self, back: B,
+        seconds_range: core::ops::Range<f32>, is_log: bool) 
+        where 
+            BE: std::error::Error + Send + Sync,
+            B: plotters::prelude::DrawingBackend<ErrorType=BE>,
+        {
+        
         use coarse_prof::profile;
         profile!("update_svg");
         
@@ -150,26 +179,20 @@ impl Graphic {
             } else {
                 0_f32
             };
-        let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+//         let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
 //         dbg!(&seconds_range);
-        if seconds_range.start >= seconds_range.end {return None;}
         
-        let mut svg_text = String::new();
-        {
-        profile!("svg_text");
-        let size = if is_log {
-            (((seconds_range.end - seconds_range.start) as u32*10).max(800),
-            1500)
-        } else {(1200, 600)};
-        let root_area = SVGBackend::with_string(&mut svg_text, size).into_drawing_area();
+                
+        let root_area = back.into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (a_speed, (a_temp, a_amp)) = if is_log {
             let (a1, a2) = root_area.split_vertically(400);
             let (a2, a3) = a2.split_vertically(400);
             (a3, (a1, a2))
         } else {
-            let (a1, a2) = root_area.split_horizontally(900);
-            let (a2, a3) = a2.split_vertically(300);
+            let size = root_area.dim_in_pixel();
+            let (a1, a2) = root_area.split_horizontally(size.0*3/4);
+            let (a2, a3) = a2.split_vertically(size.1/2);
             (a1, (a2, a3))
         };
         
@@ -274,10 +297,11 @@ impl Graphic {
                 .draw().unwrap();
             }
         }
-        }
-        Some(svg_text)
+        
     }
-    #[cfg(feature = "plotters")]
+    
+    
+    #[cfg(all(feature = "plotters", not(feature = "iced_backend")))]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
         use coarse_prof::profile;
         profile!("Graphic view");
@@ -313,7 +337,7 @@ impl Drop for Graphic {
     }
 }
 
-#[cfg(not(feature = "plotters"))]
+#[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
 impl canvas::Program<Message> for Graphic {
 
     fn update(
@@ -321,11 +345,11 @@ impl canvas::Program<Message> for Graphic {
         _event: Event,
         _bounds: Rectangle,
         _cursor: Cursor,
-    ) -> Option<Message> {
-        None
+    ) -> (iced::canvas::event::Status, Option<Message>) {
+        (iced::canvas::event::Status::Ignored , None)
     }
     
-//     #[cfg(not(feature = "plotters"))]
+    #[cfg(not(feature = "plotters"))]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
 //         dbg!(&self.state.series);
 
@@ -373,7 +397,25 @@ impl canvas::Program<Message> for Graphic {
         
         vec![grid, lines]
     }
-    
+
+    #[cfg(feature = "iced_backend")]
+    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
+        let plot = self.lines_cache.draw(bounds.size(), |frame| {
+            use plotters::prelude::*;
+            let start = self.view_port.start;
+            let end = self.view_port.end;
+            let dlt_time_f32 = |dt: DateTime| 
+                (dt - self.dt_start).to_std()
+                    .and_then(|std| Ok(std.as_secs_f32()))
+                    .unwrap_or(0_f32);
+            let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
+            if seconds_range.start >= seconds_range.end {return;}
+            
+            let back = iced_backend::IcedBackend::new(frame).unwrap();
+            self.update_plotters(back, seconds_range, false);
+        });
+        vec![plot]
+    }
 }
 
 // struct Legend {
@@ -390,7 +432,7 @@ impl canvas::Program<Message> for Graphic {
 //     values: Vec<f32>
 // }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct LineSeries {
     name: String,
     graphic_name: String,

@@ -123,7 +123,7 @@ impl Graphic {
     pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
         Canvas::new(self)
             .width(Length::Units(1800))
-            .height(Length::Units(900))
+            .height(Length::Units(850))
         .into()
     }
 

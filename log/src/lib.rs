@@ -24,6 +24,7 @@ pub fn date_time_now() -> DateTime {
 }
 
 pub fn date_time_to_string_name(dt: &DateTime) -> String {
+    let dt = (*dt+Duration::hours(3));
     dt.format("%d_%m_%Y__%H_%M_%S_%.f")
         .to_string().replace("_.", "_")
 }
@@ -149,7 +150,7 @@ impl Logger {
             };
             csv::write_values(&get_file_path("csv").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
             sessions.push(s);
-            csv::write_session(&get_file_path("csv/session.csv"), sessions.clone());
+            csv::write_session(&get_file_path("csv/sessions.csv"), sessions.clone());
         },
 //         LoggerType::Json {ref mut sessions} => sessions.push(json::NewJsonLog {
 //             start: start,

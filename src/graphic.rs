@@ -266,7 +266,10 @@ impl Graphic {
                 &Palette99::pick(c),
             );
             let ser = match s.graphic_name.deref() {
-            "Температуры" => {
+            "Ток" => {
+                let cc = &mut cc_amper;
+                cc.draw_series(ls).unwrap()
+            }, "Температуры" => {
                 let cc = &mut cc_temp;
                 if s.graphic_second {
                     cc.draw_secondary_series(ls)

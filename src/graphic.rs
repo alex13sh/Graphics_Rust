@@ -190,8 +190,9 @@ impl Graphic {
             let (a2, a3) = a2.split_vertically(400);
             (a3, (a1, a2))
         } else {
-            let (a1, a2) = root_area.split_horizontally(900);
-            let (a2, a3) = a2.split_vertically(300);
+            let size = root_area.dim_in_pixel();
+            let (a1, a2) = root_area.split_horizontally(size.0*3/4);
+            let (a2, a3) = a2.split_vertically(size.1/2);
             (a1, (a2, a3))
         };
         

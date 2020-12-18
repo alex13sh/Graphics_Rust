@@ -129,7 +129,7 @@ impl Application for App {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(200))
             .map(|_| Message::ModbusUpdate),
-            time::every(std::time::Duration::from_millis(1500))
+            time::every(std::time::Duration::from_millis(200))
             .map(|_| Message::GraphicUpdate),
         ])
     }
@@ -223,12 +223,13 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
 //         let content = Text::new("Пустое окно");
 
+        let list_value = self.view_list_value();
         let graph = self.graph.view()
             .map(Message::GraphicMessage);
             
         let row = Row::new()
             .spacing(20)
-            .push(self.view_list_value())
+            .push(list_value)
             .push(graph);
         
         let controls = {
@@ -451,7 +452,7 @@ mod style {
                     background: Some(Background::Color(
                         Color::from_rgb8(150, 0,0),
                     )),
-                    border_radius: 10,
+                    border_radius: 10_f32,
                     text_color: Color::WHITE,
                     ..button::Style::default()
                 }
@@ -460,7 +461,7 @@ mod style {
                     background: Some(Background::Color(
                         Color::from_rgb8(0, 150, 0),
                     )),
-                    border_radius: 10,
+                    border_radius: 10_f32,
                     text_color: Color::WHITE,
                     ..button::Style::default()
                 }

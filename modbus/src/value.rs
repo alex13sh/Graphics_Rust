@@ -166,6 +166,16 @@ impl ModbusValues {
     }
 }
 
+impl From<Vec<ValueInit>> for ModbusValues {
+    fn from(values: Vec<ValueInit>) -> Self {
+        ModbusValues(
+            values.into_iter()
+                .map(|v| (v.name.clone(), Arc::new(Value::from(v))))
+                .collect()
+        )
+    }
+}
+
 
 impl Deref for ModbusValues {
     type Target = HashMap<String, Arc<Value>>;

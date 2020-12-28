@@ -26,54 +26,68 @@ pub(crate) fn init_devices() -> Vec<Device> {
 pub fn make_owen_analog(ip_address: String) -> Device {
     use SensorAnalogType::*;
     use ValueGroup::*;
+    use sensor::SensorValues as SV;
+    
+    // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
+    let make_value = |name: &str, address: u16, size: ValueSize, direct: ValueDirect|  Value {
+        name: name.into(),
+        address: address,
+        direct: direct,
+        size: size,
+        log: None,
+    };
+    let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
+        Value {
+            log: Log::hash(&format!("OwenAnalog/{}/value", pin)),
+            .. make_value("value_float", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err)))
+        },
+        make_value("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
+        make_value("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
+        make_value("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
+        make_value("Нижняя граница", 4110+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
+        make_value("interval", 4113+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write),
+    ];
+    
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)| {
+        SV {
+            name: name.into(),
+            pin: pin,
+            interval: 800,
+            value_error: value_error.into(),
+            sensor_type: SensorType::Analog(Pt_100),
+            values: make_values(pin as u16, value_error.into(), ValueSize::FLOAT),
+        }
+    };
+    
+    let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)| {
+        SV {
+            sensor_type: SensorType::Analog(Pt_100),
+            value_error: value_error.into(),
+            values: make_values(pin as u16, value_error.into(), 
+                ValueSize::FloatMap(|v|10_f32.powf(v*10.0-5.5))
+            ),
+            .. make_sensor(pin, name, (0,0))
+        }
+    };
     
     Device {
         name: "Input Analog".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
-            Sensor {
-                name: "Температура Ротора".into(),
-                sensor_type: SensorType::Analog(Amper_4_20),
-                pin: 1,
-                interval: 800,
-                value_error: (60, 90).into(),
-            },
-            Sensor {
-                name: "Давление -1_1 V".into(),
-                sensor_type: SensorType::Davl(Volt_1),
-                pin: 2,
-                interval: 800,
-                value_error: (0.1, 0.5).into(),
-            },
-            Sensor {
-                name: "Вибрация 4_20 A".into(),
+            SensorValues( SV {
                 sensor_type: SensorType::Vibra(Amper_4_20),
-                pin: 3,
-                interval: 600,
-                value_error: (10, 16).into(),
-            },
-            Sensor {
-                name: "Температура Статора".into(),
-                sensor_type: SensorType::Analog(Pt_100),
-                pin: 4,
-                interval: 800,
-                value_error: (60, 85).into(),
-            },
-            Sensor {
-                name: "Температура Пер.Под.".into(),
-                sensor_type: SensorType::Analog(Pt_100),
-                pin: 5,
-                interval: 800,
-                value_error: (60, 80).into(),
-            },
-            Sensor {
-                name: "Температура Зад.Под.".into(),
-                sensor_type: SensorType::Analog(Pt_100),
-                pin: 6,
-                interval: 800,
-                value_error: (60, 80).into(),
-            },
+                .. make_sensor(1, "Температура Ротора", (60, 90))
+            }),
+            SensorValues(make_sensor_davl(2, "Давление -1_1 V", (0.1, 0.5))),
+            SensorValues( SV {
+                sensor_type: SensorType::Vibra(Amper_4_20),
+                .. make_sensor(3, "Вибрация 4_20 A", (10, 16))
+            }),
+            SensorValues(make_sensor(4, "Температура Статора", (60, 85))),
+            SensorValues(make_sensor(5, "Температура Пер.Под.", (60, 80))),
+            SensorValues(make_sensor(6, "Температура Зад.Под.", (60, 80))),
+            
         ]),
         values: None,
     }

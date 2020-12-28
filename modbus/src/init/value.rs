@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types, dead_code)]
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Value {
     pub name: String,
     pub address: u16,

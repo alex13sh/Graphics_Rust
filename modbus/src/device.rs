@@ -148,6 +148,10 @@ impl DeviceType<Device> {
                 value = None;
                 
             },
+            SensorInit::SensorValues(ref sv) => {
+                values = sv.values.clone().into();
+                value = None;
+            },
             _ => {
                 values = ModbusValues::new();
                 value = None;

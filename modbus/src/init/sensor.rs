@@ -21,7 +21,19 @@ pub enum ValueGroup {
     Group {
         name: String,
         values: Vec<Value>,
-    }
+    },
+    SensorValues(SensorValues),
+}
+
+#[derive(Debug)]
+pub struct SensorValues {
+    pub name: String,
+    pub pin: u8,
+    pub interval: u16,
+    //     pub range: std::Range, 
+    pub value_error: super::ValueError,
+    pub sensor_type: SensorType,
+    pub values: Vec<Value>,
 }
 
 

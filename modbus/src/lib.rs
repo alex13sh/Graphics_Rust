@@ -6,15 +6,13 @@ pub mod init;
 pub mod value;
 pub mod sensor;
 pub mod device;
-pub mod invertor;
-pub mod owen_digit_io;
+pub mod devices;
 
 pub use value::*;
 pub use init::ValueError;
 pub use sensor::*;
 pub use device::*;
-pub use invertor::*;
-pub use owen_digit_io::DigitIO;
+pub use devices::*;
 
 mod modbus_context;
 use modbus_context::ModbusContext;

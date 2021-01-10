@@ -1,13 +1,11 @@
-#![allow(dead_code)]
+// #![allow(dead_code)]
 
-// use super::Value;
 use super::Sensor;
 use super::{Value, ModbusValues, ModbusSensors};
 
 use super::init::{DeviceType, DeviceAddress};
 use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
-use super::init::{ValueDirect, ValueSize, SensorType, Log};
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -71,12 +69,6 @@ pub enum DeviceError {
 use std::fmt;
 impl fmt::Display for DeviceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         use DeviceError::*;
-//         match self {
-//         ContextNull => write!(f, "ContextNull"),
-//         ValueOut => write!(f, "ValueOut"),
-//         ValueError => write!(f, "ValueError"),
-//         }
         write!(f, "{:?}", self)
     }
 }

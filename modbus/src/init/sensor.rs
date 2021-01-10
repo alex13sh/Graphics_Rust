@@ -23,6 +23,7 @@ pub enum ValueGroup {
         values: Vec<Value>,
     },
     SensorValues(SensorValues),
+    GroupPinValues(GroupPinValues),
 }
 
 #[derive(Debug)]
@@ -36,6 +37,13 @@ pub struct SensorValues {
     pub values: Vec<Value>,
 }
 
+#[derive(Debug)]
+pub struct GroupPinValues {
+    pub name: String,
+    pub pin: u8,
+    pub group_type: GroupValueType,
+    pub values: Vec<Value>,
+}
 
 #[derive(Debug)]
 pub enum SensorAnalogType {

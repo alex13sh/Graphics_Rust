@@ -23,19 +23,22 @@ pub(crate) fn init_devices() -> Vec<Device> {
     ]
 }
 
+fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
+    Value {
+        name: name.into(),
+        address: address,
+        direct: direct,
+        size: size,
+        log: None,
+    }
+}
 pub fn make_owen_analog(ip_address: String) -> Device {
     use SensorAnalogType::*;
     use ValueGroup::*;
     use sensor::SensorValues as SV;
     
     // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
-    let make_value = |name: &str, address: u16, size: ValueSize, direct: ValueDirect|  Value {
-        name: name.into(),
-        address: address,
-        direct: direct,
-        size: size,
-        log: None,
-    };
+    
     let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
         Value {
             log: Log::hash(&format!("OwenAnalog/{}/value", pin)),
@@ -94,35 +97,42 @@ pub fn make_owen_analog(ip_address: String) -> Device {
 }
 
 pub fn make_io_digit(ip_address: String) -> Device {
-    use SensorAnalogType::*;
+    use GroupValueType::DigitalOutput as DO;
     use ValueGroup::*;
+    use sensor::SensorValues as SV;
+    use sensor::GroupPinValues as GV;
+    
+    let make_values = |_pin: u16, _output: bool| vec![
+    
+    ];
+    
+    let make_group = |pin: u8, name: &str, typ| GV {
+        name: name.into(),
+        group_type: typ,
+        pin: pin, 
+        values: make_values(pin as u16, false),
+    };
+    
     Device {
         name: "Input/Output Digit".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
-            Sensor {
+            SensorValues(SV{
                 name: "Скоростной счётчик импульсов".into(),
                 sensor_type: SensorType::Counter(0),
-                pin: 0,
-                interval: 2,
+                pin: 0, interval: 2,
                 value_error: (333, 433).into(),
-            },
-            GroupPin {
-                name: "Клапан 24В".into(),
-                group_type: GroupValueType::DigitalOutput(false),
-                pin: 1,
-            },
-            GroupPin {
-                name: "Клапан 2".into(),
-                group_type: GroupValueType::DigitalOutput(false),
-                pin: 2,
-            },
-            GroupPin {
-                name: "Насос".into(),
-                group_type: GroupValueType::DigitalOutput(false),
-                pin: 3,
-            },
+                values: vec![ // pin = 0; // pin - 1 = 0 - 1
+                    make_value("value", 160 +(1-1)*2, ValueSize::UINT32, ValueDirect::Read(Some((333, 433).into()))),
+                    make_value("interval", 128 +(1-1), ValueSize::UINT16, ValueDirect::Write),
+                    make_value("type_input", 64 +(1-1), ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
+                    make_value("reset_counter", 232 +(1-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
+                ]
+            }),
+            GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
+            GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
+            GroupPinValues( make_group(3, "Насос", DO(false)) ),
         ]),
         values: Some(vec![
             Value {
@@ -132,13 +142,7 @@ pub fn make_io_digit(ip_address: String) -> Device {
                 size: ValueSize::UINT8,
                 log: Log::hash("308e553d36"),
             },
-            Value {
-                name: "Битовая маска установки состояния выходов".into(),
-                address: 470,
-                direct: ValueDirect::Write,
-                size: ValueSize::UINT8,
-                log: None,
-            },
+            make_value("Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
         ]),
     }
 }

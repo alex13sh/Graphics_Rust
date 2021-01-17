@@ -10,8 +10,8 @@ use super::init::ValueGroup as SensorInit;
 use super::init::{ValueDirect, ValueSize, SensorType, Log};
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::cell::{RefCell}; //, Cell, RefMut};
+// use std::cell::{RefCell}; //, Cell, RefMut};
+use std::sync::{Mutex, PoisonError, MutexGuard, Arc};
 use derivative::Derivative;
 
 // #[derive(Debug)]
@@ -24,7 +24,7 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Option<RefCell<super::ModbusContext>>,
+    pub(super) ctx: Option<Mutex<super::ModbusContext>>,
 }
 
 impl Device {
@@ -33,10 +33,10 @@ impl Device {
     }
     
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update()
+        self.context()?.lock()?.update()
     }
     pub async fn update_async(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update_async().await
+        self.context()?.lock()?.update_async().await
     }
     
     pub fn values(&self) -> Vec<Arc<Value>> {
@@ -45,7 +45,7 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
-    pub(super) fn context(&self) -> Result<&RefCell<super::ModbusContext>, DeviceError> {
+    pub(super) fn context(&self) -> Result<&Mutex<super::ModbusContext>, DeviceError> {
         if let Some(ctx) = &self.ctx {
             Ok(ctx)
         } else {
@@ -92,6 +92,12 @@ impl std::convert::From<std::io::Error> for DeviceError {
     }
 }
 
+impl <'a, T> From<PoisonError<MutexGuard<'a, T>>> for DeviceError {
+    fn from(_err: PoisonError<MutexGuard<'a, T>>) -> Self {
+        DeviceError::ContextNull
+    }
+}
+
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ: DeviceType<Device> = d.device_type.into();
@@ -114,7 +120,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: super::ModbusContext::new(&d.address, &values).map(RefCell::new),
+            ctx: super::ModbusContext::new(&d.address, &values).map(Mutex::new),
             values: values,
         }
     }

@@ -9,7 +9,7 @@ use crate::graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DigitIO};
+use modbus::{Device, DeviceError, DigitIO};
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -45,7 +45,7 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ModbusUpdate,
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Result<(), DeviceError>),
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
@@ -172,6 +172,10 @@ impl Application for App {
                 self.graph.save_svg();
                 self.log_save();
             }
+        },
+        Message::ModbusUpdateAsync => {
+//             self.owen_analog.update();
+            return Command::perform(self.owen_analog.update_async(), Message::ModbusUpdateAsyncAnswer);
         },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),

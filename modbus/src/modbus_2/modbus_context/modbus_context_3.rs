@@ -10,10 +10,13 @@ use super::device::{
     get_ranges_value, convert_modbusvalues_to_hashmap_address,
 };
 
+type Values = HashMap<u16, Arc<Value>>;
+type RangeAddress = std::ops::RangeInclusive<u16>;
+
 pub(crate) struct ModbusContext {
     ctx: Box<dyn Client>,
-    pub(crate) values: HashMap<u16, Arc<Value>>,
-    ranges_address: Vec<std::ops::RangeInclusive<u16>>,
+    pub(crate) values: Values,
+    ranges_address: Vec<RangeAddress>,
 }
 
 impl ModbusContext {
@@ -32,26 +35,49 @@ impl ModbusContext {
         }
         } else {None}
     }
+    
+    fn update_impl(values: &mut Values, r: RangeAddress, buff: Vec<u16>) {
+        let itr_buff = buff.into_iter();
+        let mut itr_zip = r.zip(itr_buff);
+        while let Some((adr, v)) = itr_zip.next() {
+//             for (adr, v) in itr_zip {
+            if let Some(val) = values.get_mut(&adr) {
+                val.update_value(v as u32);
+                if val.size() == 1 {
+                    val.update_value(v as u32);
+                } else if val.size() == 2 {
+                    if let Some((_, v2)) = itr_zip.next() {
+                        let value: u32 = ((v2 as u32) << 16) | v as u32;
+                        val.update_value(value);
+                    }
+                }
+            }
+        }
+    }
+    
     pub fn update(&mut self) -> Result<(), DeviceError> {
         for r in &self.ranges_address {
             let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-            let itr_buff = buff.into_iter();
-            let mut itr_zip = r.clone().zip(itr_buff);
-            while let Some((adr, v)) = itr_zip.next() {
-//             for (adr, v) in itr_zip {
-                if let Some(val) = self.values.get_mut(&adr) {
-                    val.update_value(v as u32);
-                    if val.size() == 1 {
-                        val.update_value(v as u32);
-                    } else if val.size() == 2 {
-                        if let Some((_, v2)) = itr_zip.next() {
-                            let value: u32 = ((v2 as u32) << 16) | v as u32;
-                            val.update_value(value);
-                        }
-                    }
-                }
-            }
+            Self::update_impl(&mut self.values, r.clone(), buff);
+        }
+        Ok(())
+    }
+    
+    #[cfg(feature = "time")]
+    pub async fn update_async(&mut self) -> Result<(), DeviceError> {
+//         use tokio::time::delay_for;
+        use tokio::time::timeout;
+        use std::time::Duration;
+        
+        let ranges = self.ranges_address.clone();
+        let ctx = &mut self.ctx;
+        for r in ranges {
+            let buff = async{ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)}; // ?
+//             let timeout = delay_for(Duration::from_millis(300));
+            let buff = timeout(Duration::from_millis(300), buff).await??;
+//             println!("Ranges ({:?}) is '{:?}'", r, buff);
+            Self::update_impl(&mut self.values, r.clone(), buff);
         }
         Ok(())
     }
@@ -87,5 +113,12 @@ impl ModbusContext {
 impl From<modbus_rs::Error> for DeviceError {
     fn from(_err: modbus_rs::Error) -> Self {
         DeviceError::ValueError
+    }
+}
+
+#[cfg(feature = "time")]
+impl From<tokio::time::Elapsed> for DeviceError {
+    fn from(_err: tokio::time::Elapsed) -> Self {
+        DeviceError::TimeOut
     }
 }

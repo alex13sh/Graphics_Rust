@@ -33,9 +33,12 @@ impl Device {
     }
     
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update()?;
-        Ok(())
+        self.context()?.borrow_mut().update()
     }
+    pub async fn update_async(&self) -> Result<(), DeviceError> {
+        self.context()?.borrow_mut().update_async().await
+    }
+    
     pub fn values(&self) -> Vec<Arc<Value>> {
         self.values.values().map(Arc::clone).collect()
     }
@@ -60,9 +63,10 @@ impl Device {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DeviceError {
     ContextNull,
+    TimeOut,
     ValueOut,
     ValueError,
     OtherError

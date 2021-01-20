@@ -45,7 +45,7 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Result<(), DeviceError>),
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
@@ -171,12 +171,17 @@ impl Application for App {
                 self.is_started = false;
                 self.graph.save_svg();
                 self.log_save();
-            }
+            };
         },
-        Message::ModbusUpdateAsync => {
-//             self.owen_analog.update();
-            return Command::perform(self.owen_analog.update_async(), Message::ModbusUpdateAsyncAnswer);
+        Message::ModbusUpdateAsync => { 
+            let d = self.owen_analog.clone();
+            let f = async move {
+                d.update_async().await
+            };
+            let d = self.owen_analog.clone();
+            return Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswer(d.clone(), res));
         },
+        Message::ModbusUpdateAsyncAnswer(d, res) => {dbg!(&d);},
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
         

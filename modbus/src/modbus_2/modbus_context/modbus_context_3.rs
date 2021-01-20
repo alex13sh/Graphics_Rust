@@ -4,6 +4,7 @@ use super::{Value, ModbusValues};
 use super::init::DeviceAddress;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::device::{
     DeviceError,
@@ -14,7 +15,7 @@ type Values = HashMap<u16, Arc<Value>>;
 type RangeAddress = std::ops::RangeInclusive<u16>;
 
 pub(crate) struct ModbusContext {
-    ctx: Box<dyn Client>,
+    ctx: Arc<Mutex<Box<dyn Client+ 'static + Send>>>,
     pub(crate) values: Values,
     ranges_address: Vec<RangeAddress>,
 }
@@ -26,7 +27,7 @@ impl ModbusContext {
             let client = tcp::Transport::new(txt).ok()?;
             
             Some(ModbusContext {
-                ctx: Box::new(client),
+                ctx: Arc::new(Mutex::new(Box::new(client))),
                 ranges_address: get_ranges_value(&values, 8, true),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
@@ -36,12 +37,12 @@ impl ModbusContext {
         } else {None}
     }
     
-    fn update_impl(values: &mut Values, r: RangeAddress, buff: Vec<u16>) {
+    fn update_impl(values: &Values, r: RangeAddress, buff: Vec<u16>) {
         let itr_buff = buff.into_iter();
         let mut itr_zip = r.zip(itr_buff);
         while let Some((adr, v)) = itr_zip.next() {
 //             for (adr, v) in itr_zip {
-            if let Some(val) = values.get_mut(&adr) {
+            if let Some(val) = values.get(&adr) {
                 val.update_value(v as u32);
                 if val.size() == 1 {
                     val.update_value(v as u32);
@@ -55,56 +56,54 @@ impl ModbusContext {
         }
     }
     
-    pub fn update(&mut self) -> Result<(), DeviceError> {
+    pub fn update(&self) -> Result<(), DeviceError> {
         for r in &self.ranges_address {
-            let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
+            let buff = self.ctx.lock()?.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-            Self::update_impl(&mut self.values, r.clone(), buff);
+            Self::update_impl(&self.values, r.clone(), buff);
         }
         Ok(())
     }
     
     #[cfg(feature = "time")]
-    pub async fn update_async(&mut self) -> Result<(), DeviceError> {
+    pub async fn update_async(&self) -> Result<(), DeviceError> {
 //         use tokio::time::delay_for;
         use tokio::time::timeout;
         use std::time::Duration;
         
+        let ctx = self.ctx.clone();
         let ranges = self.ranges_address.clone();
-        let ctx = &mut self.ctx;
         for r in ranges {
-            let buff = async{ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)}; // ?
+            let buff = {
+                let buff = async{ctx.lock().unwrap().read_holding_registers(*r.start(), *r.end() - *r.start()+1)}; // ?
 //             let timeout = delay_for(Duration::from_millis(300));
-            let buff = timeout(Duration::from_millis(300), buff).await??;
+                timeout(Duration::from_millis(300), buff).await??
+            };
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-            Self::update_impl(&mut self.values, r.clone(), buff);
+            Self::update_impl(&self.values, r.clone(), buff);
         }
         Ok(())
     }
     
-    pub(crate) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
-//         let v = self.values.get(address).unwrap().clone();
-        
+    pub(crate) fn set_value(&self, v: &Value) -> Result<(), DeviceError> {
+        let mut ctx = self.ctx.lock()?;
         match v.size.size() {
-        1 => self.ctx.write_single_register(v.address(), v.value() as u16)?,
+        1 => ctx.write_single_register(v.address(), v.value() as u16)?,
         2 => {
-            self.ctx.write_single_register(v.address(), v.value() as u16)?;
-            self.ctx.write_single_register(v.address()+1, (v.value()>>16) as u16)?;
-        },
-        _ => {}
+            ctx.write_single_register(v.address(), v.value() as u16)?;
+            ctx.write_single_register(v.address()+1, (v.value()>>16) as u16)?;
+        }, _ => {}
         };
         Ok(())
     }
-    pub(crate) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
-//         let v = self.values.get(address).unwrap().clone();
-        
+    pub(crate) fn get_value(&self, v: &Value) -> Result<(), DeviceError>  {
+        let mut ctx = self.ctx.lock()?;
         match v.size.size() {
-        1 => v.update_value(self.ctx.read_holding_registers(v.address(), 1)?[0] as u32),
+        1 => v.update_value(ctx.read_holding_registers(v.address(), 1)?[0] as u32),
         2 => {
-            let buf = self.ctx.read_holding_registers(v.address(), 2)?;
+            let buf = ctx.read_holding_registers(v.address(), 2)?;
             v.update_value((buf[0] as u32) | (buf[1] as u32)<<16);
-        },
-        _ => {}
+        }, _ => {}
         };
         Ok(())
     }

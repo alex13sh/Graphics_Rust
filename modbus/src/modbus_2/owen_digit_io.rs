@@ -22,7 +22,7 @@ impl DigitIO {
             let vm = self.device.values_map();
             let v_bitmap = vm.get("Битовая маска установки состояния выходов").unwrap().clone();
             v_bitmap.set_bit(num-1, enb);
-            self.device.context()?.lock()?.set_value(&v_bitmap)?;
+            self.device.context()?.set_value(&v_bitmap)?;
             Ok(())
         } else {
             Err(DeviceError::ValueOut)
@@ -32,7 +32,7 @@ impl DigitIO {
         if let 1..=8 = num  {
             let vm = self.device.values_map();
             let v_bitmap = vm.get("Битовая маска состояния выходов").unwrap().clone();
-            self.device.context()?.lock()?.get_value(&v_bitmap)?;
+            self.device.context()?.get_value(&v_bitmap)?;
             Ok(v_bitmap.get_bit(num-1))
         } else {
             Err(DeviceError::ValueOut)

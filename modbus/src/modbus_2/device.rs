@@ -24,7 +24,7 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Option<Mutex<super::ModbusContext>>,
+    pub(super) ctx: Option<super::ModbusContext>,
 }
 
 impl Device {
@@ -33,10 +33,10 @@ impl Device {
     }
     
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.lock()?.update()
+        self.context()?.update()
     }
     pub async fn update_async(&self) -> Result<(), DeviceError> {
-        self.context()?.lock()?.update_async().await
+        self.context()?.update_async().await
     }
     
     pub fn values(&self) -> Vec<Arc<Value>> {
@@ -45,7 +45,7 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
-    pub(super) fn context(&self) -> Result<&Mutex<super::ModbusContext>, DeviceError> {
+    pub(super) fn context(&self) -> Result<&super::ModbusContext, DeviceError> {
         if let Some(ctx) = &self.ctx {
             Ok(ctx)
         } else {
@@ -120,7 +120,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: super::ModbusContext::new(&d.address, &values).map(Mutex::new),
+            ctx: super::ModbusContext::new(&d.address, &values),
             values: values,
         }
     }

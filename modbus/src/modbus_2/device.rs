@@ -44,8 +44,21 @@ impl Device {
         if !self.is_connect() {Err(DeviceError::ContextNull)}
         else {Ok(())}
     }
+    pub fn is_connecting(&self) -> bool {
+        self.ctx.is_poisoned()
+    }
+    fn disconnect(&self) -> Result<(), DeviceError> {
+        *self.ctx.lock()? = None;
+        Ok(())
+    }
+    
     pub async fn update_async(&self) -> Result<(), DeviceError> {
-        self.context()?.update_async().await
+        let res = self.context()?.update_async().await;
+        if let Err(DeviceError::TimeOut) = res {
+            println!("update_async TimeOut");
+            self.disconnect()?;
+            Err(DeviceError::ContextNull)
+        } else {res}
     }
     
     pub fn values(&self) -> Vec<Arc<Value>> {
@@ -75,6 +88,7 @@ impl Device {
 #[derive(Debug, Clone)]
 pub enum DeviceError {
     ContextNull,
+    ContextBusy,
     TimeOut,
     ValueOut,
     ValueError,

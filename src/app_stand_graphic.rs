@@ -128,8 +128,8 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(200))
-            .map(|_| Message::ModbusUpdate),
+            time::every(std::time::Duration::from_millis(2000))
+            .map(|_| Message::ModbusUpdateAsync),
             time::every(std::time::Duration::from_millis(200))
             .map(|_| Message::GraphicUpdate),
         ])
@@ -160,14 +160,18 @@ impl Application for App {
             
             let mut device_features = Vec::new();
             for d in &devices {
-                let mut d = d.clone();
-                let upd = async move {
-                    if !d.is_connect() {
-                        d.connect();
-                    }
-                    d.update();
-                };
-                device_features.push(upd);
+                if !d.is_connecting() {
+                    let  dc = d.clone();
+                    let upd = async move {
+                        if !dc.is_connect() {
+                            dc.connect();
+                        }
+    //                     d.update();
+                        dc.update_async().await
+                    };
+                    let dc = d.clone();
+                    device_features.push((dc, upd));
+                }
             }
             let fut = join_all(device_features);
             
@@ -177,7 +181,13 @@ impl Application for App {
             self.proccess_values();
             self.proccess_speed();
         },
-        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {dbg!(&d);},
+        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
+//             dbg!(&d);
+            println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+            if !d.is_connect() {
+                println!("\tis not connect");
+            }
+        },
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
         

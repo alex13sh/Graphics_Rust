@@ -67,10 +67,13 @@ impl ModbusContext {
     
     #[cfg(feature = "time")]
     pub async fn update_async(&self) -> Result<(), DeviceError> {
-//         use tokio::time::delay_for;
+        use tokio::time::sleep;
         use tokio::time::timeout;
         use std::time::Duration;
         
+        if self.ctx.is_poisoned() {
+            return Err(DeviceError::ContextBusy)
+        }
         let ctx = self.ctx.clone();
         let ranges = self.ranges_address.clone();
         for r in ranges {

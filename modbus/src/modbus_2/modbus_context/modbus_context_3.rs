@@ -70,6 +70,8 @@ impl ModbusContext {
         use tokio::time::sleep;
         use tokio::time::timeout;
         use std::time::Duration;
+        use futures::select;
+        use futures::FutureExt;
         
         if self.ctx.is_poisoned() {
             return Err(DeviceError::ContextBusy)
@@ -79,8 +81,13 @@ impl ModbusContext {
         for r in ranges {
             let buff = {
                 let buff = async{ctx.lock().unwrap().read_holding_registers(*r.start(), *r.end() - *r.start()+1)}; // ?
-//             let timeout = delay_for(Duration::from_millis(300));
-                timeout(Duration::from_millis(300), buff).await??
+                let timeout = sleep(Duration::from_millis(300));
+//                 timeout(Duration::from_millis(100), buff).await??
+                let res = select! {
+                buff = buff.fuse() => Ok(buff),
+                _ = timeout.fuse() => Err(DeviceError::TimeOut),
+                };
+                res??
             };
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             Self::update_impl(&self.values, r.clone(), buff);

@@ -173,9 +173,12 @@ impl Application for App {
                     device_features.push((dc, upd));
                 }
             }
-            let fut = join_all(device_features);
-            
-            return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
+//             let fut = join_all(device_features);
+//             return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
+            println!("Message::ModbusUpdateAsync end");
+            return Command::batch(device_features.into_iter()
+                .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                );
         },
         Message::ModbusUpdateAsyncAnswer => {
             self.proccess_values();

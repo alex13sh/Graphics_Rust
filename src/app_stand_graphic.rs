@@ -45,7 +45,8 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Arc<Device>, Result<(), DeviceError>),
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
@@ -151,9 +152,12 @@ impl Application for App {
         },
         Message::ModbusUpdateAsync => {
             use futures::future::join_all;
-            let devices = [&self.owen_analog, 
-                &self.digit_io.device(), &self.invertor.device()];
+            let devices = [
+                self.owen_analog.clone(),
+                self.digit_io.device().clone(), 
+                self.invertor.device().clone()];
                 
+            
             let mut device_features = Vec::new();
             for d in &devices {
                 let mut d = d.clone();
@@ -165,18 +169,15 @@ impl Application for App {
                 };
                 device_features.push(upd);
             }
-            join_all(device_features);
+            let fut = join_all(device_features);
+            
+            return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
+        },
+        Message::ModbusUpdateAsyncAnswer => {
             self.proccess_values();
             self.proccess_speed();
-            
-//             let d = self.owen_analog.clone();
-//             let f = async move {
-//                 d.update_async().await
-//             };
-//             let d = self.owen_analog.clone();
-//             return Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswer(d.clone(), res));
         },
-        Message::ModbusUpdateAsyncAnswer(d, res) => {dbg!(&d);},
+        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {dbg!(&d);},
         Message::GraphicUpdate => self.graph.update_svg(),
         Message::ButtonStart(message) => self.ui.start.update(message),
         

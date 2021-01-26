@@ -116,8 +116,8 @@ impl From<modbus_rs::Error> for DeviceError {
 }
 
 #[cfg(feature = "time")]
-impl From<tokio::time::Elapsed> for DeviceError {
-    fn from(_err: tokio::time::Elapsed) -> Self {
+impl From<tokio::time::error::Elapsed> for DeviceError {
+    fn from(_err: tokio::time::error::Elapsed) -> Self {
         DeviceError::TimeOut
     }
 }

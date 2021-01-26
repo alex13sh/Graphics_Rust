@@ -134,52 +134,49 @@ impl Application for App {
         ])
     }
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    
         match message {
         Message::ModbusUpdate  => {
-            use std::convert::TryFrom;
             let devices = [&self.owen_analog, 
                 &self.digit_io.device(), &self.invertor.device()];
                 
             for d in &devices {
+                if !d.is_connect() {
+                    d.connect();
+                }
                 d.update();
             }
-            let values = {
-                self.values.iter()
-                .map(|(k, v)| 
-                    if let Ok(value) = f32::try_from(v.as_ref()) {
-                        (&k[..], value)
-                    } else {(&v.name()[..], -1.0)}
-                ).collect()
-            };
-            self.graph.append_values(values);
-            let mut log_values: Vec<_> = {
-                use std::convert::TryFrom;
-                self.values.iter()
-                .map(|(k, v)| v)
-                .filter(|v| v.is_log())
-                .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
-            };
-            self.log_values.append(&mut log_values);
-            
-            let speed_value = self.invertor.get_hz_out_value();
-            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-            if self.is_started == false && speed_value > 5.0 {
-                self.is_started = true;
-                self.reset_values();
-            } else if self.is_started == true && speed_value < 5.0 {
-                self.is_started = false;
-                self.graph.save_svg();
-                self.log_save();
-            };
+            self.proccess_values();
+            self.proccess_speed();
         },
-        Message::ModbusUpdateAsync => { 
-            let d = self.owen_analog.clone();
-            let f = async move {
-                d.update_async().await
-            };
-            let d = self.owen_analog.clone();
-            return Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswer(d.clone(), res));
+        Message::ModbusUpdateAsync => {
+            use futures::future::join_all;
+            let devices = [&self.owen_analog, 
+                &self.digit_io.device(), &self.invertor.device()];
+                
+            let mut device_features = Vec::new();
+            for d in &devices {
+                let mut d = d.clone();
+                let upd = async move {
+                    if let Some(mut dm) = Arc::get_mut(&mut d) {
+                        if !dm.is_connect() {
+                            dm.connect();
+                        }
+                        dm.update();
+                    }
+                };
+                device_features.push(upd);
+            }
+            join_all(device_features);
+            self.proccess_values();
+            self.proccess_speed();
+            
+//             let d = self.owen_analog.clone();
+//             let f = async move {
+//                 d.update_async().await
+//             };
+//             let d = self.owen_analog.clone();
+//             return Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswer(d.clone(), res));
         },
         Message::ModbusUpdateAsyncAnswer(d, res) => {dbg!(&d);},
         Message::GraphicUpdate => self.graph.update_svg(),
@@ -330,6 +327,45 @@ impl Drop for App {
     }
 }
 
+// logic
+impl App {
+    fn proccess_values(&mut self) {
+        use std::convert::TryFrom;
+        let values = {
+            self.values.iter()
+            .map(|(k, v)| 
+                if let Ok(value) = f32::try_from(v.as_ref()) {
+                    (&k[..], value)
+                } else {(&v.name()[..], -1.0)}
+            ).collect()
+        };
+        self.graph.append_values(values);
+        let mut log_values: Vec<_> = {
+            self.values.iter()
+            .map(|(k, v)| v)
+            .filter(|v| v.is_log())
+            .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+            .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+        };
+        self.log_values.append(&mut log_values);
+    }
+    
+    fn proccess_speed(&mut self) {
+        use std::convert::TryFrom;
+        let speed_value = self.invertor.get_hz_out_value();
+        let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        if self.is_started == false && speed_value > 5.0 {
+            self.is_started = true;
+            self.reset_values();
+        } else if self.is_started == true && speed_value < 5.0 {
+            self.is_started = false;
+            self.graph.save_svg();
+            self.log_save();
+        };
+    }
+}
+
+// view
 impl App {
 
     fn log_save(&mut self) {

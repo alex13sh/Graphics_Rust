@@ -35,6 +35,14 @@ impl Device {
     pub fn update(&self) -> Result<(), DeviceError> {
         self.context()?.update()
     }
+    
+    pub fn connect(&mut self) -> Result<(), DeviceError> {
+        if let Some(_) = self.ctx {return Ok(());}
+        
+        self.ctx = super::ModbusContext::new(&self.address, &self.values);
+        if let None = self.ctx {Err(DeviceError::ContextNull)}
+        else {Ok(())}
+    }
     pub async fn update_async(&self) -> Result<(), DeviceError> {
         self.context()?.update_async().await
     }
@@ -120,7 +128,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: super::ModbusContext::new(&d.address, &values),
+            ctx: None,
             values: values,
         }
     }

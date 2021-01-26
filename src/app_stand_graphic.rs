@@ -158,12 +158,10 @@ impl Application for App {
             for d in &devices {
                 let mut d = d.clone();
                 let upd = async move {
-                    if let Some(mut dm) = Arc::get_mut(&mut d) {
-                        if !dm.is_connect() {
-                            dm.connect();
-                        }
-                        dm.update();
+                    if !d.is_connect() {
+                        d.connect();
                     }
+                    d.update();
                 };
                 device_features.push(upd);
             }

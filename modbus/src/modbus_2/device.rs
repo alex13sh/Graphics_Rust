@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, PoisonError, MutexGuard, Arc};
 use derivative::Derivative;
 
+type ModbusContext = Arc<super::ModbusContext>;
 // #[derive(Debug)]
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -24,7 +25,7 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Option<super::ModbusContext>,
+    pub(super) ctx: Mutex< Option<ModbusContext> >,
 }
 
 impl Device {
@@ -36,11 +37,11 @@ impl Device {
         self.context()?.update()
     }
     
-    pub fn connect(&mut self) -> Result<(), DeviceError> {
-        if let Some(_) = self.ctx {return Ok(());}
+    pub fn connect(&self) -> Result<(), DeviceError> {
+        if self.is_connect() {return Ok(());}
         
-        self.ctx = super::ModbusContext::new(&self.address, &self.values);
-        if let None = self.ctx {Err(DeviceError::ContextNull)}
+        *self.ctx.lock()? = super::ModbusContext::new(&self.address, &self.values).map(Arc::new);
+        if !self.is_connect() {Err(DeviceError::ContextNull)}
         else {Ok(())}
     }
     pub async fn update_async(&self) -> Result<(), DeviceError> {
@@ -53,9 +54,9 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
-    pub(super) fn context(&self) -> Result<&super::ModbusContext, DeviceError> {
-        if let Some(ctx) = &self.ctx {
-            Ok(ctx)
+    pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
+        if let Some(ref ctx) = *self.ctx.lock()? {
+            Ok(ctx.clone())
         } else {
             Err(DeviceError::ContextNull)
         }
@@ -128,7 +129,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: None,
+            ctx: Mutex::new(None),
             values: values,
         }
     }

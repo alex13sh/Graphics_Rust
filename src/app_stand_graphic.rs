@@ -1,9 +1,14 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
-    Column, Row, Space,
-    Length,
+    Column, Row, Space, Length,
+    Settings,
 };
+
+fn main() {
+    App::run(Settings::default());
+}
+
 
 use graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};

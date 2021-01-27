@@ -4,6 +4,18 @@ version = "0.1.0"
 authors = ["alex13sh <alex97sh@yandex.ru>"]
 edition = "2018"
 
+[[bin]]
+name = "meln_graphics"
+path = "src/main.rs"
+
+[[bin]]
+name = "app_test_device"
+path = "src/main_app_test_device.rs"
+
+[[bin]]
+name = "app_stand_graphic"
+path = "./src/app_stand_graphic.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -21,6 +33,7 @@ graphic = {path = "./graphic"}
 members = [
     "log",
     "modbus",
+    "graphic",
 ]
 
 [features]

@@ -5,7 +5,7 @@ use iced::{
     Length,
 };
 
-use crate::graphic::{self, Graphic};
+use graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device

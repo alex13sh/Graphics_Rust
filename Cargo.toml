@@ -11,21 +11,11 @@ iced = { version = "0.2",  features = ["canvas", "tokio", "svg"] }
 iced_native = { version = "0.2"}
 
 chrono = "0.4"
-coarse-prof = {version = "0.2.4", path = "../coarse-prof-0.2.4"}
+coarse-prof = {version = "0.2.4"} #, path = "../coarse-prof-0.2.4"}
 
 log = {path = "./log"}
 modbus = {path = "./modbus"}
-
-[dependencies.plotters]
-#path = "../plotters"
-version = "0.3.0"
-optional = true
-default-features = false
-features = [ "chrono", "line_series", "svg_backend"] # "iced_back"]
-
-[dependencies.iced_backend]
-path = "./src/iced_backend/"
-optional = true
+graphic = {path = "./graphic"}
 
 [workspace]
 members = [
@@ -34,7 +24,7 @@ members = [
 ]
 
 [features]
-default = ["plotters", "iced_backend"] #, "test"]
+default = ["graphic/plotters", "graphic/iced_backend"] #, "test"]
 
 test = ["modbus/test"]
 

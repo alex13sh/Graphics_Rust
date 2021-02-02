@@ -6,5 +6,5 @@ pub use owen_digit_io::DigitIO;
 
 
 use super::init;
-use super::{Device, DeviceError, ModbusValues};
+use super::{Device, DeviceInner, DeviceError, ModbusValues};
 use super::Value;

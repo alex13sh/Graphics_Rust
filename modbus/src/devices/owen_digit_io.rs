@@ -1,9 +1,15 @@
-use super::{Device, DeviceError};
+use super::{Device, DeviceInner, DeviceError};
 
 use std::sync::Arc;
 
 pub struct DigitIO {
     device: Arc<Device>, 
+}
+
+impl DeviceInner for DigitIO {
+    fn device(&self) -> Arc<Device> {
+        self.device.clone()
+    }
 }
 
 impl DigitIO {
@@ -35,10 +41,6 @@ impl DigitIO {
         }
     }
     
-    
-    pub fn device(&self) -> Arc<Device> {
-        self.device.clone()
-    }
 }
 
 impl From<Device> for DigitIO {

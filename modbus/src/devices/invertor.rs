@@ -1,5 +1,5 @@
 use super::init::{DeviceType, InvertorFunc};
-use super::{Device, DeviceError, ModbusValues};
+use super::{Device, DeviceInner, DeviceError, ModbusValues};
 use super::Value;
 
 use std::sync::Arc;
@@ -15,6 +15,12 @@ pub struct Invertor {
 pub enum DvijDirect {
     FWD,
     REV,
+}
+
+impl DeviceInner for Invertor {
+    fn device(&self) -> Arc<Device> {
+        self.device.clone()
+    }
 }
 
 impl Invertor {
@@ -105,10 +111,6 @@ impl Invertor {
         _ => {}
         };
         None
-    }
-    
-    pub fn device(&self) -> Arc<Device> {
-        self.device.clone()
     }
     
     pub fn configure(&self) {

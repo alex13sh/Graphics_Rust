@@ -58,6 +58,10 @@ impl Device {
     }
 }
 
+pub trait DeviceInner {
+    fn device(&self) -> Arc<Device>;
+}
+
 #[derive(Debug)]
 pub enum DeviceError {
     ContextNull,

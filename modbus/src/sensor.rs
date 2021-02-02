@@ -69,6 +69,9 @@ impl Sensor {
     pub fn values(&self) -> &ModbusValues {
         &self.values
     }
+    pub fn pin(&self) -> u8 {
+        self.pin
+    }
 }
 
 impl Into<f32> for Sensor {

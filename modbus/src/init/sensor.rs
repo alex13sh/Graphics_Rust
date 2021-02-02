@@ -95,6 +95,7 @@ impl Default for SensorType {
 #[derive(Debug)]
 pub enum GroupValueType {
     DigitalOutput(bool),
+    PWM(u32), // interval
 }
 
 impl Default for GroupValueType {

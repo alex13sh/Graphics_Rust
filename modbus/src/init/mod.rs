@@ -97,7 +97,7 @@ pub fn make_owen_analog(ip_address: String) -> Device {
 }
 
 pub fn make_io_digit(ip_address: String) -> Device {
-    use GroupValueType::DigitalOutput as DO;
+    use GroupValueType::{DigitalOutput as DO, PWM};
     use ValueGroup::*;
     use sensor::SensorValues as SV;
     use sensor::GroupPinValues as GV;
@@ -111,6 +111,17 @@ pub fn make_io_digit(ip_address: String) -> Device {
         group_type: typ,
         pin: pin, 
         values: make_values(pin as u16, false),
+    };
+    
+    let make_pwm = |pin: u8, name: &str| GV {
+        name: name.into(),
+        pin: pin,
+        group_type: PWM(0),
+        values: vec![
+            make_value("Режим работы выхода", 272+pin as u16, ValueSize::UINT8, ValueDirect::Write),
+            make_value("Период ШИМ выхода", 308+pin as u16, ValueSize::UINT16, ValueDirect::Write),
+            make_value("Коэффициент заполнения ШИМ выхода", 340+pin as u16, ValueSize::UINT16, ValueDirect::Write),
+        ],
     };
     
     Device {
@@ -133,6 +144,8 @@ pub fn make_io_digit(ip_address: String) -> Device {
             GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
             GroupPinValues( make_group(3, "Насос", DO(false)) ),
+            
+            GroupPinValues( make_pwm(1, "Test PWM") ),
         ]),
         values: Some(vec![
             Value {

@@ -40,6 +40,12 @@ impl Device {
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
+    pub fn get_sensor_by_pin(&self, pin: u8) -> Option<Arc<Sensor>> {
+        self.sensors.iter()
+            .map(|(_txt, s)| s)
+            .find(|&s| s.pin() == pin)
+            .map(Arc::clone)
+    }
     pub(super) fn context(&self) -> Result<&RefCell<super::ModbusContext>, DeviceError> {
         if let Some(ctx) = &self.ctx {
             Ok(ctx)

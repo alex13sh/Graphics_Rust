@@ -8,6 +8,7 @@ use iced::{
 
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
+use modbus::DeviceInner;
 use modbus::{Value, ModbusValues};
 use graphic::{self, Graphic};
 

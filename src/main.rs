@@ -6,7 +6,6 @@ use iced::{
     Application, window, Settings, executor, Subscription, Command, time,
 };
 
-mod graphic;
 
 mod app_test_device;
 mod app_graphic;

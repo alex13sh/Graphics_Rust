@@ -6,7 +6,7 @@ use iced::{
     Application, window, Settings, executor, Subscription, Command, time,
 };
 
-use crate::graphic;
+// use crate::graphic;
 
 pub struct GraphicsApp {
     graph: graphic::Graphic,

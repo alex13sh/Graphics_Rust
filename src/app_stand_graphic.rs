@@ -1,11 +1,16 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
-    Column, Row, Space,
-    Length,
+    Column, Row, Space, Length,
+    Settings,
 };
 
-use crate::graphic::{self, Graphic};
+fn main() {
+    App::run(Settings::default());
+}
+
+
+use graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device

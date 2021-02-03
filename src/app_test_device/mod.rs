@@ -17,6 +17,7 @@ pub enum TestDeviceApp {
     },
     TestInvertor (test_invertor::TestInvertor),
     TestDigitIO (owen::io_digit::IODigit),
+    TestPWM(owen::pwm::PWM_Gui),
 }
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -25,6 +26,7 @@ pub enum Message {
     
     Invertor(test_invertor::Message),
     DigitIO(owen::io_digit::Message),
+    PWM_GUI(owen::pwm::Message),
 }
 
 impl Application for TestDeviceApp {
@@ -36,7 +38,7 @@ impl Application for TestDeviceApp {
         (
             Self::Connect {
                 input_ip_address: text_input::State::new(),
-                ip_address: "192.168.1.5".into(),
+                ip_address: "192.168.1.10".into(),
                 pb_connect: button::State::new(),
             },
             Command::none()
@@ -58,7 +60,7 @@ impl Application for TestDeviceApp {
         match self {
         Self::Connect {ip_address, ..} => match message {
             Message::InputIpAddressChanged(txt) => *ip_address = txt,
-            Message::Connect => *self = Self::TestInvertor ( test_invertor::TestInvertor::new(ip_address.clone())),
+            Message::Connect => *self = Self::TestPWM ( owen::pwm::PWM_Gui::new(ip_address.clone())),
 //             Message::Connect => *self = Self::TestDigitIO ( owen::io_digit::IODigit::new(ip_address.clone())),
             _ => {}
             },
@@ -68,6 +70,10 @@ impl Application for TestDeviceApp {
             },
         Self::TestDigitIO (device) => match message {
             Message::DigitIO(message) => device.update(message),
+            _ => {}
+            },  
+        Self::TestPWM (device) => match message {
+            Message::PWM_GUI(message) => device.update(message),
             _ => {}
             },  
         };
@@ -100,6 +106,9 @@ impl Application for TestDeviceApp {
         },
         Self::TestDigitIO (device) => {
             device.view().map(Message::DigitIO)
+        },
+        Self::TestPWM (device) => {
+            device.view().map(Message::PWM_GUI)
         }
         };
         Container::new(content)

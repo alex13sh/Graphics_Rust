@@ -59,6 +59,16 @@ impl Sensor {
                 .. Sensor::default()
             }
         },
+        SensorInit::GroupPinValues (gv)=> {
+            Sensor {
+                name: gv.name,
+                pin: gv.pin,
+                values: values,
+                value: value,
+                interval: 1000,
+                .. Sensor::default()
+            }
+        },
         _ => Sensor::default()
         }
     }

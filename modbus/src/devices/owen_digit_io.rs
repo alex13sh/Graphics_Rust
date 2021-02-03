@@ -19,6 +19,17 @@ impl DigitIO {
         }
     }
     
+    pub fn config_output(&self, pin: u8) {
+        let sens = self.device.get_sensor_by_pin(pin);
+        if let Some(sens) = sens {
+            let vm = sens.values();
+            let mut context = self.device.context().unwrap().borrow_mut();
+            let v_conf = vm.get("Режим работы выхода").unwrap().clone();
+            v_conf.update_value(0 as u32);
+            context.set_value(&v_conf).unwrap();
+        }
+    }
+    
     pub fn turn_clapan(&self, num: u8, enb: bool)  ->  Result<(), DeviceError> {
         if let 1..=8 = num  {
             let vm = self.device.values_map();

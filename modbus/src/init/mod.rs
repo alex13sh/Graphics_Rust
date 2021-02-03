@@ -17,8 +17,8 @@ pub(crate) fn tst() {
 
 pub(crate) fn init_devices() -> Vec<Device> {    
     vec![
-    make_owen_analog("192.168.1.5".into()),
-    make_io_digit("192.168.1.3".into()),
+    make_owen_analog("192.168.1.11".into()),
+    make_io_digit("192.168.1.10".into()),
     make_invertor("192.168.1.5".into()),
     ]
 }
@@ -102,8 +102,8 @@ pub fn make_io_digit(ip_address: String) -> Device {
     use sensor::SensorValues as SV;
     use sensor::GroupPinValues as GV;
     
-    let make_values = |_pin: u16, _output: bool| vec![
-    
+    let make_values = |pin: u16, _output: bool| vec![
+        make_value("Режим работы выхода", 272+(pin-1) as u16, ValueSize::UINT8, ValueDirect::Write),
     ];
     
     let make_group = |pin: u8, name: &str, typ| GV {
@@ -117,11 +117,13 @@ pub fn make_io_digit(ip_address: String) -> Device {
         name: name.into(),
         pin: pin,
         group_type: PWM(0),
-        values: vec![
+        values: {
+            let pin = pin-1;
+        vec![
             make_value("Режим работы выхода", 272+pin as u16, ValueSize::UINT8, ValueDirect::Write),
             make_value("Период ШИМ выхода", 308+pin as u16, ValueSize::UINT16, ValueDirect::Write),
             make_value("Коэффициент заполнения ШИМ выхода", 340+pin as u16, ValueSize::UINT16, ValueDirect::Write),
-        ],
+        ]},
     };
     
     Device {
@@ -145,7 +147,7 @@ pub fn make_io_digit(ip_address: String) -> Device {
             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
             GroupPinValues( make_group(3, "Насос", DO(false)) ),
             
-            GroupPinValues( make_pwm(1, "Test PWM") ),
+            GroupPinValues( make_pwm(4, "Test PWM") ),
         ]),
         values: Some(vec![
             Value {

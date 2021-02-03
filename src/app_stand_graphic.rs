@@ -9,6 +9,7 @@ use crate::graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
+use modbus::DeviceInner;
 use modbus::{Device, DigitIO};
 
 use std::collections::BTreeMap;

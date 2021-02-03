@@ -8,6 +8,7 @@ use iced::{
 
 use modbus::init;
 use modbus::{Device, DigitIO};
+use modbus::DeviceInner;
 use modbus::{Value, ModbusValues};
 
 pub struct IODigit {

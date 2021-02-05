@@ -123,6 +123,7 @@ pub fn make_io_digit(ip_address: String) -> Device {
             make_value("Режим работы выхода", 272+pin as u16, ValueSize::UINT8, ValueDirect::Write),
             make_value("Период ШИМ выхода", 308+pin as u16, ValueSize::UINT16, ValueDirect::Write),
             make_value("Коэффициент заполнения ШИМ выхода", 340+pin as u16, ValueSize::UINT16, ValueDirect::Write),
+            make_value("Безопасное состояние выхода", 474+pin as u16, ValueSize::UINT16, ValueDirect::Write),
         ]},
     };
     

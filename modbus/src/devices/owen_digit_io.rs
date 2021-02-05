@@ -75,14 +75,39 @@ impl DigitIO {
             let v_procent = vm.get("Коэффициент заполнения ШИМ выхода").unwrap().clone();
             v_procent.update_value(500); // 50.0
             context.set_value(&v_procent).unwrap();
+            let v_procent = vm.get("Безопасное состояние выхода").unwrap().clone();
+            v_procent.update_value(500); // 50.0
+            context.set_value(&v_procent).unwrap();
         }
+    }
+    
+    pub fn set_pwm(&self, procent: f32) -> Result<(), DeviceError> {
+        let vm = self.device.values_map();
+        let mut context = self.device.context()?.borrow_mut();
+        let procent = (procent*10.0) as u32;
+        
+        let v_procent = vm.get("Test PWM/Коэффициент заполнения ШИМ выхода").unwrap().clone();
+        v_procent.update_value(procent); // 50.0
+        context.set_value(&v_procent)?;
+        
+        let v_procent = vm.get("Test PWM/Безопасное состояние выхода").unwrap().clone();
+        v_procent.update_value(procent); // 50.0
+        context.set_value(&v_procent).unwrap();
+        Ok(())
     }
     
     pub fn set_hz(&self, hz: f32) -> Result<(), DeviceError> {
         let vm = self.device.values_map();
-        let v_hz = vm.get("Test PWM/Период ШИМ выхода").unwrap().clone();
-        v_hz.update_value((1_000_f32/hz) as u32);
-        self.device.context()?.borrow_mut().set_value(&v_hz)?;
+//         dbg!(&vm);
+        if hz == 0_f32 {
+            self.set_pwm(0.0)?;
+        } else {
+            self.set_pwm(50.0)?;
+            
+            let v_hz = vm.get("Test PWM/Период ШИМ выхода").unwrap().clone();
+            v_hz.update_value((1_000_f32/hz) as u32);
+            self.device.context()?.borrow_mut().set_value(&v_hz)?;
+        }
         Ok(())
     }
 }

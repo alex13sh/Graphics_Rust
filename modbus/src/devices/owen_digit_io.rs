@@ -1,8 +1,4 @@
-#![allow(dead_code)]
-
-use super::init::{DeviceType, InvertorFunc};
 use super::{Device, DeviceError};
-use super::Value;
 
 use std::sync::Arc;
 

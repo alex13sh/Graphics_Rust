@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::init::{DeviceType, InvertorFunc};
 use super::{Device, DeviceError, ModbusValues};
 use super::Value;
@@ -7,7 +5,6 @@ use super::Value;
 use std::sync::Arc;
 
 mod error;
-use error::*;
 
 pub struct Invertor {
     device: Arc<Device>, // make mut

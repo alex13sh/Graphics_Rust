@@ -1,0 +1,14 @@
+[package]
+name = "meln_logic"
+version = "0.1.0"
+authors = ["Алексей (Работа) <alex76sh1@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "meln_logic"
+
+[dependencies]
+epoxy_frp = {path="../../epoxy_rs"}
+
+epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1'}

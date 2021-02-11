@@ -142,7 +142,7 @@ impl Application for App {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(2000))
             .map(|_| Message::ModbusUpdateAsync),
-            time::every(std::time::Duration::from_millis(200))
+            time::every(std::time::Duration::from_millis(2000))
             .map(|_| Message::GraphicUpdate),
         ])
     }
@@ -176,9 +176,11 @@ impl Application for App {
                     let  dc = d.clone();
                     let upd = async move {
                         if !dc.is_connect() {
-                            dc.connect();
+                            let res = dc.connect().await;
+                            if res.is_err() {
+                                return res;
+                            }
                         }
-    //                     d.update();
                         dc.update_async().await
                     };
                     let dc = d.clone();
@@ -198,9 +200,14 @@ impl Application for App {
         },
         Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
 //             dbg!(&d);
-            println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
-            if !d.is_connect() {
-                println!("\tis not connect");
+            if res.is_ok() {
+                println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                if !d.is_connect() {
+                    println!("\tis not connect");
+                } else {
+                    self.proccess_values();
+                    self.proccess_speed();
+                }
             }
         },
         Message::GraphicUpdate => self.graph.update_svg(),

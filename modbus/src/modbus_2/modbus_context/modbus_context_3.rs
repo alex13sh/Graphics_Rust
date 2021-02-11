@@ -71,24 +71,37 @@ impl ModbusContext {
     pub async fn update_async(&self) -> Result<(), DeviceError> {
         info!("context_3 pub async fn update_async");
         use tokio::time::sleep;
-        use tokio::time::timeout;
+//         use tokio::time::timeout;
         use std::time::Duration;
-        use futures::select;
-        use futures::FutureExt;
+        use tokio::sync::mpsc;
+        use std::thread;
         
         if self.ctx.is_poisoned() {
             return Err(DeviceError::ContextBusy)
         }
-        let ctx = self.ctx.clone();
         let ranges = self.ranges_address.clone();
         for r in ranges {
             let buff = {
-                let buff = async{ctx.lock().unwrap().read_holding_registers(*r.start(), *r.end() - *r.start()+1)}; // ?
-                let timeout = sleep(Duration::from_millis(300));
+                let (s, mut rx) = mpsc::unbounded_channel();
+                let r = r.clone();
+                let ctx = self.ctx.clone();
+                thread::spawn(move || {
+                    let buff = ctx.try_lock().unwrap().read_holding_registers(*r.start(), *r.end() - *r.start()+1);
+                    s.send(buff).unwrap();
+                });
+                let buff = rx.recv();
+                 // ?
+                let timeout = sleep(Duration::from_millis(10));
 //                 timeout(Duration::from_millis(100), buff).await??
-                let res = select! {
-                buff = buff.fuse() => Ok(buff),
-                _ = timeout.fuse() => Err(DeviceError::TimeOut),
+                let res = tokio::select! {
+                buff = buff => {
+                    info!("-> select buff");
+                    Ok(buff.unwrap())
+                },
+                _ = timeout => {
+                    info!("-> select timeout");
+                    Err(DeviceError::TimeOut)
+                    },
                 };
                 res??
             };
@@ -97,6 +110,10 @@ impl ModbusContext {
         }
         info!("\t <- pub async fn update_async");
         Ok(())
+    }
+    
+    pub(crate) fn is_busy(&self) -> bool {
+        self.ctx.is_poisoned()
     }
     
     pub(crate) fn set_value(&self, v: &Value) -> Result<(), DeviceError> {

@@ -25,7 +25,7 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Mutex< Option<ModbusContext> >,
+    pub(super) ctx: Arc<Mutex< Option<ModbusContext> >>,
 }
 
 use log::{info, trace, warn};
@@ -39,11 +39,25 @@ impl Device {
         self.context()?.update()
     }
     
-    pub fn connect(&self) -> Result<(), DeviceError> {
+    pub async fn connect(&self) -> Result<(), DeviceError> {
         info!("device connect");
         if self.is_connect() {return Ok(());}
         
-        *self.ctx.lock()? = super::ModbusContext::new(&self.address, &self.values).map(Arc::new);
+        use std::thread;
+        use tokio::sync::mpsc;
+        
+        let (s, mut rx) = mpsc::unbounded_channel();
+        let a = self.address.clone();
+        let v = self.values.clone();
+        let ctx = self.ctx.clone();
+        thread::spawn(move || {
+            if let Ok(mut ctx) = ctx.try_lock() {
+                *ctx = super::ModbusContext::new(&a, &v).map(Arc::new);
+            }
+            s.send(());
+        });
+        rx.recv().await.unwrap();
+        
         if !self.is_connect() {Err(DeviceError::ContextNull)}
         else {Ok(())}
     }
@@ -56,8 +70,20 @@ impl Device {
     }
     
     pub async fn update_async(&self) -> Result<(), DeviceError> {
-        let res = self.context()?.update_async().await;
         info!("pub async fn update_async");
+        if self.ctx.is_poisoned()  {
+            info!(" <- device is busy");
+            return Err(DeviceError::ContextBusy);
+        } 
+        info!(" -> test busy 2");
+        let ctx = self.context()?;
+        if ctx.is_busy() {
+            info!(" <- device is busy");
+            return Err(DeviceError::ContextBusy);
+        }
+        info!("Device: {} - {:?}", self.name, self.address);
+        let res = ctx.update_async().await;
+        info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
             info!("update_async TimeOut");
             self.disconnect()?;
@@ -72,8 +98,8 @@ impl Device {
         &self.values
     }
     pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
-        if let Some(ref ctx) = *self.ctx.lock()? {
         info!("-> device get context");
+        if let Some(ref ctx) = *self.ctx.try_lock()? {
             Ok(ctx.clone())
         } else {
             Err(DeviceError::ContextNull)
@@ -126,6 +152,12 @@ impl <'a, T> From<PoisonError<MutexGuard<'a, T>>> for DeviceError {
         DeviceError::ContextNull
     }
 }
+impl <'a, T> From<std::sync::TryLockError<MutexGuard<'a, T>>> for DeviceError {
+    fn from(_err: std::sync::TryLockError<MutexGuard<'a, T>>) -> Self {
+        warn!("DeviceError::ContextBusy");
+        DeviceError::ContextBusy
+    }
+}
 
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
@@ -150,7 +182,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: Mutex::new(None),
+            ctx: Arc::new(Mutex::new(None)),
             values: values,
         }
     }

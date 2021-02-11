@@ -28,6 +28,8 @@ pub struct Device {
     pub(super) ctx: Mutex< Option<ModbusContext> >,
 }
 
+use log::{info, trace, warn};
+
 impl Device {
     pub fn name(&self) -> &String {
         &self.name
@@ -38,6 +40,7 @@ impl Device {
     }
     
     pub fn connect(&self) -> Result<(), DeviceError> {
+        info!("device connect");
         if self.is_connect() {return Ok(());}
         
         *self.ctx.lock()? = super::ModbusContext::new(&self.address, &self.values).map(Arc::new);
@@ -54,8 +57,9 @@ impl Device {
     
     pub async fn update_async(&self) -> Result<(), DeviceError> {
         let res = self.context()?.update_async().await;
+        info!("pub async fn update_async");
         if let Err(DeviceError::TimeOut) = res {
-            println!("update_async TimeOut");
+            info!("update_async TimeOut");
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}
@@ -69,6 +73,7 @@ impl Device {
     }
     pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
         if let Some(ref ctx) = *self.ctx.lock()? {
+        info!("-> device get context");
             Ok(ctx.clone())
         } else {
             Err(DeviceError::ContextNull)
@@ -117,6 +122,7 @@ impl std::convert::From<std::io::Error> for DeviceError {
 
 impl <'a, T> From<PoisonError<MutexGuard<'a, T>>> for DeviceError {
     fn from(_err: PoisonError<MutexGuard<'a, T>>) -> Self {
+        warn!("DeviceError::ContextNull");
         DeviceError::ContextNull
     }
 }
@@ -137,6 +143,7 @@ impl From<DeviceInit> for Device {
                 values.insert(s.name().clone()+"/"+v.name(),v.clone());
             };
         };
+        info!("Device from {}", d.name);
         
         Device {
             name: d.name,

@@ -67,6 +67,18 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+//         env_logger::init();
+        use std::io::Write;
+        env_logger::builder()
+            .format(|buf, record| {
+                let ts = buf.timestamp_millis();
+                writeln!(buf, "{} [{}] File: {}; Line: {}\n\t'{}'", 
+                ts, record.level(),
+                record.file().unwrap(), record.line().unwrap(), 
+                record.args())
+            })
+            .init();
+    
         let invertor = Invertor::new(init::make_invertor("192.168.1.5".into()).into());
         let dev_invertor = invertor.device();
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());

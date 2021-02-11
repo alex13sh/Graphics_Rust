@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use log::{info};
+
 use super::device::{
     DeviceError,
     get_ranges_value, convert_modbusvalues_to_hashmap_address,
@@ -67,6 +69,7 @@ impl ModbusContext {
     
     #[cfg(feature = "time")]
     pub async fn update_async(&self) -> Result<(), DeviceError> {
+        info!("context_3 pub async fn update_async");
         use tokio::time::sleep;
         use tokio::time::timeout;
         use std::time::Duration;
@@ -92,6 +95,7 @@ impl ModbusContext {
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             Self::update_impl(&self.values, r.clone(), buff);
         }
+        info!("\t <- pub async fn update_async");
         Ok(())
     }
     

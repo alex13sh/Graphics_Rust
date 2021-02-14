@@ -26,7 +26,15 @@ impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
         if cfg!(not(feature = "test")) {
         if let DeviceAddress::TcpIP(txt) = address {
-            let client = tcp::Transport::new(txt).ok()?;
+            use std::time::Duration;
+            let client = tcp::Transport::new_with_cfg(
+                txt, tcp::Config {
+                    tcp_connect_timeout: Some(Duration::from_millis(100)),
+                    tcp_read_timeout: Some(Duration::from_millis(100)),
+                    tcp_write_timeout: Some(Duration::from_millis(100)),
+                    
+                    .. Default::default()
+                }).ok()?;
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(Box::new(client))),
@@ -48,7 +56,14 @@ impl ModbusContext {
             
             let txt_adr = txt.clone();
             thread::spawn(move || {
-                if let Ok(client) = tcp::Transport::new(&txt_adr) {
+                use std::time::Duration;
+                let client = tcp::Transport::new_with_cfg( &txt_adr, tcp::Config {
+                    tcp_connect_timeout: Some(Duration::from_millis(100)),
+                        tcp_read_timeout: Some(Duration::from_millis(100)),
+                        tcp_write_timeout: Some(Duration::from_millis(100)),
+                        .. Default::default()
+                    });
+                if let Ok(client) = client {
                     s.send(client);
                 }
             });

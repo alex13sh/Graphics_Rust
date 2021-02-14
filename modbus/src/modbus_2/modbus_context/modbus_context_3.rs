@@ -39,6 +39,32 @@ impl ModbusContext {
         } else {None}
     }
     
+    pub async fn new_async(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        if let DeviceAddress::TcpIP(txt) = address {
+        
+            use std::thread;
+            use tokio::sync::mpsc;
+            let (s, mut rx) = mpsc::unbounded_channel();
+            
+            let txt_adr = txt.clone();
+            thread::spawn(move || {
+                if let Ok(client) = tcp::Transport::new(&txt_adr) {
+                    s.send(client);
+                }
+            });
+        
+            let client = rx.recv().await.unwrap();
+            
+            Some(ModbusContext {
+                ctx: Arc::new(Mutex::new(Box::new(client))),
+                ranges_address: get_ranges_value(&values, 8, true),
+                values: convert_modbusvalues_to_hashmap_address(values),
+            })
+        } else {
+            None
+        }
+    }
+    
     fn update_impl(values: &Values, r: RangeAddress, buff: Vec<u16>) {
         let itr_buff = buff.into_iter();
         let mut itr_zip = r.zip(itr_buff);

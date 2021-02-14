@@ -10,7 +10,7 @@ use super::init::ValueGroup as SensorInit;
 use super::init::{ValueDirect, ValueSize, SensorType, Log};
 
 use std::collections::HashMap;
-// use std::cell::{RefCell}; //, Cell, RefMut};
+use std::cell::{RefCell}; //, Cell, RefMut};
 use std::sync::{Mutex, PoisonError, MutexGuard, Arc};
 use derivative::Derivative;
 
@@ -25,7 +25,7 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Arc<Mutex< Option<ModbusContext> >>,
+    pub(super) ctx: Mutex< Option<ModbusContext> >,
 }
 
 use log::{info, trace, warn};
@@ -43,20 +43,8 @@ impl Device {
         info!("device connect");
         if self.is_connect() {return Ok(());}
         
-        use std::thread;
-        use tokio::sync::mpsc;
-        
-        let (s, mut rx) = mpsc::unbounded_channel();
-        let a = self.address.clone();
-        let v = self.values.clone();
-        let ctx = self.ctx.clone();
-        thread::spawn(move || {
-            if let Ok(mut ctx) = ctx.try_lock() {
-                *ctx = super::ModbusContext::new(&a, &v).map(Arc::new);
-            }
-            s.send(());
-        });
-        rx.recv().await.unwrap();
+        *self.ctx.try_lock()? = super::ModbusContext
+            ::new_async(&self.address, &self.values).await.map(Arc::new); 
         
         if !self.is_connect() {Err(DeviceError::ContextNull)}
         else {Ok(())}
@@ -65,7 +53,7 @@ impl Device {
         self.ctx.is_poisoned()
     }
     fn disconnect(&self) -> Result<(), DeviceError> {
-        *self.ctx.lock()? = None;
+        *self.ctx.try_lock()? = None;
         Ok(())
     }
     
@@ -182,7 +170,7 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: Arc::new(Mutex::new(None)),
+            ctx: Mutex::new(None),
             values: values,
         }
     }

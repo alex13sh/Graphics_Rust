@@ -32,13 +32,16 @@ impl Properties {
     }
 }
 
-trait Sinks<T> {
-    fn emit(&self, name: &str, value: T);
+pub trait Sinks<T> {
+    fn emit(&self, name: &str, value: T) -> bool;
 }
 
 impl Sinks<f32> for Properties {
-    fn emit(&self, name: &str, value: f32) {
-        self.sinks[&String::from(name)].emit(value);
+    fn emit(&self, name: &str, value: f32) -> bool {
+        if let Some(s) = self.sinks.get(&String::from(name)) {
+            s.emit(value);
+            true
+        } else {false}
     }
 }
 
@@ -61,8 +64,8 @@ pub struct Engine {
 }
 
 impl Sinks<f32> for Engine {
-    fn emit(&self, name: &str, value: f32) {
-        self.props.emit(name, value);
+    fn emit(&self, name: &str, value: f32) -> bool {
+        self.props.emit(name, value)
     }
 }
 
@@ -129,8 +132,11 @@ impl Vacum {
 }
 
 impl Sinks<f32> for Vacum {
-    fn emit(&self, _name: &str, value: f32) {
-        self.sink_davl.emit(value);
+    fn emit(&self, name: &str, value: f32) -> bool {
+        if name == "davl" {
+            self.sink_davl.emit(value);
+            true
+        } else {false}
     }
 }
 

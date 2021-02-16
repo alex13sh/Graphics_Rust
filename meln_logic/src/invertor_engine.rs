@@ -1,5 +1,5 @@
  
-use super::{Engine, Vacum, Invertor};
+use super::{Engine, Vacum, Invertor, Sinks};
     
 use std::collections::BTreeMap;
 use epoxy::property::*;
@@ -65,5 +65,12 @@ impl InvertorEngine {
     
     pub fn get_values(&self) -> BTreeMap<String, f32> {
         BTreeMap::new()
+    }
+}
+
+impl Sinks<f32> for InvertorEngine {
+    fn emit(&self, name: &str, value: f32) -> bool {
+        self.dvij.emit(name, value) ||
+        self.vacum.emit(name, value)
     }
 }

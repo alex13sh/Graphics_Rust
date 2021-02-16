@@ -42,7 +42,7 @@ impl InvertorEngine {
             },
             dvij: Engine {
                 speed: speed.clone(),
-                .. Engine::default()
+                .. Engine::new()
             },
             speed: speed.clone(),
             vacum: Vacum::new(),

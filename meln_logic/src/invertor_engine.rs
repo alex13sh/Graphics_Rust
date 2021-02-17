@@ -1,7 +1,7 @@
  
 use super::{Engine, Vacum, Invertor, Sinks};
     
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use epoxy::property::*;
 use epoxy::{binding, Sink};
 
@@ -65,6 +65,12 @@ impl InvertorEngine {
     
     pub fn get_values(&self) -> BTreeMap<String, f32> {
         BTreeMap::new()
+    }
+    pub fn get_properties(&self) -> HashMap<String, PropertyRead<f32>> {
+        let mut res = HashMap::new();
+        res.extend(self.dvij.props.properties.clone().into_iter());
+        res.insert("davl".into(), self.vacum.davl.clone());
+        res
     }
 }
 

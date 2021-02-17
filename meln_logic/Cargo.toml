@@ -10,5 +10,9 @@ name = "meln_logic"
 
 [dependencies]
 epoxy_frp = {path="../../epoxy_rs"}
-
 epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1'}
+
+macros = {path="./macros", package="meln_logic_macro"}
+
+[workspace]
+members = ["macros"]

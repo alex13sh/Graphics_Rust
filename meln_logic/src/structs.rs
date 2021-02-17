@@ -45,11 +45,12 @@ impl Sinks<f32> for Properties {
     }
 }
 
+#[derive(macros::PropertiesExt)]
 pub struct Engine {
     pub speed: PropertyRead<u32>, // f32
     
-    pub vibra: PropertyRead<f32>,
-    pub temp_stator: PropertyRead<f32>,
+    #[props] pub vibra: PropertyRead<f32>,
+    #[props] pub temp_stator: PropertyRead<f32>,
     pub temp_rotor: PropertyRead<f32>,
 //     temp_oil_in: PropertyRead<f32>,
     pub temp_oil_out:    PropertyRead<f32>,

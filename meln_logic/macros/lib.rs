@@ -10,6 +10,7 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
     if let syn::Data::Struct(s) = data {
         if let syn::Fields::Named(FieldsNamed { named, .. }) = s.fields {
             let mut props_read = Vec::new();
+            let mut props_read_def = Vec::new();
             let mut props = None;
             for n in named {
                 let name = n.ident;
@@ -28,6 +29,8 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
                     let ty = n.ty.clone();
                     let p = quote! {#name: #ty};
                     println!("Field Type {}", p);
+                }, s if s.starts_with("PropertyRead") => {
+                    props_read_def.push(name.clone());
                 }, "Properties" => {
                     props = Some(name.clone());
                 }, _ => {}
@@ -35,22 +38,25 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
             }
             
             if let Some(props) = props {
-                return quote!{
+                let code = quote!{
                     impl PropertiesExt for #struct_ident {
-//                         fn init_props() -> Self {
-//                             let prop_str = [#(stringify!(#props_read)),*];
-//                             
-//                             Self {
-//                                 #(#props_read): Default::default(), *
-//                                 #props: Properties::new(&prop_str),
-//                             }
-//                         }
+                        fn init_props() -> Self {
+                            let prop_str = [#(stringify!(#props_read)),*];
+                            let props = Properties::new(&prop_str);
+                            Self {
+                                #(#props_read_def: Default::default()), *,
+                                #(#props_read: props.prop(stringify!(#props_read))), *,
+                                #props: props,
+                            }
+                        }
                         fn get_props(&self) -> String {
                             let prop_str = [#(stringify!(#props_read)),*];
                             prop_str.join(", ").into()
                         }
                     }
-                }.into();
+                };
+//                 println!("Code: {}", code);
+                return code.into();
             }
         }
     }

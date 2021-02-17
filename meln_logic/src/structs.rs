@@ -11,7 +11,7 @@ pub(crate) struct Properties {
 }
 
 pub trait PropertiesExt {
-//     fn init_props() -> Self;
+    fn init_props() -> Self;
     fn get_props(&self) -> String ;
 }
 
@@ -84,29 +84,6 @@ pub enum EngineUpdateMessage {
     
     DavlOilPodshipnikBottom(f32),
     DavlOilPodshipnikTop(f32),
-}
-
-impl Engine {
-    pub(crate) fn new() -> Self {
-        let props = ["speed", "vibra", "temp_stator", "temp_rotor",
-            "temp_oil_out", "temp_podshipnik", "davl_oil_podshipnik_bottom", "davl_oil_podshipnik_top"];
-        let props = Properties::new(&props);
-        
-        Engine {
-            speed: Default::default(),
-            
-            vibra: props.prop("vibra"),
-            temp_stator: props.prop("temp_stator"),
-            temp_rotor: props.prop("temp_rotor"),
-            
-            temp_oil_out: props.prop("temp_oil_out"),
-            temp_podshipnik: props.prop("temp_podshipnik"),
-            davl_oil_podshipnik_bottom: props.prop("davl_oil_podshipnik_bottom"),
-            davl_oil_podshipnik_top: props.prop("davl_oil_podshipnik_top"),
-            
-            props: props,
-        }
-    }
 }
 
 // pub struct Oil {

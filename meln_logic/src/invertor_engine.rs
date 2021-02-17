@@ -1,5 +1,5 @@
  
-use super::{Engine, Vacum, Invertor, Sinks};
+use super::{Engine, Vacum, Invertor, Sinks, PropertiesExt};
     
 use std::collections::{BTreeMap, HashMap};
 use epoxy::property::*;
@@ -42,7 +42,7 @@ impl InvertorEngine {
             },
             dvij: Engine {
                 speed: speed.clone(),
-                .. Engine::new()
+                .. Engine::init_props()
             },
             speed: speed.clone(),
             vacum: Vacum::new(),

@@ -10,6 +10,11 @@ pub(crate) struct Properties {
     pub(crate) sinks: HashMap<String, Sink<f32>>,
 }
 
+pub trait PropertiesExt {
+//     fn init_props() -> Self;
+    fn get_props(&self) -> String ;
+}
+
 impl Properties {
     pub(crate) fn new(props: &[&'static str]) -> Self {
         let mut properties = HashMap::new();

@@ -15,6 +15,7 @@ coarse-prof = {version = "0.2.4", path = "../coarse-prof-0.2.4"}
 
 log = {path = "./log"}
 modbus = {path = "./modbus"}
+meln_logic = {path = "./meln_logic"}
 
 [dependencies.plotters]
 #path = "../plotters"
@@ -32,6 +33,7 @@ members = [
     "log",
     "modbus",
     "meln_logic",
+    "meln_logic/macros",
 ]
 
 [features]

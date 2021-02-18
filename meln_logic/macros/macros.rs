@@ -6,7 +6,7 @@ use syn::{parse_macro_input, DataEnum, DataUnion, DeriveInput, FieldsNamed, Fiel
 pub fn derive_helper(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
     let struct_ident = ident.clone();
-    println!("My Derive beggin: {}", quote! {#ident});
+    print!("My Derive Properties: {}: ", quote! {#ident});
     if let syn::Data::Struct(s) = data {
         if let syn::Fields::Named(FieldsNamed { named, .. }) = s.fields {
             let mut props_read = Vec::new();
@@ -19,16 +19,18 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
                     let attr = n.attrs[0].clone();
                     let ty = n.ty.clone();
                     let p = quote! {[#attr] #name: #ty};
-                    println!("Field Attr {}", p);
+//                     println!("Field Attr {}", p);
                 }
                 
                 let ty = n.ty.clone();
                 match format!("{}", quote!{#ty}).as_str() {
                 "PropertyRead < f32 >" => {
                     props_read.push(name.clone());
-                    let ty = n.ty.clone();
-                    let p = quote! {#name: #ty};
-                    println!("Field Type {}", p);
+                    print!("{}, ", quote!(#name));
+//                     let ty = n.ty.clone();
+//                     let p = quote! {#name: #ty};
+//                     println!("Field Type {}", p);
+
                 }, s if s.starts_with("PropertyRead") => {
                     props_read_def.push(name.clone());
                 }, "Properties" => {
@@ -36,6 +38,7 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
                 }, _ => {}
                 }
             }
+            print!("\n");
             
             if let Some(props) = props {
                 let code = quote!{
@@ -53,6 +56,9 @@ pub fn derive_helper(input: TokenStream) -> TokenStream {
                             let prop_str = [#(stringify!(#props_read)),*];
                             prop_str.join(", ").into()
                         }
+//                         fn get_properties(&self) -> HashMap<String, PropertyRead<f32>> {
+//                             self.props.clone()
+//                         }
                     }
                 };
 //                 println!("Code: {}", code);

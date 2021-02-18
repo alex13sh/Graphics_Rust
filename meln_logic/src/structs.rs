@@ -12,7 +12,7 @@ pub(crate) struct Properties {
 
 pub trait PropertiesExt {
     fn init_props() -> Self;
-    fn get_props(&self) -> String ;
+    fn get_props(&self) -> String;
 }
 
 impl Properties {

@@ -7,9 +7,6 @@ use iced::{
 
 use crate::graphic::{self, Graphic};
 use modbus::{Value, ModbusValues, ValueError};
-use modbus::init;
-use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DigitIO};
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -23,9 +20,7 @@ pub struct App {
     speed: u32,
     
     values: BTreeMap<String, Arc<Value>>,
-    invertor: Invertor,
-    digit_io: DigitIO,
-    owen_analog: Arc<Device>,
+    logic: meln_logic::init::Complect,
     
     klapans: [bool; 2],
     
@@ -66,20 +61,9 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let invertor = Invertor::new(init::make_invertor("192.168.1.5".into()).into());
-        let dev_invertor = invertor.device();
-        let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
-        let dev_digit_io = digit_io.device();
-        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.11".into()).into();
-        
-        let mut values = BTreeMap::new();
-        for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
-            .chain(dev_digit_io.values_map().iter().map(|v|("DigitIO", v)))
-            .chain(dev_owen_analog.values_map().iter().map(|v|("Analog", v)))
-            .filter(|(_dev, (_k,v))| v.is_read_only()) {
-            values.insert(format!("{}/{}", dev, k.clone()), v.clone());
-        }
-        
+        let logic = meln_logic::init::Complect::new();
+        let values = logic.make_values();
+                
         let mut graphic = Graphic::new();
 //         graphic.set_datetime_start(chrono::Local::now());
         
@@ -111,9 +95,7 @@ impl Application for App {
                 klapans: [false; 2],
                 
                 values: values,
-                invertor: invertor,
-                digit_io: digit_io,
-                owen_analog: Arc::new(dev_owen_analog),
+                logic: logic,
                 
                 log: log::Logger::open_csv(),
                 log_values: Vec::new(),
@@ -137,8 +119,8 @@ impl Application for App {
         match message {
         Message::ModbusUpdate  => {
             use std::convert::TryFrom;
-            let devices = [&self.owen_analog, 
-                &self.digit_io.device(), &self.invertor.device()];
+            let devices = [&self.logic.owen_analog, 
+                &self.logic.digit_io.device(), &self.logic.invertor.device()];
                 
             for d in &devices {
                 d.update();
@@ -162,7 +144,7 @@ impl Application for App {
             };
             self.log_values.append(&mut log_values);
             
-            let speed_value = self.invertor.get_hz_out_value();
+            let speed_value = self.logic.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
             if self.is_started == false && speed_value > 5.0 {
                 self.is_started = true;
@@ -182,14 +164,14 @@ impl Application for App {
             // Invertor SetSpeed
             // Invertor Start | Stop
             if start {
-                self.invertor.start();
+                self.logic.invertor.start();
             } else {
-                self.invertor.stop();
+                self.logic.invertor.stop();
             }
             self.log_save();
         },
         Message::ToggleKlapan(ind, enb) => {
-            let device = &self.digit_io;
+            let device = &self.logic.digit_io;
             self.klapans[ind as usize] = enb;
             self.klapans[1-ind as usize] = false;
             match ind {
@@ -207,7 +189,7 @@ impl Application for App {
         Message::SpeedChanged(speed) => {
             self.speed = speed;
 //             dbg!((10*speed)/6);
-            self.invertor.set_speed((10*speed)/6);
+            self.logic.invertor.set_speed((10*speed)/6);
         },
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
@@ -229,7 +211,7 @@ impl Application for App {
             .push(graph);
         
         let controls = {
-            let klapans = if self.digit_io.device().is_connect() {
+            let klapans = if self.logic.digit_io.device().is_connect() {
                 let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
@@ -255,7 +237,7 @@ impl Application for App {
                 Element::from(buttons)
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             
-            let invertor: Element<_> = if self.invertor.device().is_connect() {
+            let invertor: Element<_> = if self.logic.invertor.device().is_connect() {
                 let is_started = self.is_started;
                 let start = self.ui.start.view(
                     self.is_started,
@@ -374,7 +356,7 @@ impl App {
         {
             let values_name = &values_name_map[&"Analog"];
             
-            let values_map = self.owen_analog.values_map();
+            let values_map = self.logic.owen_analog.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
         };
 //         {
@@ -386,7 +368,7 @@ impl App {
         
         {
             let values_name = &values_name_map[&"Invertor"];
-            let dev = self.invertor.device();
+            let dev = self.logic.invertor.device();
             let values_map = dev.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}", name)));
         };

@@ -13,6 +13,11 @@ epoxy_frp = {path="../../epoxy_rs"}
 epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1'}
 
 macros = {path="./macros", package="meln_logic_macro"}
+modbus = {path = "../modbus", optional=true}
 
-[workspace]
-members = ["macros"]
+# [workspace]
+# members = ["macros"]
+
+[features]
+default = ["init"]
+init = ["modbus"]

@@ -1,4 +1,5 @@
- 
+use format as tr;
+
 use super::{Engine, Vacum, Invertor, Sinks, PropertiesExt};
     
 use std::collections::{BTreeMap, HashMap};
@@ -68,15 +69,25 @@ impl InvertorEngine {
     }
     pub fn get_properties(&self) -> HashMap<String, PropertyRead<f32>> {
         let mut res = HashMap::new();
-        res.extend(self.dvij.props.properties.clone().into_iter());
+        let engine = &self.dvij.props.properties;
+        res.extend(engine.clone().into_iter());
+        res.extend(engine.clone().into_iter()
+            .map(|(k, v)| (tr!("Engine/{}", k), v)));
         res.insert("davl".into(), self.vacum.davl.clone());
+        res.insert("Vacum/davl".into(), self.vacum.davl.clone());
         res
     }
 }
 
 impl Sinks<f32> for InvertorEngine {
     fn emit(&self, name: &str, value: f32) -> bool {
-        self.dvij.emit(name, value) ||
-        self.vacum.emit(name, value)
+        if let Some(name) = name.strip_prefix("Engine/") {
+            self.dvij.emit(name, value)
+        } else if let Some(name) = name.strip_prefix("Vacum/") {
+            self.vacum.emit(name, value)
+        } else {
+            self.dvij.emit(name, value) ||
+            self.vacum.emit(name, value)
+        }
     }
 }

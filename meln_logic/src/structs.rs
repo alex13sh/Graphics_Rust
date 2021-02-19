@@ -5,9 +5,12 @@ use epoxy::{binding, Sink};
 
 use std::collections::HashMap;
 
+pub type ValueSink = Sink<f32>;
+pub type ValueRead = PropertyRead<f32>;
+
 pub(crate) struct Properties {
-    pub properties: HashMap<String, PropertyRead<f32>>,
-    pub(crate) sinks: HashMap<String, Sink<f32>>,
+    pub properties: HashMap<String, ValueRead>,
+    pub(crate) sinks: HashMap<String, ValueSink>,
 }
 
 pub trait PropertiesExt {

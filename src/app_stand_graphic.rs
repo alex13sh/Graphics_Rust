@@ -61,8 +61,9 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let logic = meln_logic::init::Complect::new();
+        let mut logic = meln_logic::init::Complect::new();
         let values = logic.make_values();
+        logic.init_values(&values);
                 
         let mut graphic = Graphic::new();
 //         graphic.set_datetime_start(chrono::Local::now());
@@ -119,12 +120,6 @@ impl Application for App {
         match message {
         Message::ModbusUpdate  => {
             use std::convert::TryFrom;
-            let devices = [&self.logic.owen_analog, 
-                &self.logic.digit_io.device(), &self.logic.invertor.device()];
-                
-            for d in &devices {
-                d.update();
-            }
             let values = {
                 self.values.iter()
                 .map(|(k, v)| 

@@ -37,8 +37,11 @@ enum ValueGroup {
 
 impl Sensor {
     pub fn new(s: SensorInit, values: ModbusValues, value: Option<Arc<Value>>) -> Self {
+        use super::init::{SensorValues as SV, GroupPinValues as GV};
+        
         match s {
-        SensorInit::Sensor {name, pin, value_error, sensor_type, interval} => {
+        SensorInit::Sensor {name, pin, value_error, sensor_type, interval}
+        | SensorInit::SensorValues (SV{name, pin, value_error, sensor_type, interval, ..}) => {
             Sensor {
                 name: name,
                 pin: pin,
@@ -49,7 +52,8 @@ impl Sensor {
                 value: value
             }
         },
-        SensorInit::GroupPin {name, pin, group_type:_typ}=> {
+        SensorInit::GroupPin {name, pin, group_type:_typ} 
+        | SensorInit::GroupPinValues (GV{name, pin, group_type:_typ, ..}) => {
             Sensor {
                 name: name,
                 pin: pin,

@@ -17,7 +17,7 @@ pub(crate) fn tst() {
 
 pub(crate) fn init_devices() -> Vec<Device> {    
     vec![
-    make_owen_analog("192.168.1.5".into()),
+//     make_owen_analog("192.168.1.5".into()),
     make_io_digit("192.168.1.3".into()),
     make_invertor("192.168.1.5".into()),
     ]
@@ -32,7 +32,7 @@ fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -
         log: None,
     }
 }
-pub fn make_owen_analog(ip_address: String) -> Device {
+pub fn make_owen_analogs(ip_address: String) -> Vec<Device> {
     use SensorAnalogType::*;
     use ValueGroup::*;
     use sensor::SensorValues as SV;
@@ -51,20 +51,21 @@ pub fn make_owen_analog(ip_address: String) -> Device {
         make_value("interval", 4113+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write),
     ];
     
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)| {
-        SV {
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)| SV {
             name: name.into(),
             pin: pin,
             interval: 800,
             value_error: value_error.into(),
             sensor_type: SensorType::Analog(Pt_100),
             values: make_values(pin as u16, value_error.into(), ValueSize::FLOAT),
-        }
     };
-    
+    let make_sensor_2 = |pin, name: &str, value_error: (i32, i32)| SV {
+            sensor_type: SensorType::Analog(Amper_4_20),
+            .. make_sensor(pin, name, value_error)
+        };
     let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)| {
         SV {
-            sensor_type: SensorType::Analog(Pt_100),
+            sensor_type: SensorType::Analog(Amper_4_20),
             value_error: value_error.into(),
             values: make_values(pin as u16, value_error.into(), 
                 ValueSize::FloatMap(|v|10_f32.powf(v*10.0-5.5))
@@ -73,27 +74,46 @@ pub fn make_owen_analog(ip_address: String) -> Device {
         }
     };
     
+    vec![
     Device {
-        name: "Input Analog".into(),
+        name: "1) МВ210-101".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
-            SensorValues( SV {
-                sensor_type: SensorType::Vibra(Amper_4_20),
-                .. make_sensor(1, "Температура Ротора", (60, 90))
-            }),
-            SensorValues(make_sensor_davl(2, "Давление -1_1 V", (0.1, 0.5))),
-            SensorValues( SV {
-                sensor_type: SensorType::Vibra(Amper_4_20),
-                .. make_sensor(3, "Вибрация 4_20 A", (10, 16))
-            }),
-            SensorValues(make_sensor(4, "Температура Статора", (60, 85))),
-            SensorValues(make_sensor(5, "Температура Пер.Под.", (60, 80))),
-            SensorValues(make_sensor(6, "Температура Зад.Под.", (60, 80))),
+            SensorValues(make_sensor(1, "Температура Статора дв.1", (60, 85))),
+            SensorValues(make_sensor(2, "Температура масла на выходе 1 дв. Низ", (60, 85))), // <<-- ValueError
+            SensorValues(make_sensor(3, "Температура масла на выходе 2 дв. Низ", (60, 85))), // <<-- ValueError
+            SensorValues(make_sensor(4, "Температура масла на выходе маслостанции", (60, 85))), // <<-- ValueError
+            SensorValues(make_sensor(5, "Температура Статора дв.2", (60, 85))),
+            SensorValues(make_sensor(6, "Температура Пер.Под.", (60, 80))),
+            SensorValues(make_sensor(7, "Температура Зад.Под.", (60, 80))),
             
         ]),
         values: None,
+    },
+    Device {
+        name: "2) МВ110-24.8АС".into(),
+        device_type: DeviceType::OwenAnalog,
+        address: DeviceAddress::TcpIP("192.168.1.11".into()), // <<--
+        
+        sensors: Some(vec![
+            SensorValues(make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5))),
+            SensorValues(make_sensor_davl(2, "Давление масла нижний подшипник", (0.1, 0.5))),
+            SensorValues(make_sensor_davl(3, "Давление воздуха компрессора", (0.1, 0.5))),
+            SensorValues( SV {
+                sensor_type: SensorType::Vibra(Amper_4_20),
+                .. make_sensor(4, "Разрежение воздуха  в системе", (100, 106))
+            }),
+            
+            SensorValues(make_sensor_2(5, "Температура Ротора дв.1", (60, 90))),
+            SensorValues(make_sensor_2(6, "Температура Ротора дв.2", (60, 90))),
+            
+            SensorValues(make_sensor_2(7, "Вибродатчик дв.1", (10, 16))),
+            SensorValues(make_sensor_2(8, "Вибродатчик дв.2", (10, 16))),
+        ]),
+        values: None,
     }
+    ]
 }
 
 pub fn make_io_digit(ip_address: String) -> Device {
@@ -106,33 +126,36 @@ pub fn make_io_digit(ip_address: String) -> Device {
     
     ];
     
-    let make_group = |pin: u8, name: &str, typ| GV {
+    let _make_group = |pin: u8, name: &str, typ| GV {
         name: name.into(),
         group_type: typ,
         pin: pin, 
         values: make_values(pin as u16, false),
     };
     
+    let make_counter = |pin: u16, name: &str, value_error: (i32, i32)| SV{ 
+        name: name.into(),
+        sensor_type: SensorType::Counter(0),
+        pin: pin as u8, interval: 2,
+        value_error: value_error.into(),
+        values: vec![ // pin = 0; // pin - 1 = 0 - 1
+            make_value("value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read(Some((333, 433).into()))),
+            make_value("interval", 128 +(pin-1), ValueSize::UINT16, ValueDirect::Write),
+            make_value("type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
+            make_value("reset_counter", 232 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
+        ]
+    };
+    
     Device {
-        name: "Input/Output Digit".into(),
+        name: "3) МК210-302".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
         sensors: Some(vec![
-            SensorValues(SV{
-                name: "Скоростной счётчик импульсов".into(),
-                sensor_type: SensorType::Counter(0),
-                pin: 0, interval: 2,
-                value_error: (333, 433).into(),
-                values: vec![ // pin = 0; // pin - 1 = 0 - 1
-                    make_value("value", 160 +(1-1)*2, ValueSize::UINT32, ValueDirect::Read(Some((333, 433).into()))),
-                    make_value("interval", 128 +(1-1), ValueSize::UINT16, ValueDirect::Write),
-                    make_value("type_input", 64 +(1-1), ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
-                    make_value("reset_counter", 232 +(1-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
-                ]
-            }),
-            GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
-            GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
-            GroupPinValues( make_group(3, "Насос", DO(false)) ),
+            SensorValues(make_counter(1, "Скорость ротора дв. Верх", (333, 433))),
+            
+//             GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
+//             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
+//             GroupPinValues( make_group(3, "Насос", DO(false)) ),
         ]),
         values: Some(vec![
             Value {

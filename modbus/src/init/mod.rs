@@ -32,7 +32,7 @@ fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -
         log: None,
     }
 }
-pub fn make_owen_analogs(ip_address: String) -> Vec<Device> {
+pub fn make_owen_analogs(ip_address: [&str;2]) -> Vec<Device> {
     use SensorAnalogType::*;
     use ValueGroup::*;
     use sensor::SensorValues as SV;
@@ -78,7 +78,7 @@ pub fn make_owen_analogs(ip_address: String) -> Vec<Device> {
     Device {
         name: "1) МВ210-101".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIP(ip_address),
+        address: DeviceAddress::TcpIP(ip_address[0].into()),
         sensors: Some(vec![
             SensorValues(make_sensor(1, "Температура Статора дв.1", (60, 85))),
             SensorValues(make_sensor(2, "Температура масла на выходе 1 дв. Низ", (60, 85))), // <<-- ValueError
@@ -94,7 +94,7 @@ pub fn make_owen_analogs(ip_address: String) -> Vec<Device> {
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIP("192.168.1.11".into()), // <<--
+        address: DeviceAddress::TcpIP(ip_address[1].into()), // <<--
         
         sensors: Some(vec![
             SensorValues(make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5))),

@@ -25,7 +25,7 @@ pub struct Complect {
     
     pub invertor: Invertor,
     pub digit_io: DigitIO,
-    pub owen_analog: Arc<Device>,
+    pub owen_analog: Vec<Arc<Device>>,
     
     values_sink: Vec<(Arc<Value>, ValueSink)>,
 }
@@ -36,7 +36,8 @@ impl Complect {
         let invertor = Invertor::new(invertor.into());
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
         
-        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.11".into()).into();
+        let dev_owen_analog: Vec<_> = init::make_owen_analogs(["192.168.1.11", "192.168.1.13"]).into_iter()
+            .map(|d| Arc::new(Device::from(d))).collect();
         
         
         Complect {
@@ -44,21 +45,22 @@ impl Complect {
             
             invertor: invertor,
             digit_io: digit_io,
-            owen_analog: Arc::new(dev_owen_analog),
+            owen_analog: dev_owen_analog,
             
             values_sink: Vec::new(),
         }
     }
     pub fn make_values(&self) -> BTreeMap<String, Arc<Value>> {
-        let dev_invertor = self.invertor.device();
-        let dev_digit_io = self.digit_io.device();
-        let dev_owen_analog = self.owen_analog.clone();
+        let devices = self.get_arr_device();//.map(|&d| d.clone());
         
         let mut values = BTreeMap::new();
-        for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
-            .chain(dev_digit_io.values_map().iter().map(|v|("DigitIO", v)))
-            .chain(dev_owen_analog.values_map().iter().map(|v|("Analog", v)))
-            .filter(|(_dev, (_k,v))| v.is_read_only()) {
+        for (dev, (k,v)) in devices.iter()
+            .flat_map(|d| {
+                let dname = d.name().clone();
+                d.values_map().iter()
+                .map(move |(k,v)| (dname.clone(), (k,v)))
+            }).filter(|(_d, (_k,v))| v.is_read_only()) {
+        
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
         values
@@ -66,12 +68,17 @@ impl Complect {
     
     pub fn update(&self) {
         use std::convert::TryFrom;
-        let devices = [&self.owen_analog, 
-            &self.digit_io.device(), &self.invertor.device()];
+        let devices = self.get_arr_device();
             
         for d in &devices {
             d.update();
         }
+    }
+    
+    fn get_arr_device(&self) -> Vec<Arc<Device>> {
+        [&self.owen_analog[0], &self.owen_analog[1],
+        &self.digit_io.device(), &self.invertor.device()]
+        .iter().map(|&d| d.clone()).collect()
     }
     
     pub fn init_values(&mut self, values: &BTreeMap<String, Arc<Value>>) {

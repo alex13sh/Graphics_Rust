@@ -351,7 +351,7 @@ impl App {
         {
             let values_name = &values_name_map[&"Analog"];
             
-            let values_map = self.logic.owen_analog.values_map();
+            let values_map = self.logic.owen_analog[0].values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
         };
 //         {

@@ -48,8 +48,8 @@ impl Complect {
             values_sink: Vec::new(),
         }
     }
-    pub fn make_values(&self) -> BTreeMap<String, Arc<Value>> {
-        let devices = self.get_arr_device();//.map(|&d| d.clone());
+    pub fn make_values(&self, read_only: bool) -> BTreeMap<String, Arc<Value>> {
+        let devices = self.get_devices();//.map(|&d| d.clone());
         
         let mut values = BTreeMap::new();
         for (dev, (k,v)) in devices.iter()
@@ -57,7 +57,7 @@ impl Complect {
                 let dname = d.name().clone();
                 d.values_map().iter()
                 .map(move |(k,v)| (dname.clone(), (k,v)))
-            }).filter(|(_d, (_k,v))| v.is_read_only()) {
+            }).filter(|(_d, (_k,v))| !read_only || v.is_read_only()) {
         
             values.insert(format!("{}/{}", dev, k.clone()), v.clone());
         }
@@ -66,14 +66,14 @@ impl Complect {
     
     pub fn update(&self) {
         use std::convert::TryFrom;
-        let devices = self.get_arr_device();
+        let devices = self.get_devices();
             
         for d in &devices {
             d.update();
         }
     }
     
-    fn get_arr_device(&self) -> Vec<Arc<Device>> {
+    pub fn get_devices(&self) -> Vec<Arc<Device>> {
         [&self.owen_analog_1, &self.owen_analog_2,
         &self.digit_io.device(), &self.invertor.device()]
         .iter().map(|&d| d.clone()).collect()

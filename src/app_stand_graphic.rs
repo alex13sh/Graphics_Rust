@@ -62,7 +62,7 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let mut logic = meln_logic::init::Complect::new();
-        let values = logic.make_values();
+        let values = logic.make_values(true);
         logic.init_values(&values);
                 
         let mut graphic = Graphic::new();
@@ -316,9 +316,12 @@ impl App {
         let mut map = HashMap::new();
         map.insert("Analog", vec![
             "Температура Ротора",
-            "Температура Статора",
+            "Температура Статора дв.1",
+            "Температура Статора дв.2",
             "Температура Пер.Под.",
             "Температура Зад.Под.",
+            "Температура масла на выходе 1 дв. Низ",
+            "Температура масла на выходе 2 дв. Низ",
             
             "Давление -1_1 V",
             "Вибрация 4_20 A",

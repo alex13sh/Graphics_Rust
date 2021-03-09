@@ -10,10 +10,11 @@ use super::device::{
     get_ranges_value, convert_modbusvalues_to_hashmap_address,
 };
 
+type RangesAddress = Vec<std::ops::RangeInclusive<u16>>;
 pub(crate) struct ModbusContext {
     ctx: Box<dyn Client>,
     pub(crate) values: HashMap<u16, Arc<Value>>,
-    ranges_address: Vec<std::ops::RangeInclusive<u16>>,
+    ranges_address: RangesAddress,
 }
 
 impl ModbusContext {
@@ -33,8 +34,9 @@ impl ModbusContext {
         }
         } else {None}
     }
-    pub fn update(&mut self) -> Result<(), DeviceError> {
-        for r in &self.ranges_address {
+    pub fn update(&mut self, ranges_address: Option<&RangesAddress>) -> Result<(), DeviceError> {
+        let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
+        for r in ranges_address {
             let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();

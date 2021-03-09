@@ -31,7 +31,11 @@ impl Device {
     }
     
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update()?;
+        self.context()?.borrow_mut().update(None)?;
+        Ok(())
+    }
+    pub fn update_all(&self) -> Result<(), DeviceError> {
+        self.context()?.borrow_mut().update(Some(&get_ranges_value(&self.values, 1, false)))?;
         Ok(())
     }
     pub fn values(&self) -> Vec<Arc<Value>> {

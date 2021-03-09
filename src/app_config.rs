@@ -27,11 +27,13 @@ pub struct App {
 struct UI {
     scroll: scrollable::State,
     txt_values: BTreeMap<String, text_input::State>,
+    pb_update: button::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ValueEdited(String, String), // name, value
+    ModbusUpdate,
 }
 
 impl Application for App {
@@ -75,6 +77,12 @@ impl Application for App {
             if let Some(txt) = self.txt_values.get_mut(&name) {
                 *txt = value;
             },
+        Message::ModbusUpdate => {
+            self.logic.update_all();
+            self.txt_values = self.values.iter()
+                .map(|(k, v)| (k.clone(), v.value().to_string()))
+                .collect();
+        },
         };
         Command::none()
     }
@@ -85,6 +93,7 @@ impl Application for App {
             ui: UI {
                 scroll: ui_scroll,
                 txt_values: ui_txt_values,
+                pb_update,
             },
             ..
         } = self;
@@ -115,7 +124,7 @@ impl Application for App {
 
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
-                .push(Text::new("Кнопки в шапке"))
+                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)

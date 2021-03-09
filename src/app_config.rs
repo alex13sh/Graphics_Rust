@@ -1,7 +1,7 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     text_input, TextInput, button, Button, slider, Slider, scrollable, Scrollable,
-    Element, Container, Text, Column, Row, Space, Length,
+    Element, Container, Text, Column, Row, Space, Length, Align,
     Settings,
 };
 
@@ -26,7 +26,7 @@ pub struct App {
 #[derive(Default)]
 struct UI {
     scroll: scrollable::State,
-    txt_values: HashMap<String, text_input::State>,
+    txt_values: BTreeMap<String, text_input::State>,
 }
 
 #[derive(Debug, Clone)]
@@ -90,13 +90,17 @@ impl Application for App {
         } = self;
         
         let values = ui_txt_values.iter_mut()
-            .fold(Column::new().spacing(20), |lst, (name, input_state)| {
+            .fold(Column::new()
+                .spacing(10).align_items(Align::Center), 
+                |lst, (name, input_state)| {
                 let name = name.clone();
 //                 if let Some(ref txt_value) = txt_values.get(name) {
                     lst.push(Row::new().spacing(20)
-                        .push(Text::new(name.clone()))
+                        .push(Text::new(name.clone()).width(Length::FillPortion(70)))
                         .push(TextInput::new(input_state, "Value", &txt_values[&name],
-                            move |value| Message::ValueEdited(name.clone(), value)))
+                            move |value| Message::ValueEdited(name.clone(), value))
+                            .width(Length::FillPortion(30))
+                        )
                     )
 //                 } else {lst}
             });
@@ -109,9 +113,13 @@ impl Application for App {
             .center_x();
 //             .center_y();
 
-        Scrollable::new(ui_scroll)
-            .padding(10)
-             .push(content)
-            .into()
+        Column::new().spacing(20)
+            .push(Row::new().spacing(20)
+                .push(Text::new("Кнопки в шапке"))
+            ).push(Scrollable::new(ui_scroll)
+                .padding(10)
+                .push(content)
+            ).into()
+            
     }
 }

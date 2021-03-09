@@ -1,6 +1,6 @@
 use iced::{
     Application, executor, Command, Subscription, time,
-    Element, Container, Text, button, Button, slider, Slider,
+    Element, Container, Text, button, Button, slider, Slider, scrollable, Scrollable,
     Column, Row, Space, Length,
     Settings,
 };
@@ -9,15 +9,22 @@ fn main() {
     App::run(Settings::default());
 }
 
+use modbus::{Value, ModbusValues, ValueError};
+
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::sync::Arc;
+
 pub struct App {
     ui: UI,
     
-    
+    logic: meln_logic::init::Complect,
+    values: BTreeMap<String, Arc<Value>>,
 }
 
 #[derive(Default)]
 struct UI {
-
+    scroll: scrollable::State,
 }
 
 #[derive(Debug, Clone)]
@@ -31,10 +38,16 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-    
+        let mut logic = meln_logic::init::Complect::new();
+        let values = logic.make_values(false);
+        logic.init_values(&values);
+        
         (
         Self {
             ui: UI::default(),
+            
+            logic: logic,
+            values: values,
             
         },
         Command::none()
@@ -50,13 +63,18 @@ impl Application for App {
     }
     
     fn view(&mut self) -> Element<Self::Message> {
-        let content = Text::new("Test App Config");
-        Container::new(content)
+        let values = self.values.keys().fold(String::from(""), |txt, name| txt+"\n"+name);
+        let content = Text::new(values);
+        let content = Container::new(content)
             .width(Length::Fill)
-            .height(Length::Fill)
+//             .height(Length::Fill)
             .padding(10)
-            .center_x()
-            .center_y()
+            .center_x();
+//             .center_y();
+        
+        Scrollable::new(&mut self.ui.scroll)
+            .padding(10)
+             .push(content)
             .into()
     }
 }

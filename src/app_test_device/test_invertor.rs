@@ -9,7 +9,7 @@ use iced::{
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
 use modbus::{Value, ModbusValues};
-use crate::graphic::{self, Graphic};
+use graphic::{self, Graphic};
 
 pub struct TestInvertor {
     ui: UI,

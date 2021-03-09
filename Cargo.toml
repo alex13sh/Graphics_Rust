@@ -4,6 +4,18 @@ version = "0.1.0"
 authors = ["alex13sh <alex97sh@yandex.ru>"]
 edition = "2018"
 
+[[bin]]
+name = "meln_graphics"
+path = "src/main.rs"
+
+[[bin]]
+name = "app_test_device"
+path = "src/main_app_test_device.rs"
+
+[[bin]]
+name = "app_stand_graphic"
+path = "./src/app_stand_graphic.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -11,11 +23,12 @@ iced = { version = "0.2",  features = ["canvas", "tokio", "svg"] }
 iced_native = { version = "0.2"}
 
 chrono = "0.4"
-coarse-prof = {version = "0.2.4", path = "../coarse-prof-0.2.4"}
+coarse-prof = {version = "0.2.4"} #, path = "../coarse-prof-0.2.4"}
 
 log = {path = "./log"}
 modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
+graphic = {path = "./graphic"}
 
 [dependencies.plotters]
 #path = "../plotters"
@@ -24,20 +37,17 @@ optional = true
 default-features = false
 features = [ "chrono", "line_series", "svg_backend"] # "iced_back"]
 
-[dependencies.iced_backend]
-path = "./src/iced_backend/"
-optional = true
-
 [workspace]
 members = [
     "log",
     "modbus",
     "meln_logic",
     "meln_logic/macros",
+    "graphic",
 ]
 
 [features]
-default = ["plotters", "iced_backend"] #, "test"]
+default = ["graphic/plotters", "graphic/iced_backend"] #, "test"]
 
 test = ["modbus/test"]
 

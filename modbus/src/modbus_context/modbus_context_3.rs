@@ -19,7 +19,9 @@ pub(crate) struct ModbusContext {
 impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
         if cfg!(not(feature = "test")) {
-        if let DeviceAddress::TcpIP(txt) = address {
+        match address {
+        DeviceAddress::TcpIP(txt) |
+        DeviceAddress::TcpIp2Rtu(txt, _) => {
             let client = tcp::Transport::new(txt).ok()?;
             
             Some(ModbusContext {
@@ -27,8 +29,7 @@ impl ModbusContext {
                 ranges_address: get_ranges_value(&values, 8, true),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
-        } else {
-            None
+        } _ => None,
         }
         } else {None}
     }

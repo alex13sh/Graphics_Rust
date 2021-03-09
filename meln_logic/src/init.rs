@@ -25,7 +25,8 @@ pub struct Complect {
     
     pub invertor: Invertor,
     pub digit_io: DigitIO,
-    pub owen_analog: Vec<Arc<Device>>,
+    pub owen_analog_1: Arc<Device>,
+    pub owen_analog_2: Arc<Device>,
     
     values_sink: Vec<(Arc<Value>, ValueSink)>,
 }
@@ -36,16 +37,13 @@ impl Complect {
         let invertor = Invertor::new(invertor.into());
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
         
-        let dev_owen_analog: Vec<_> = init::make_owen_analogs(["192.168.1.11", "192.168.1.13"]).into_iter()
-            .map(|d| Arc::new(Device::from(d))).collect();
-        
-        
         Complect {
             invertor_engine: InvertorEngine::new(),
             
             invertor: invertor,
             digit_io: digit_io,
-            owen_analog: dev_owen_analog,
+            owen_analog_1: Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11"))),
+            owen_analog_2: Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13"))),
             
             values_sink: Vec::new(),
         }
@@ -76,7 +74,7 @@ impl Complect {
     }
     
     fn get_arr_device(&self) -> Vec<Arc<Device>> {
-        [&self.owen_analog[0], &self.owen_analog[1],
+        [&self.owen_analog_1, &self.owen_analog_2,
         &self.digit_io.device(), &self.invertor.device()]
         .iter().map(|&d| d.clone()).collect()
     }

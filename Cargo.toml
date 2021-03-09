@@ -16,6 +16,10 @@ path = "src/main_app_test_device.rs"
 name = "app_stand_graphic"
 path = "./src/app_stand_graphic.rs"
 
+[[bin]]
+name = "app_config"
+path = "./src/app_config.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

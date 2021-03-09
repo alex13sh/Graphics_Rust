@@ -1,7 +1,7 @@
 use iced::{
     Application, executor, Command, Subscription, time,
-    Element, Container, Text, button, Button, slider, Slider, scrollable, Scrollable,
-    Column, Row, Space, Length,
+    text_input, TextInput, button, Button, slider, Slider, scrollable, Scrollable,
+    Element, Container, Text, Column, Row, Space, Length,
     Settings,
 };
 
@@ -20,16 +20,18 @@ pub struct App {
     
     logic: meln_logic::init::Complect,
     values: BTreeMap<String, Arc<Value>>,
+    txt_values: HashMap<String, String>,
 }
 
 #[derive(Default)]
 struct UI {
     scroll: scrollable::State,
+    txt_values: HashMap<String, text_input::State>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-
+    ValueEdited(String, String), // name, value
 }
 
 impl Application for App {
@@ -42,13 +44,22 @@ impl Application for App {
         let values = logic.make_values(false);
         logic.init_values(&values);
         
+        let txt_values = values.iter()
+            .map(|(k, v)| (k.clone(), v.value().to_string()))
+            .collect();
+        
         (
         Self {
-            ui: UI::default(),
+            ui: UI {
+                txt_values: values.iter()
+                    .map(|(k, v)| (k.clone(), text_input::State::default()))
+                    .collect(),
+                .. UI::default()
+            },
             
             logic: logic,
             values: values,
-            
+            txt_values: txt_values,
         },
         Command::none()
         )
@@ -59,20 +70,46 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+        match message {
+        Message::ValueEdited(name, value) => 
+            if let Some(txt) = self.txt_values.get_mut(&name) {
+                *txt = value;
+            },
+        };
         Command::none()
     }
     
     fn view(&mut self) -> Element<Self::Message> {
-        let values = self.values.keys().fold(String::from(""), |txt, name| txt+"\n"+name);
-        let content = Text::new(values);
+        let Self {
+            txt_values,
+            ui: UI {
+                scroll: ui_scroll,
+                txt_values: ui_txt_values,
+            },
+            ..
+        } = self;
+        
+        let values = ui_txt_values.iter_mut()
+            .fold(Column::new().spacing(20), |lst, (name, input_state)| {
+                let name = name.clone();
+//                 if let Some(ref txt_value) = txt_values.get(name) {
+                    lst.push(Row::new().spacing(20)
+                        .push(Text::new(name.clone()))
+                        .push(TextInput::new(input_state, "Value", &txt_values[&name],
+                            move |value| Message::ValueEdited(name.clone(), value)))
+                    )
+//                 } else {lst}
+            });
+         
+        let content = values;
         let content = Container::new(content)
             .width(Length::Fill)
 //             .height(Length::Fill)
             .padding(10)
             .center_x();
 //             .center_y();
-        
-        Scrollable::new(&mut self.ui.scroll)
+
+        Scrollable::new(ui_scroll)
             .padding(10)
              .push(content)
             .into()

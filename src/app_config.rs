@@ -31,18 +31,30 @@ struct UI {
     scroll: scrollable::State,
     txt_values: BTreeMap<String, text_input::State>,
     pb_update: button::State,
+    pb_write: button::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ValueEdited(String, String), // name, value
-    ModbusUpdate,
+    ModbusUpdate, ModbusWrite,
 }
 
 fn make_values(values: &Values) -> ValuesOldNew {
     values.iter()
         .map(|(k, v)| {let v = v.value().to_string(); (k.clone(), (v.clone(), v))})
         .collect()
+}
+
+impl App {
+
+    fn make_new_values(&self) -> ModbusValues {
+        self.txt_values.iter()
+            .filter(|(_, (old, new))| old != new)
+            .flat_map(|(name, (_, new))| Some(((name.clone(), Arc::new(self.values[name].new_value(new.parse().ok()?))))))
+            .collect::<HashMap<_,_>>()
+            .into()
+    }
 }
 
 impl Application for App {
@@ -87,7 +99,13 @@ impl Application for App {
         Message::ModbusUpdate => {
             self.logic.update_all();
             self.txt_values = make_values(&self.values);
-        },
+        }, Message::ModbusWrite => {
+            let new_values = self.make_new_values();
+            dbg!(new_values);
+            for (ref mut old, new) in self.txt_values.values_mut() {
+                *old = new.clone();
+            }
+        }
         };
         Command::none()
     }
@@ -98,7 +116,7 @@ impl Application for App {
             ui: UI {
                 scroll: ui_scroll,
                 txt_values: ui_txt_values,
-                pb_update,
+                pb_update, pb_write,
             },
             ..
         } = self;
@@ -135,6 +153,7 @@ impl Application for App {
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
                 .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate))
+                .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)

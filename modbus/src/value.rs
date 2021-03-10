@@ -176,6 +176,12 @@ impl From<Vec<ValueInit>> for ModbusValues {
     }
 }
 
+impl From<HashMap<String, Arc<Value>>> for ModbusValues {
+    fn from(values: HashMap<String, Arc<Value>>) -> Self {
+        ModbusValues(values)
+    }
+}
+
 
 impl Deref for ModbusValues {
     type Target = HashMap<String, Arc<Value>>;

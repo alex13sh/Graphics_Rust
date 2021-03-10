@@ -15,12 +15,15 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+type Values = BTreeMap<String, Arc<Value>>;
+type ValuesOldNew = BTreeMap<String, (String, String)>; // (old, new)
+
 pub struct App {
     ui: UI,
     
     logic: meln_logic::init::Complect,
-    values: BTreeMap<String, Arc<Value>>,
-    txt_values: HashMap<String, String>,
+    values: Values,
+    txt_values: ValuesOldNew,
 }
 
 #[derive(Default)]
@@ -36,6 +39,12 @@ pub enum Message {
     ModbusUpdate,
 }
 
+fn make_values(values: &Values) -> ValuesOldNew {
+    values.iter()
+        .map(|(k, v)| {let v = v.value().to_string(); (k.clone(), (v.clone(), v))})
+        .collect()
+}
+
 impl Application for App {
     type Executor = executor::Default;
     type Flags = ();
@@ -46,9 +55,7 @@ impl Application for App {
         let values = logic.make_values(false);
         logic.init_values(&values);
         
-        let txt_values = values.iter()
-            .map(|(k, v)| (k.clone(), v.value().to_string()))
-            .collect();
+        let txt_values = make_values(&values);
         
         (
         Self {
@@ -74,14 +81,12 @@ impl Application for App {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
         Message::ValueEdited(name, value) => 
-            if let Some(txt) = self.txt_values.get_mut(&name) {
-                *txt = value;
+            if let Some((_old, new)) = self.txt_values.get_mut(&name) {
+                *new = value;
             },
         Message::ModbusUpdate => {
             self.logic.update_all();
-            self.txt_values = self.values.iter()
-                .map(|(k, v)| (k.clone(), v.value().to_string()))
-                .collect();
+            self.txt_values = make_values(&self.values);
         },
         };
         Command::none()
@@ -103,12 +108,17 @@ impl Application for App {
                 .spacing(10).align_items(Align::Center), 
                 |lst, (name, input_state)| {
                 let name = name.clone();
+                let txt_value = &txt_values[&name];
 //                 if let Some(ref txt_value) = txt_values.get(name) {
                     lst.push(Row::new().spacing(20)
                         .push(Text::new(name.clone()).width(Length::FillPortion(70)))
-                        .push(TextInput::new(input_state, "Value", &txt_values[&name],
+                        .push(TextInput::new(input_state, "Value", &txt_value.1,
                             move |value| Message::ValueEdited(name.clone(), value))
                             .width(Length::FillPortion(30))
+                            .padding(10)
+                            .style(style::ValueInput {
+                                changed: txt_value.0 != txt_value.1
+                            })
                         )
                     )
 //                 } else {lst}
@@ -130,5 +140,42 @@ impl Application for App {
                 .push(content)
             ).into()
             
+    }
+}
+
+mod style {
+    use iced::{text_input, container, Background, Color, Vector};
+    
+    pub struct ValueInput{
+        pub changed: bool,
+    }
+    
+    impl text_input::StyleSheet for ValueInput {
+        fn active(&self) -> text_input::Style {
+            let g = if self.changed {255} else {0};
+            text_input::Style {
+                border_width: 2.0,
+                border_color: Color::from_rgb8(0, g, 0),
+                background: Background::Color(Color::from_rgba8(255-g, 255, 255-g, 0.2)),
+                .. Default::default()
+            }
+        }
+        
+            /// Produces the style of a focused text input.
+        fn focused(&self) -> text_input::Style {
+            self.active()
+        }
+
+        fn placeholder_color(&self) -> Color {
+            Color::from_rgb8(0, 0, 0)
+        }
+
+        fn value_color(&self) -> Color {
+            Color::from_rgb8(0, 0, 0)
+        }
+
+        fn selection_color(&self) -> Color {
+            Color::from_rgb8(0, 0, 255)
+        }
     }
 }

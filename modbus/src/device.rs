@@ -178,19 +178,20 @@ pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> 
 
 pub(super) fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
     let empty_space = empty_space as u16;
+    
+//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+    let mut values: Vec<_> = values.iter()
+        .filter(|v| v.1.is_read_only() || !read_only )
+        .map(|(_, v)| v.clone()).collect();
+    values.sort_by(|a, b| a.address().cmp(&b.address()));
     if values.len() == 0 {
         return Vec::new();
     }
     
-//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-    let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
-    values.sort_by(|a, b| a.address().cmp(&b.address()));
-    let values = values;
-    
     let mut itr = values.into_iter();
     let v = itr.next().unwrap();
     let adr = v.address();
-    let end = adr + v.size() as u16;
+    let end = adr + v.size() as u16-1;
     let mut res = vec![std::ops::Range { start: adr, end: end }];
     let mut last_range = res.last_mut().unwrap();
     

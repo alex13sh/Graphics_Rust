@@ -19,12 +19,21 @@ pub(crate) struct ModbusContext {
 
 impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        use std::time::Duration;
+        let num = if let DeviceAddress::TcpIp2Rtu(_, num) = address {num} else {&1};
         if cfg!(not(feature = "test")) {
         match address {
         DeviceAddress::TcpIP(txt) |
         DeviceAddress::TcpIp2Rtu(txt, _) => {
-            let client = tcp::Transport::new(txt).ok()?;
-            
+            let client = tcp::Transport::new_with_cfg(
+                txt, tcp::Config {
+                    tcp_connect_timeout: Some(Duration::from_millis(100)),
+                    tcp_read_timeout: Some(Duration::from_millis(100)),
+                    tcp_write_timeout: Some(Duration::from_millis(100)),
+                    modbus_uid: *num,
+                    .. Default::default()
+                }).ok()?;
+            dbg!(num);
             Some(ModbusContext {
                 ctx: Box::new(client),
                 ranges_address: get_ranges_value(&values, 8, true),
@@ -37,7 +46,12 @@ impl ModbusContext {
     pub fn update(&mut self, ranges_address: Option<&RangesAddress>) -> Result<(), DeviceError> {
         let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
         for r in ranges_address {
-            let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
+            let mut res = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1);
+//             if let Err(_) = res {
+//                 res = self.ctx.read_input_registers(*r.start(), *r.end() - *r.start()+1);
+//             }
+            if let Err(ref err) = res {dbg!(err);}
+            let buff = res?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
             let mut itr_zip = r.clone().zip(itr_buff);

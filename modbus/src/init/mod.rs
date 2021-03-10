@@ -124,7 +124,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 1), // <<--
+        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 16), // <<--
         
         sensors: Some(vec![
             SensorValues(make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5))),

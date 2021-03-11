@@ -104,7 +104,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
             interval: 800,
             value_error: value_error.into(),
             sensor_type: SensorType::Analog(Pt_100),
-            values: make_values(pin as u16, value_error.into(), ValueSize::FLOAT),
+            values: make_values(pin as u16, value_error.into(), ValueSize::UINT16),
     };
     let make_sensor_2 = |pin, name: &str, value_error: (i32, i32)| SV {
             sensor_type: SensorType::Analog(Amper_4_20),
@@ -115,7 +115,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
             sensor_type: SensorType::Analog(Amper_4_20),
             value_error: value_error.into(),
             values: make_values(pin as u16, value_error.into(), 
-                ValueSize::FloatMap(|v|10_f32.powf(v*10.0-5.5))
+                ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
             ),
             .. make_sensor(pin, name, (0,0))
         }
@@ -124,7 +124,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 16), // <<--
+        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 11), // <<--
         
         sensors: Some(vec![
             SensorValues(make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5))),

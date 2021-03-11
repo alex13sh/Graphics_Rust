@@ -26,5 +26,5 @@ optional = true
 version = "*"
 
 [features]
-default = ["modbus-rs"]
+default = ["tokio-modbus"]
 test = []

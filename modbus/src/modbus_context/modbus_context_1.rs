@@ -10,33 +10,37 @@ use super::device::{
     get_ranges_value, convert_modbusvalues_to_hashmap_address,
 };
 
-pub(super) struct ModbusContext {
+type RangesAddress = Vec<std::ops::RangeInclusive<u16>>;
+pub(crate) struct ModbusContext {
     ctx: Context,
-    pub(super) values: HashMap<u16, Arc<Value>>,
-    ranges_address: Vec<std::ops::RangeInclusive<u16>>,
+    pub(crate) values: HashMap<u16, Arc<Value>>,
+    ranges_address: RangesAddress,
 }
 
 impl ModbusContext {
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        let num = if let DeviceAddress::TcpIp2Rtu(_, num) = address {*num} else {1};
         if cfg!(not(feature = "test")) {
-        if let DeviceAddress::TcpIP(txt) = address {
+        match address {
+        DeviceAddress::TcpIP(txt) |
+        DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
             dbg!(&socket_addr);
             
             Some(ModbusContext {
-                ctx: sync::tcp::connect(socket_addr).ok()?,
+                ctx: sync::tcp::connect_slave(socket_addr, num.into()).ok()?,
                 ranges_address: get_ranges_value(&values, 8, true),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
-        } else {
-            None
+        } _ => None,
         }
         } else {None}
     }
-    pub fn update(&mut self) -> Result<(), DeviceError> {
+    pub fn update(&mut self, ranges_address: Option<&RangesAddress>) -> Result<(), DeviceError> {
         use tokio_modbus::client::sync::Reader;
-        for r in &self.ranges_address {
+        let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
+        for r in ranges_address {
             let buff = self.ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1)?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             let itr_buff = buff.into_iter();
@@ -59,7 +63,7 @@ impl ModbusContext {
         Ok(())
     }
     
-    pub(super) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
+    pub(crate) fn set_value(&mut self, v: &Value) -> Result<(), DeviceError> {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::sync::Writer;
         match v.size.size() {
@@ -72,7 +76,7 @@ impl ModbusContext {
         };
         Ok(())
     }
-    pub(super) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
+    pub(crate) fn get_value(&mut self, v: &Value) -> Result<(), DeviceError>  {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::sync::Reader;
         match v.size.size() {

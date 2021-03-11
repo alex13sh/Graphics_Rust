@@ -29,6 +29,6 @@ optional = true
 version = "*"
 
 [features]
-default = ["modbus-rs", "time"]
+default = ["tokio-modbus", "time"]
 test = []
 time = ["tokio/time"]

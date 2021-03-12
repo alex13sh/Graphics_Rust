@@ -26,8 +26,11 @@ path = "./src/app_config.rs"
 iced = { version = "0.2",  features = ["canvas", "tokio", "svg"] }
 iced_native = { version = "0.2"}
 
+futures = "0.3.12"
 chrono = "0.4"
-coarse-prof = {version = "0.2.4"} #, path = "../coarse-prof-0.2.4"}
+coarse-prof = {version = "0.2.4"}
+# log = "0.4.0"
+env_logger = "0.8.2"
 
 log = {path = "./log"}
 modbus = {path = "./modbus"}

@@ -9,6 +9,9 @@ edition = "2018"
 [dependencies]
 derivative = "2.1.1"
 thiserror = "1.0"
+tokio = { version = "*", features = ["sync", "macros"]}
+futures = "0.3.12"
+log = "0.4.14"
 
 [dependencies.tokio-modbus]
 optional = true
@@ -26,5 +29,6 @@ optional = true
 version = "*"
 
 [features]
-default = ["tokio-modbus"]
+default = ["tokio-modbus", "time"]
 test = []
+time = ["tokio/time"]

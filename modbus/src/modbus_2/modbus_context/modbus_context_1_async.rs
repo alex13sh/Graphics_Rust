@@ -5,7 +5,7 @@ use super::{Value, ModbusValues};
 use super::init::DeviceAddress;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use super::device::{
     DeviceError,
@@ -69,7 +69,7 @@ impl ModbusContext {
     pub fn update(&self) -> Result<(), DeviceError> {
         use tokio_modbus::client::Reader;
         for r in &self.ranges_address {
-            let buff = block_on(self.ctx.lock()?.read_holding_registers(*r.start(), *r.end() - *r.start()+1))?;
+            let buff = block_on(async{self.ctx.lock().await.read_holding_registers(*r.start(), *r.end() - *r.start()+1).await})?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             Self::update_impl(&self.values, r.clone(), buff);
         }
@@ -79,7 +79,7 @@ impl ModbusContext {
     pub async fn update_async(&self) -> Result<(), DeviceError> {
         use tokio_modbus::client::Reader;
         for r in &self.ranges_address {
-            let buff = self.ctx.lock()?.read_holding_registers(*r.start(), *r.end() - *r.start()+1).await?;
+            let buff = self.ctx.lock().await.read_holding_registers(*r.start(), *r.end() - *r.start()+1).await?;
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
             Self::update_impl(&self.values, r.clone(), buff);
         }
@@ -87,17 +87,18 @@ impl ModbusContext {
     }
     
     pub(crate) fn is_busy(&self) -> bool {
-        self.ctx.is_poisoned()
+//         self.ctx.is_poisoned()
+        false
     }
     
     pub(crate) fn set_value(&self, v: &Value) -> Result<(), DeviceError> {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::Writer;
         match v.size.size() {
-        1 => block_on(self.ctx.lock()?.write_single_register(v.address(), v.value() as u16))?,
+        1 => block_on(async{self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await})?,
         2 => {
-            block_on(self.ctx.lock()?.write_single_register(v.address(), v.value() as u16))?;
-            block_on(self.ctx.lock()?.write_single_register(v.address()+1, (v.value()>>16) as u16))?;
+            block_on(async{self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await})?;
+            block_on(async{self.ctx.lock().await.write_single_register(v.address()+1, (v.value()>>16) as u16).await})?;
         },
         _ => {}
         };
@@ -107,9 +108,9 @@ impl ModbusContext {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::Reader;
         match v.size.size() {
-        1 => v.update_value(block_on(self.ctx.lock()?.read_holding_registers(v.address(), 1))?[0] as u32),
+        1 => v.update_value(block_on(async{self.ctx.lock().await.read_holding_registers(v.address(), 1).await})?[0] as u32),
         2 => {
-            let buf = block_on(self.ctx.lock()?.read_holding_registers(v.address(), 2))?;
+            let buf = block_on(async{self.ctx.lock().await.read_holding_registers(v.address(), 2).await})?;
             v.update_value((buf[0] as u32) | (buf[1] as u32)<<16);
         },
         _ => {}

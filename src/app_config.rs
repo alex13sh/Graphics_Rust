@@ -9,7 +9,7 @@ fn main() {
     App::run(Settings::default());
 }
 
-use modbus::{Value, ModbusValues, ValueError};
+use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -38,6 +38,8 @@ struct UI {
 pub enum Message {
     ValueEdited(String, String), // name, value
     ModbusUpdate, ModbusWrite,
+    ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 }
 
 fn make_values(values: &Values) -> ValuesOldNew {
@@ -105,7 +107,50 @@ impl Application for App {
             for (ref mut old, new) in self.txt_values.values_mut() {
                 *old = new.clone();
             }
-        }
+        },
+        Message::ModbusUpdateAsync => {
+            use futures::future::join_all;
+            let devices = self.logic.get_devices();
+                
+            
+            let mut device_features = Vec::new();
+            for d in &devices {
+                if !d.is_connecting() {
+                    let  dc = d.clone();
+                    let upd = async move {
+                        if !dc.is_connect() {
+                            let res = dc.connect().await;
+                            if res.is_err() {
+                                return res;
+                            }
+                        }
+                        dc.update_async().await
+                    };
+                    let dc = d.clone();
+                    device_features.push((dc, upd));
+                }
+            }
+//             let fut = join_all(device_features);
+//             return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
+            println!("Message::ModbusUpdateAsync end");
+            return Command::batch(device_features.into_iter()
+                .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                );
+        },
+        Message::ModbusUpdateAsyncAnswer => {
+            self.txt_values = make_values(&self.values);
+        },
+        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
+//             dbg!(&d);
+            if res.is_ok() {
+                println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                if !d.is_connect() {
+                    println!("\tis not connect");
+                } else {
+                    self.txt_values = make_values(&self.values);
+                }
+            }
+        },
         };
         Command::none()
     }
@@ -152,7 +197,7 @@ impl Application for App {
 
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
-                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate))
+                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdateAsync))
                 .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)

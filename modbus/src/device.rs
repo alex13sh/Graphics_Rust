@@ -73,7 +73,7 @@ impl Device {
             return Err(DeviceError::ContextBusy);
         }
         info!("Device: {} - {:?}", self.name, self.address);
-        let res = ctx.update_async(None).await;
+        let res = ctx.update_async(Some(&get_ranges_value(&self.values, 0, false))).await;
         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
             info!("update_async TimeOut");
@@ -167,7 +167,8 @@ impl From<DeviceInit> for Device {
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: Mutex::new(super::ModbusContext::new(&d.address, &values).map(Arc::new)),
+//             ctx: Mutex::new(super::ModbusContext::new(&d.address, &values).map(Arc::new)),
+            ctx: Mutex::new(None),
             values: values,
         }
     }

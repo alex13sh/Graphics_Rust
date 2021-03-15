@@ -100,10 +100,22 @@ impl ModbusContext {
     
     pub async fn update_async(&self, ranges_address: Option<&Vec<RangeAddress>>) -> Result<(), DeviceError> {
         use tokio_modbus::client::Reader;
+        use tokio::time::sleep;
+        use tokio::time::timeout;
+        use std::time::Duration;
         let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
         for r in ranges_address {
-            let buff = self.ctx.lock().await.read_holding_registers(*r.start(), *r.end() - *r.start()+1).await?;
+            let buff = {
+                let mut ctx = self.ctx.lock().await;
+                let buff = ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1);
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
+                let timeout = sleep(Duration::from_millis(100));
+                let res = tokio::select! {
+                buff = buff => Ok(buff.unwrap()),
+                _ = timeout => Err(DeviceError::TimeOut),
+                };
+                res?
+            };
             Self::update_impl(&self.values, r.clone(), buff);
         }
         Ok(())

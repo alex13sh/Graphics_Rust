@@ -25,39 +25,45 @@ pub(crate) struct ModbusContext {
 impl ModbusContext {
     
     pub fn new(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
+        use std::time::Duration;
+        let num = if let DeviceAddress::TcpIp2Rtu(_, num) = address {*num} else {1};
         if cfg!(not(feature = "test")) {
-        if let DeviceAddress::TcpIP(txt) = address {
+        match address {
+        DeviceAddress::TcpIP(txt) |
+        DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
             dbg!(&socket_addr);
             
             Some(ModbusContext {
-                ctx: Arc::new(Mutex::new(block_on(tcp::connect(socket_addr)).ok()?)),
+                ctx: Arc::new(Mutex::new(block_on(tcp::connect_slave(socket_addr,  num.into())).ok()?)),
 //                 ctx: tcp::connect(socket_addr).await.ok()?,
                 ranges_address: get_ranges_value(&values, 8, true),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
-        } else {
-            None
+        } _ => None,
         }
         } else {None}
     }
     
     pub async fn new_async(address: &DeviceAddress, values: &ModbusValues) -> Option<Self> {
-                if cfg!(not(feature = "test")) {
-        if let DeviceAddress::TcpIP(txt) = address {
+        use std::time::Duration;
+        let num = if let DeviceAddress::TcpIp2Rtu(_, num) = address {*num} else {1};
+        if cfg!(not(feature = "test")) {
+        match address {
+        DeviceAddress::TcpIP(txt) |
+        DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
             dbg!(&socket_addr);
             
             Some(ModbusContext {
-                ctx: Arc::new(Mutex::new(tcp::connect(socket_addr).await.ok()?)),
+                ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),
 //                 ctx: tcp::connect(socket_addr).await.ok()?,
                 ranges_address: get_ranges_value(&values, 8, true),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
-        } else {
-            None
+        } _ => None,
         }
         } else {None}
     }

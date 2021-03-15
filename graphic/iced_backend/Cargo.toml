@@ -8,7 +8,12 @@ edition = "2018"
 
 [dependencies]
 plotters-backend = "^0.3.0"
-iced = {  version = "0.2", features = ["canvas"] }
+# iced = {  version = "0.2", features = ["canvas"] }
+
+[dependencies.iced]
+git = "https://github.com/hecrj/iced"
+features = ["canvas"] 
+
 
 [dev-dependencies]
 plotters = {version = "^0.3.0", default_features = false}

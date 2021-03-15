@@ -2,7 +2,7 @@ use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
     Column, Row, Space, Length,
-    Settings,
+    Settings, Clipboard,
 };
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
 
 
 use graphic::{self, Graphic};
-use modbus::{Value, ModbusValues, ValueError};
+use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -122,7 +122,7 @@ impl Application for App {
             .map(|_| Message::GraphicUpdate),
         ])
     }
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
         match message {
         Message::ModbusUpdate  => {
@@ -368,7 +368,7 @@ impl App {
     
     fn proccess_speed(&mut self) {
         use std::convert::TryFrom;
-        let speed_value = self.invertor.get_hz_out_value();
+        let speed_value = self.logic.invertor.get_hz_out_value();
         let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
         if self.is_started == false && speed_value > 5.0 {
             self.is_started = true;

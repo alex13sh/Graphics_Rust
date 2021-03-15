@@ -2,7 +2,7 @@ use iced::{
     Application, executor, Command, Subscription, time,
     text_input, TextInput, button, Button, slider, Slider, scrollable, Scrollable,
     Element, Container, Text, Column, Row, Space, Length, Align,
-    Settings,
+    Settings, Clipboard,
 };
 
 fn main() {
@@ -92,7 +92,7 @@ impl Application for App {
         String::from("Config Modules - Iced")
     }
     
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         match message {
         Message::ValueEdited(name, value) => 
             if let Some((_old, new)) = self.txt_values.get_mut(&name) {
@@ -112,7 +112,6 @@ impl Application for App {
             use futures::future::join_all;
             let devices = self.logic.get_devices();
                 
-            
             let mut device_features = Vec::new();
             for d in &devices {
                 if !d.is_connecting() {
@@ -141,7 +140,7 @@ impl Application for App {
             self.txt_values = make_values(&self.values);
         },
         Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
-//             dbg!(&d);
+            dbg!(&d.name(), &res);
             if res.is_ok() {
                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
                 if !d.is_connect() {

@@ -15,7 +15,9 @@ log = "0.4.14"
 
 [dependencies.tokio-modbus]
 optional = true
-version = "*"
+# version = "*"
+git = "https://github.com/ivoisbelongtous/tokio-modbus"
+branch = "tokio1"
 default-features = false
 features = ["tcp", "sync"]
 

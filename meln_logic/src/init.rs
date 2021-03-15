@@ -65,11 +65,15 @@ impl Complect {
     }
     
     pub fn update(&self) {
-        use std::convert::TryFrom;
-        let devices = self.get_devices();
-            
-        for d in &devices {
+        for d in &self.get_devices() {
             d.update();
+        }
+    }
+    pub fn update_all(&self) {
+        for d in &self.get_devices() {
+            if let Err(err) = d.update_all() {
+                println!("Device {} update error: {:?}", d.name(), err);
+            }
         }
     }
     

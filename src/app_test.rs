@@ -1,7 +1,7 @@
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 
-    Application, window, Settings, executor, Subscription, Command, time,
+    Application, window, Settings, executor, Subscription, Command, time, Clipboard,
 };
 
 pub struct TestUI {
@@ -37,7 +37,7 @@ impl Application for TestUI {
         "Test UI".into()
     }
     
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         match message {
         
         }

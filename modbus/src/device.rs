@@ -8,10 +8,11 @@ use super::init::Device as DeviceInit;
 use super::init::ValueGroup as SensorInit;
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::cell::{RefCell}; //, Cell, RefMut};
+use std::sync::{Mutex, PoisonError, MutexGuard, Arc};
 use derivative::Derivative;
 
+type ModbusContext = Arc<super::ModbusContext>;
 // #[derive(Debug)]
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -22,8 +23,10 @@ pub struct Device {
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
-    pub(super) ctx: Option<RefCell<super::ModbusContext>>,
+    pub(super) ctx: Mutex< Option<ModbusContext> >,
 }
+
+use log::{info, trace, warn};
 
 impl Device {
     pub fn name(&self) -> &String {
@@ -31,18 +34,64 @@ impl Device {
     }
     
     pub fn update(&self) -> Result<(), DeviceError> {
-        self.context()?.borrow_mut().update()?;
+        self.context()?.update(None)?;
         Ok(())
     }
+    pub fn update_all(&self) -> Result<(), DeviceError> {
+        self.context()?.update(Some(&get_ranges_value(&self.values, 0, false)))?;
+        Ok(())
+    }
+    
+    pub async fn connect(&self) -> Result<(), DeviceError> {
+        info!("device connect");
+        if self.is_connect() {return Ok(());}
+        
+        *self.ctx.try_lock()? = super::ModbusContext
+            ::new_async(&self.address, &self.values).await.map(Arc::new); 
+        
+        if !self.is_connect() {Err(DeviceError::ContextNull)}
+        else {Ok(())}
+    }
+    pub fn is_connecting(&self) -> bool {
+        self.ctx.is_poisoned()
+    }
+    fn disconnect(&self) -> Result<(), DeviceError> {
+        *self.ctx.try_lock()? = None;
+        Ok(())
+    }
+    
+    pub async fn update_async(&self) -> Result<(), DeviceError> {
+        info!("pub async fn update_async");
+        if self.ctx.is_poisoned()  {
+            info!(" <- device is busy");
+            return Err(DeviceError::ContextBusy);
+        } 
+        info!(" -> test busy 2");
+        let ctx = self.context()?;
+        if ctx.is_busy() {
+            info!(" <- device is busy");
+            return Err(DeviceError::ContextBusy);
+        }
+        info!("Device: {} - {:?}", self.name, self.address);
+        let res = ctx.update_async(Some(&get_ranges_value(&self.values, 0, false))).await;
+        info!("-> res");
+        if let Err(DeviceError::TimeOut) = res {
+            info!("update_async TimeOut");
+            self.disconnect()?;
+            Err(DeviceError::ContextNull)
+        } else {res}
+    }
+    
     pub fn values(&self) -> Vec<Arc<Value>> {
         self.values.values().map(Arc::clone).collect()
     }
     pub fn values_map(&self) -> &ModbusValues {
         &self.values
     }
-    pub(super) fn context(&self) -> Result<&RefCell<super::ModbusContext>, DeviceError> {
-        if let Some(ctx) = &self.ctx {
-            Ok(ctx)
+    pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
+        info!("-> device get context");
+        if let Some(ref ctx) = *self.ctx.try_lock()? {
+            Ok(ctx.clone())
         } else {
             Err(DeviceError::ContextNull)
         }
@@ -58,9 +107,11 @@ impl Device {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DeviceError {
     ContextNull,
+    ContextBusy,
+    TimeOut,
     ValueOut,
     ValueError,
     OtherError
@@ -80,6 +131,19 @@ impl std::convert::From<std::io::Error> for DeviceError {
     }
 }
 
+impl <'a, T> From<PoisonError<MutexGuard<'a, T>>> for DeviceError {
+    fn from(_err: PoisonError<MutexGuard<'a, T>>) -> Self {
+        warn!("DeviceError::ContextNull");
+        DeviceError::ContextNull
+    }
+}
+impl <'a, T> From<std::sync::TryLockError<MutexGuard<'a, T>>> for DeviceError {
+    fn from(_err: std::sync::TryLockError<MutexGuard<'a, T>>) -> Self {
+        warn!("DeviceError::ContextBusy");
+        DeviceError::ContextBusy
+    }
+}
+
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ: DeviceType<Device> = d.device_type.into();
@@ -96,13 +160,15 @@ impl From<DeviceInit> for Device {
                 values.insert(s.name().clone()+"/"+v.name(),v.clone());
             };
         };
+        info!("Device from {}", d.name);
         
         Device {
             name: d.name,
             address: d.address.clone(),
             sensors: sens,
             device_type: typ,
-            ctx: super::ModbusContext::new(&d.address, &values).map(RefCell::new),
+//             ctx: Mutex::new(super::ModbusContext::new(&d.address, &values).map(Arc::new)),
+            ctx: Mutex::new(None),
             values: values,
         }
     }
@@ -174,19 +240,20 @@ pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> 
 
 pub(super) fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
     let empty_space = empty_space as u16;
+    
+//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
+    let mut values: Vec<_> = values.iter()
+        .filter(|v| v.1.is_read_only() || !read_only )
+        .map(|(_, v)| v.clone()).collect();
+    values.sort_by(|a, b| a.address().cmp(&b.address()));
     if values.len() == 0 {
         return Vec::new();
     }
     
-//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-    let mut values: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|(_, v)| v.clone()).collect();
-    values.sort_by(|a, b| a.address().cmp(&b.address()));
-    let values = values;
-    
     let mut itr = values.into_iter();
     let v = itr.next().unwrap();
     let adr = v.address();
-    let end = adr + v.size() as u16;
+    let end = adr + v.size() as u16-1;
     let mut res = vec![std::ops::Range { start: adr, end: end }];
     let mut last_range = res.last_mut().unwrap();
     

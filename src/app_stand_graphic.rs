@@ -1,12 +1,17 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
-    Column, Row, Space,
-    Length,
+    Column, Row, Space, Length,
+    Settings, Clipboard,
 };
 
-use crate::graphic::{self, Graphic};
-use modbus::{Value, ModbusValues, ValueError};
+fn main() {
+    App::run(Settings::default());
+}
+
+
+use graphic::{self, Graphic};
+use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -40,7 +45,8 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ModbusUpdate,
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
@@ -110,15 +116,17 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(200))
-            .map(|_| Message::ModbusUpdate),
-            time::every(std::time::Duration::from_millis(200))
+            time::every(std::time::Duration::from_millis(2000))
+            .map(|_| Message::ModbusUpdateAsync),
+            time::every(std::time::Duration::from_millis(2000))
             .map(|_| Message::GraphicUpdate),
         ])
     }
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+    
         match message {
         Message::ModbusUpdate  => {
+            self.logic.update();
             use std::convert::TryFrom;
             let values = {
                 self.values.iter()
@@ -139,15 +147,52 @@ impl Application for App {
             };
             self.log_values.append(&mut log_values);
             
-            let speed_value = self.logic.invertor.get_hz_out_value();
-            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-            if self.is_started == false && speed_value > 5.0 {
-                self.is_started = true;
-                self.reset_values();
-            } else if self.is_started == true && speed_value < 5.0 {
-                self.is_started = false;
-                self.graph.save_svg();
-                self.log_save();
+            self.proccess_values();
+            self.proccess_speed();
+        },
+        Message::ModbusUpdateAsync => {
+            use futures::future::join_all;
+            let devices = self.logic.get_devices();
+                
+            
+            let mut device_features = Vec::new();
+            for d in &devices {
+                if !d.is_connecting() {
+                    let  dc = d.clone();
+                    let upd = async move {
+                        if !dc.is_connect() {
+                            let res = dc.connect().await;
+                            if res.is_err() {
+                                return res;
+                            }
+                        }
+                        dc.update_async().await
+                    };
+                    let dc = d.clone();
+                    device_features.push((dc, upd));
+                }
+            }
+//             let fut = join_all(device_features);
+//             return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
+            println!("Message::ModbusUpdateAsync end");
+            return Command::batch(device_features.into_iter()
+                .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                );
+        },
+        Message::ModbusUpdateAsyncAnswer => {
+            self.proccess_values();
+            self.proccess_speed();
+        },
+        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
+//             dbg!(&d);
+            if res.is_ok() {
+                println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                if !d.is_connect() {
+                    println!("\tis not connect");
+                } else {
+                    self.proccess_values();
+                    self.proccess_speed();
+                }
             }
         },
         Message::GraphicUpdate => self.graph.update_svg(),
@@ -298,6 +343,45 @@ impl Drop for App {
     }
 }
 
+// logic
+impl App {
+    fn proccess_values(&mut self) {
+        use std::convert::TryFrom;
+        let values = {
+            self.values.iter()
+            .map(|(k, v)| 
+                if let Ok(value) = f32::try_from(v.as_ref()) {
+                    (&k[..], value)
+                } else {(&v.name()[..], -1.0)}
+            ).collect()
+        };
+        self.graph.append_values(values);
+        let mut log_values: Vec<_> = {
+            self.values.iter()
+            .map(|(k, v)| v)
+            .filter(|v| v.is_log())
+            .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+            .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+        };
+        self.log_values.append(&mut log_values);
+    }
+    
+    fn proccess_speed(&mut self) {
+        use std::convert::TryFrom;
+        let speed_value = self.logic.invertor.get_hz_out_value();
+        let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        if self.is_started == false && speed_value > 5.0 {
+            self.is_started = true;
+            self.reset_values();
+        } else if self.is_started == true && speed_value < 5.0 {
+            self.is_started = false;
+            self.graph.save_svg();
+            self.log_save();
+        };
+    }
+}
+
+// view
 impl App {
 
     fn log_save(&mut self) {

@@ -3,7 +3,7 @@
 use iced::{
     Align, Column, Row, Scrollable, scrollable, Container, Element, Length,
     Text, text_input, TextInput, button, Button, 
-    Application, window, Settings, executor, Subscription, Command, time,
+    Application, window, Settings, executor, Subscription, Command, time, Clipboard,
 };
 
 mod test_invertor;
@@ -54,7 +54,7 @@ impl Application for TestDeviceApp {
         }
     }
     
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         match self {
         Self::Connect {ip_address, ..} => match message {
             Message::InputIpAddressChanged(txt) => *ip_address = txt,

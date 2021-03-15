@@ -2,14 +2,13 @@
 pub use super::init::{ValueDirect, ValueSize, Log};
 pub use super::init::Value as ValueInit;
 
-use std::cell::Cell;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct Value {
     name: String,
     address: u16,
-    value: Cell<u32>, // Cell
+    value: Mutex<u32>, // Cell
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
@@ -24,7 +23,7 @@ impl Value {
             direct: direct,
             size: size,
             log: None,
-            value: Cell::new(0),
+            value: Mutex::new(0),
         }
     }
     pub fn name(&self) -> &String {
@@ -58,21 +57,21 @@ impl Value {
     }
     
     pub(super) fn update_value(&self, value: u32) {
-        self.value.set(value);
+        *self.value.lock().unwrap() = value;
     }
     
     pub fn new_value(&self, value: u32) -> Self {
         Self {
             name: self.name.clone(),
             address: self.address,
-            value: Cell::new(value),
+            value: Mutex::new(value),
             direct: self.direct,
             size: self.size.clone(),
             log: self.log.clone(),
         }
     }
     pub fn value(&self) -> u32 {
-        self.value.get()
+        *self.value.lock().unwrap()
     }
     pub fn size(&self) -> u8 {
         self.size.size()
@@ -82,16 +81,16 @@ impl Value {
 //         self.value.update(|v| {
 //             v+1
 //         });
-        let mut v = self.value.get();
+        let mut v = self.value();
         if lvl {
             v |= 1<<num;
         } else {
             v &= !(1<<num);
         };
-        self.value.set(v);
+        self.update_value(v);
     }
     pub fn get_bit(&self, num: u8) -> bool {
-        self.value.get() & (1<<num) > 0
+        self.value() & (1<<num) > 0
     }
 }
 
@@ -114,7 +113,7 @@ impl From<ValueInit> for Value {
             direct: v.direct,
             size: v.size,
             log: v.log,
-            value: Cell::new(0),
+            value: Mutex::new(0),
         }
     }
 }
@@ -124,15 +123,15 @@ impl TryFrom<&Value> for f32 {
     type Error = ();
     fn try_from(val: &Value) -> Result<f32, Self::Error> {
         match val.size {
-        ValueSize::FLOAT => Ok(f32::from_bits(val.value.get())),
-        ValueSize::FloatMap(f) => Ok(f(f32::from_bits(val.value.get()))),
+        ValueSize::FLOAT => Ok(f32::from_bits(val.value())),
+        ValueSize::FloatMap(f) => Ok(f(f32::from_bits(val.value()))),
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16
         | ValueSize::INT16
         | ValueSize::UINT8
-        | ValueSize::INT8 => Ok(val.value.get() as f32),
-        ValueSize::UInt16Map(f) => Ok(f(val.value.get())),
+        | ValueSize::INT8 => Ok(val.value() as f32),
+        ValueSize::UInt16Map(f) => Ok(f(val.value())),
         _ => Err(()),
         }
     }
@@ -173,6 +172,12 @@ impl From<Vec<ValueInit>> for ModbusValues {
                 .map(|v| (v.name.clone(), Arc::new(Value::from(v))))
                 .collect()
         )
+    }
+}
+
+impl From<HashMap<String, Arc<Value>>> for ModbusValues {
+    fn from(values: HashMap<String, Arc<Value>>) -> Self {
+        ModbusValues(values)
     }
 }
 

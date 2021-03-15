@@ -3,7 +3,7 @@ use super::{InvertorEngine, Properties, ValueSink};
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DigitIO};
+use modbus::{Device, DeviceResult, DigitIO};
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -75,6 +75,28 @@ impl Complect {
                 println!("Device {} update error: {:?}", d.name(), err);
             }
         }
+    }
+    
+    pub fn update_async(&self) -> Vec<(Arc<modbus::Device>,
+    impl std::future::Future<Output = DeviceResult>)> {
+        let mut device_futures = Vec::new();
+        for d in &self.get_devices() {
+            if !d.is_connecting() {
+                let  dc = d.clone();
+                let upd = async move {
+                    if !dc.is_connect() {
+                        let res = dc.connect().await;
+                        if res.is_err() {
+                            return res;
+                        }
+                    }
+                    dc.update_async().await
+                };
+                let dc = d.clone();
+                device_futures.push((dc, upd));
+            }
+        }
+        device_futures
     }
     
     pub fn get_devices(&self) -> Vec<Arc<Device>> {

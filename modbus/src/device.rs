@@ -33,16 +33,16 @@ impl Device {
         &self.name
     }
     
-    pub fn update(&self) -> Result<(), DeviceError> {
+    pub fn update(&self) -> DeviceResult {
         self.context()?.update(None)?;
         Ok(())
     }
-    pub fn update_all(&self) -> Result<(), DeviceError> {
+    pub fn update_all(&self) -> DeviceResult {
         self.context()?.update(Some(&get_ranges_value(&self.values, 0, false)))?;
         Ok(())
     }
     
-    pub async fn connect(&self) -> Result<(), DeviceError> {
+    pub async fn connect(&self) -> DeviceResult {
         info!("device connect");
         if self.is_connect() {return Ok(());}
         
@@ -55,12 +55,12 @@ impl Device {
     pub fn is_connecting(&self) -> bool {
         self.ctx.is_poisoned()
     }
-    fn disconnect(&self) -> Result<(), DeviceError> {
+    fn disconnect(&self) -> DeviceResult {
         *self.ctx.try_lock()? = None;
         Ok(())
     }
     
-    pub async fn update_async(&self) -> Result<(), DeviceError> {
+    pub async fn update_async(&self) -> DeviceResult {
         info!("pub async fn update_async");
         if self.ctx.is_poisoned()  {
             info!(" <- device is busy");
@@ -73,7 +73,7 @@ impl Device {
             return Err(DeviceError::ContextBusy);
         }
         info!("Device: {} - {:?}", self.name, self.address);
-        let res = ctx.update_async(Some(&get_ranges_value(&self.values, 0, false))).await;
+        let res = ctx.update_async(None).await;
         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
             info!("update_async TimeOut");
@@ -107,6 +107,7 @@ impl Device {
     }
 }
 
+pub type DeviceResult = Result<(), DeviceError>;
 #[derive(Debug, Clone)]
 pub enum DeviceError {
     ContextNull,

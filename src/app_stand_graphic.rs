@@ -151,31 +151,9 @@ impl Application for App {
             self.proccess_speed();
         },
         Message::ModbusUpdateAsync => {
-            use futures::future::join_all;
-            let devices = self.logic.get_devices();
+            let device_futures = self.logic.update_async();
                 
-            
-            let mut device_features = Vec::new();
-            for d in &devices {
-                if !d.is_connecting() {
-                    let  dc = d.clone();
-                    let upd = async move {
-                        if !dc.is_connect() {
-                            let res = dc.connect().await;
-                            if res.is_err() {
-                                return res;
-                            }
-                        }
-                        dc.update_async().await
-                    };
-                    let dc = d.clone();
-                    device_features.push((dc, upd));
-                }
-            }
-//             let fut = join_all(device_features);
-//             return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);
-            println!("Message::ModbusUpdateAsync end");
-            return Command::batch(device_features.into_iter()
+            return Command::batch(device_futures.into_iter()
                 .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                 );
         },

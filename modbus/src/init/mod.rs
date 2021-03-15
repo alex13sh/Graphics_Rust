@@ -43,7 +43,7 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
     let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
         Value {
             log: Log::hash(&format!("OwenAnalog/{}/value", pin)),
-            .. make_value("value_float", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err)))
+            .. make_value("value", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err)))
         },
         make_value("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
         make_value("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
@@ -89,7 +89,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
     let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
         Value {
             log: Log::hash(&format!("OwenAnalog/{}/value", pin)),
-            .. make_value("value_float", 0x100+(pin-1)*1, val_size, ValueDirect::Read(Some(err)))
+            .. make_value("value", 0x100+(pin-1)*1, val_size, ValueDirect::Read(Some(err)))
         },
         make_value("type", 0x00+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
         make_value("point", 0x20+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"

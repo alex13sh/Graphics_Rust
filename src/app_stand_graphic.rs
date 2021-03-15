@@ -80,10 +80,10 @@ impl Application for App {
 //             dbg!(&value_names);
 
         let temp_value_names = [
-            "Analog/Температура Ротора",
-            "Analog/Температура Статора",
-            "Analog/Температура Пер.Под.",
-            "Analog/Температура Зад.Под.",
+            "2) МВ110-24.8АС/Температура Ротора дв.1",
+            "1) МВ210-101/Температура Статора дв.1",
+            "1) МВ210-101/Температура Пер.Под.",
+            "1) МВ210-101/Температура Зад.Под.",
             "Invertor/Температура радиатора",
         ];
         graphic.add_series("Температуры", false, &temp_value_names);
@@ -376,17 +376,22 @@ impl App {
     
     fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
         let mut map = HashMap::new();
-        map.insert("Analog", vec![
-            "Температура Ротора",
+        map.insert("1) МВ210-101", vec![
             "Температура Статора дв.1",
             "Температура Статора дв.2",
-            "Температура Пер.Под.",
-            "Температура Зад.Под.",
+            "Температура подшипника 1 дв.верх",
+            "Температура подшипника 2 дв.верх",
             "Температура масла на выходе 1 дв. Низ",
             "Температура масла на выходе 2 дв. Низ",
             
-            "Давление -1_1 V",
-            "Вибрация 4_20 A",
+        ]);
+        
+        map.insert("2) МВ110-24.8АС", vec![
+            "Температура Ротора дв.1",
+            "Температура Ротора дв.2",
+            "Вибродатчик дв.1",
+            "Вибродатчик дв.2",
+            "Разрежение воздуха  в системе",
         ]);
         
         map.insert("DigitIO", vec![
@@ -414,10 +419,16 @@ impl App {
 //         .width(Length::Units(200));
         let values_name_map = Self::get_values_name_map();
         {
-            let values_name = &values_name_map[&"Analog"];
+            let values_name = &values_name_map[&"1) МВ210-101"];
             
             let values_map = self.logic.owen_analog_1.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
+        };
+        {
+            let values_name = &values_name_map[&"2) МВ110-24.8АС"];
+            
+            let values_map = self.logic.owen_analog_2.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
         };
 //         {
 //             let values_name = &values_name_map[&"DigitIO"];
@@ -441,7 +452,7 @@ impl App {
     {
         pub use std::convert::TryFrom;
         names.into_iter()
-            .fold(Column::new().width(Length::Units(200)).spacing(2),
+            .fold(Column::new().width(Length::Units(250)).spacing(2),
             |lst, &name| {
                 let key = value_key(name);
                 let name = name.into();

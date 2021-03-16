@@ -100,7 +100,7 @@ impl ValueSize {
         match self {
         INT8 | UINT8 | INT16 | UINT16 | UInt16Map(_) => 1,
         INT32 | UINT32 | FLOAT | FloatMap(_) => 2,
-        BitMap(_) => 1,
+        BitMap(_) | Bit(_) => 1,
         }
     }
 }

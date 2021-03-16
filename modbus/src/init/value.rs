@@ -50,6 +50,7 @@ pub enum ValueSize {
     FLOAT,
     FloatMap(fn(f32) -> f32),
     BitMap (Vec<ValueBit>),
+    Bit(u8), // Номер бита
     // UINT16_FLOAT(u8 offset),
     // INT16_FLOAT(u8 offset),
 }

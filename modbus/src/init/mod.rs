@@ -118,6 +118,20 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
         }
     };
     
+    let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)| {
+        SV {
+            sensor_type: SensorType::Analog(Amper_4_20),
+            value_error: value_error.into(),
+            values: make_values(pin as u16, value_error.into(), 
+                ValueSize::UInt16Map(|v| {
+                    if v>500 {dbg!(v);}
+                    v as f32 / 100.0
+                })
+            ),
+            .. make_sensor(pin, name, (0,0))
+        }
+    };
+    
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
@@ -135,8 +149,8 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
             SensorValues(make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90))),
             SensorValues(make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90))),
             
-            SensorValues(make_sensor(7, "Вибродатчик дв. М1", (10, 16))),
             SensorValues(make_sensor(8, "Вибродатчик дв. М2", (10, 16))),
+            SensorValues(make_sensor_vibra(7, "Вибродатчик дв. М1", (10.0, 16.0))),
         ]),
         values: None,
     }

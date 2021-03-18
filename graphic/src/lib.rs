@@ -39,7 +39,7 @@ impl Graphic {
             view_port: ViewPort {
                 end: chrono::Local::now(),
                 start: chrono::Local::now() - Duration::seconds(2*60),
-                min_value: -10_f32, 
+                min_value: 10_f32, 
                 max_value: 100_f32,
             },
             dt_start: chrono::Local::now(),
@@ -186,7 +186,7 @@ impl Graphic {
         let root_area = back.into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (a_speed, (a_temp, a_amp)) = if is_log {
-            let (a1, a2) = root_area.split_vertically(400);
+            let (a1, a2) = root_area.split_vertically(600);
             let (a2, a3) = a2.split_vertically(400);
             (a3, (a1, a2))
         } else {
@@ -219,7 +219,7 @@ impl Graphic {
             self.view_port.min_value..self.view_port.max_value)
         .set_secondary_coord(seconds_range.clone(),
             (0.001_f32..1000.0f32).log_scale());
-            cc.configure_mesh().x_labels(5).y_labels(10).draw().unwrap();
+            cc.configure_mesh().x_labels(5).y_labels(20).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
             cc};
         
@@ -266,7 +266,10 @@ impl Graphic {
                 &Palette99::pick(c),
             );
             let ser = match s.graphic_name.deref() {
-            "Температуры" => {
+            "Ток" => {
+                let cc = &mut cc_amper;
+                cc.draw_series(ls).unwrap()
+            }, "Температуры" => {
                 let cc = &mut cc_temp;
                 if s.graphic_second {
                     cc.draw_secondary_series(ls)
@@ -324,9 +327,17 @@ impl Graphic {
     pub fn save_svg(&self) {
         if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
             use std::io::Write;
-            let mut f = std::fs::File::create(format!("./plot/plot_{}.svg", log::date_time_to_string_name(&self.dt_start.into()))).unwrap();
+            let svg_name = format!("plot_{}", log::date_time_to_string_name(&self.dt_start.into()));
+            let mut f = std::fs::File::create(format!("./plot/{}.svg", svg_name)).unwrap();
             f.write(svg_text.as_bytes());
             f.flush();
+            
+            use std::process::Command;
+            let _ = Command::new("inkscape")
+                .arg("-z").arg("-d 320")
+                .arg(format!("./plot/{}.svg", svg_name))
+                .arg("-e").arg(format!("./plot/{}.png", svg_name))
+                .spawn().unwrap();
         }
     }
 }

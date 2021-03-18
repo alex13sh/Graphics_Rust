@@ -89,8 +89,8 @@ impl Application for App {
         graphic.add_series("Температуры", false, &temp_value_names);
         
         graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
-        graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A"]);
-        graphic.add_series("Ток", true, &["Invertor/Выходной ток (A)"]);
+        graphic.add_series("Скорость", true, &["2) МВ110-24.8АС/Вибродатчик дв. М1"]);
+        graphic.add_series("Ток", false, &["Invertor/Выходной ток (A)"]);
         
         (
             Self {
@@ -116,9 +116,9 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(2000))
+            time::every(std::time::Duration::from_millis(500))
             .map(|_| Message::ModbusUpdateAsync),
-            time::every(std::time::Duration::from_millis(2000))
+            time::every(std::time::Duration::from_millis(1000))
             .map(|_| Message::GraphicUpdate),
         ])
     }
@@ -127,26 +127,7 @@ impl Application for App {
         match message {
         Message::ModbusUpdate  => {
             self.logic.update();
-            use std::convert::TryFrom;
-            let values = {
-                self.values.iter()
-                .map(|(k, v)| 
-                    if let Ok(value) = f32::try_from(v.as_ref()) {
-                        (&k[..], value)
-                    } else {(&v.name()[..], -1.0)}
-                ).collect()
-            };
-            self.graph.append_values(values);
-            let mut log_values: Vec<_> = {
-                use std::convert::TryFrom;
-                self.values.iter()
-                .map(|(k, v)| v)
-                .filter(|v| v.is_log())
-                .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
-            };
-            self.log_values.append(&mut log_values);
-            
+           
             self.proccess_values();
             self.proccess_speed();
         },
@@ -164,9 +145,9 @@ impl Application for App {
         Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
 //             dbg!(&d);
             if res.is_ok() {
-                println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+//                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
                 if !d.is_connect() {
-                    println!("\tis not connect");
+//                     println!("\tis not connect");
                 } else {
                     self.proccess_values();
                     self.proccess_speed();
@@ -348,10 +329,15 @@ impl App {
         use std::convert::TryFrom;
         let speed_value = self.logic.invertor.get_hz_out_value();
         let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        
+        let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();
+        let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+            
         if self.is_started == false && speed_value > 5.0 {
             self.is_started = true;
             self.reset_values();
-        } else if self.is_started == true && speed_value < 5.0 {
+        } else if self.is_started == true 
+                && (speed_value < 2.0 && vibra_value<0.2) {
             self.is_started = false;
             self.graph.save_svg();
             self.log_save();

@@ -77,7 +77,52 @@ pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
     Ok(())
 }
 
-
+pub fn filter_values_2(file_name: &str, step_sec: u16) -> crate::MyResult {
+    let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
+    let new_path = crate::get_file_path("csv/").join(format!("{}_filter_{}.csv",file_name,step_sec));
+    
+    let values = crate::csv::read_values(&cur_path).ok_or("Error read csv")?;
+    let dt_dlt = values.last().unwrap().date_time - values.first().unwrap().date_time;
+    dbg!(&new_path, &dt_dlt);
+    
+    let name_hash = vec![
+        ("dt", "2) МВ110-24.8АС/5/value"),
+        ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+        ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+        ("Температура статора", "1) МВ210-101/1/value"),
+        ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+        ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+    ];
+    
+    use std::collections::BTreeMap;
+//     let map_values = BTreeMap::new();
+    
+    let felds: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
+    let lst: Vec<_> = name_hash.into_iter().map(|(name, hash)| {
+        let dt_value: BTreeMap<_, _> = values.iter()
+            .filter(move |v| v.hash == hash)
+            .map(move |v| {
+                let dt = (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string();
+                if name == "dt" { ( dt.clone(), dt) }
+                else {(dt, format!("{:.1}", v.value) )}
+            }).collect();
+        let val: Vec<_> = dt_value.values().cloned().collect();
+        val
+    }).collect();
+    
+    let lst : Vec<_> = myzip(lst)
+//         .take(5)
+        .collect();
+        
+    let mut wrt = ::csv::WriterBuilder::new()
+        .delimiter(b';')
+        .from_path(new_path)?;
+    for s in lst {
+        wrt.write_record(&s)?;
+    }
+    
+    Ok(())
+}
 
 struct MyZip <T, U>
 where T: Iterator<Item=U>

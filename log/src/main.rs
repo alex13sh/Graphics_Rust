@@ -10,7 +10,8 @@ fn main() -> MyResult {
 //     test_read_csv_2()?;
 //     convert_session()?;
 //     filter_values("value_18_03_2021__13_02_08_848344819_1", 1)?;
-    convert::filter_values("value_18_03_2021__13_18_44_814534674", 10)?;
+    convert::filter_values_2("value_18_03_2021__13_18_44_814534674", 1)?;
+//     find_1("value_18_03_2021__13_18_44_814534674");
     
     Ok(())
 }

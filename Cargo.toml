@@ -16,8 +16,8 @@ log = {path = "./log"}
 modbus = {path = "./modbus"}
 
 [dependencies.plotters]
-#path = "../plotters"
-version = "*"
+path = "../plotters"
+# version = "0.3"
 optional = true
 default-features = false
 features = ["image_encoder", "chrono", "line_series", "svg"] # "iced_back"]

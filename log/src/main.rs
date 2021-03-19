@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_variables, unused_imports)]
+
 use log::*;
 
 type MyResult = Result<(), Box<dyn std::error::Error>>;
@@ -6,7 +8,10 @@ fn main() -> MyResult {
 //     convert_json_old_new()?;
 //     convert_json2csv()?;
 //     test_read_csv_2()?;
-    convert_session()?;
+//     convert_session()?;
+//     filter_values("value_18_03_2021__13_02_08_848344819_1", 1)?;
+    convert::filter_values("value_18_03_2021__13_18_44_814534674", 10)?;
+    
     Ok(())
 }
 
@@ -83,6 +88,7 @@ fn convert_json2csv() -> MyResult {
     Ok(())
 }
 
+// <<<<<<< Updated upstream
 fn convert_session() -> MyResult {
     let session_path_1 = get_file_path("log/sessions_1.csv");
     let session_path_2 = get_file_path("csv/sessions.csv");
@@ -98,6 +104,21 @@ fn convert_session() -> MyResult {
     csv::write_session(&session_path_2, sessions)?;
     Ok(())
 }
+
+// fn convert_session() -> MyResult {
+//     let session_path_1 = get_file_path("log/sessions_1.csv");
+//     let session_path_2 = get_file_path("csv/sessions.csv");
+//     
+//     let sessions = csv::read_session(&session_path_1).ok_or("")?;
+//     let sessions: Vec<_> = sessions.into_iter()
+//         .map(|mut s| {
+//             s.set_file_name(format!("value_{}.csv", date_time_to_string_name(&start)));
+//             s
+//         })
+//         .collect();
+//     csv::write_session(&session_path_2, sessions)?;
+//     Ok(())
+// }
 
 fn get_file_list(dir: impl Into<PathBuf>) -> Vec<PathBuf> {
     let dir = dir.into();

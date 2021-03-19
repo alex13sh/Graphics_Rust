@@ -1,11 +1,13 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 
 pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
-pub use chrono::{SecondsFormat};
+pub use chrono::{SecondsFormat, Offset, FixedOffset, Duration};
 type DateTimeLocal = chrono::DateTime<chrono::Local>;
-type DateTimeFix = chrono::DateTime<chrono::FixedOffset>; 
-type DateTime = DateTimeFix;
+pub type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
+// type DateTimeMSK = chrono::DateTime<MSK>;
+pub type DateTime = DateTimeFix;
 
 pub mod json;
 pub mod csv;
@@ -47,7 +49,9 @@ where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
+    let s = s +" +0300";
+    let dt = DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f %z").map_err(de::Error::custom)?;
+    Ok(dt-Duration::hours(3))
 }
 
 pub(crate) fn date_time_to_str<S>(dt: &DateTimeFix, serializer: S) -> Result<S::Ok, S::Error>
@@ -55,7 +59,8 @@ where
     S: Serializer,
 {
 //     let s = dt.to_rfc3339_opts(SecondsFormat::Millis, false);
-    let s = dt.format("%Y-%m-%dT%H:%M:%S%.f").to_string();
+    let s = (*dt+Duration::hours(3))
+    .format("%Y-%m-%dT%H:%M:%S%.3f").to_string();
     serializer.serialize_str(&s)
 }
 

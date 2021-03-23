@@ -104,7 +104,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
             interval: 800,
             value_error: value_error.into(),
             sensor_type: SensorType::Analog(Amper_4_20),
-            values: make_values(pin as u16, value_error.into(), ValueSize::UINT16), //ValueSize::UInt16Map(|v|v as f32 /100.0)),
+            values: make_values(pin as u16, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0)),
     };
 
     let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)| {

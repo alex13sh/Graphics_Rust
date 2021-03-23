@@ -139,8 +139,8 @@ impl Application for App {
                 );
         },
         Message::ModbusUpdateAsyncAnswer => {
-            self.proccess_values();
-            self.proccess_speed();
+//             self.proccess_values();
+//             self.proccess_speed();
         },
         Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
 //             dbg!(&d);
@@ -149,12 +149,17 @@ impl Application for App {
                 if !d.is_connect() {
 //                     println!("\tis not connect");
                 } else {
-                    self.proccess_values();
-                    self.proccess_speed();
+//                     self.proccess_values();
+//                     self.proccess_speed();
                 }
             }
         },
-        Message::GraphicUpdate => self.graph.update_svg(),
+        Message::GraphicUpdate => {
+            self.graph.update_svg();
+            
+            self.proccess_values();
+            self.proccess_speed();
+        },
         Message::ButtonStart(message) => self.ui.start.update(message),
         
         Message::ToggleStart(start) => {

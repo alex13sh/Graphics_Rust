@@ -8,16 +8,21 @@ edition = "2018"
 [lib]
 name = "meln_logic"
 
-[dependencies]
-epoxy_frp = {path="../../epoxy_rs"}
-epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1'}
+# path = "./src/init_2.rs"
 
-macros = {path="./macros", package="meln_logic_macro"}
+[dependencies]
+epoxy_frp = {path="../../epoxy_rs", optional=true}
+epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1', optional=true}
+
+macros = {path="./macros", package="meln_logic_macro", optional=true}
 modbus = {path = "../modbus", optional=true}
 
 # [workspace]
 # members = ["macros"]
 
 [features]
-default = ["init"]
-init = ["modbus"]
+default = ["init_clear"]
+init = ["modbus", "macros"]
+init_clear = ["modbus"]
+
+epoxy = ["epoxy_frp", "epoxy_streams"]

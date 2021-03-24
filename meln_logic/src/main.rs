@@ -7,8 +7,8 @@ use meln_logic::*;
 fn main() {
     println!("!!Hello, world!");
     
-    let dvij = InvertorEngine::new();
-    dbg!(dvij.dvij.get_props());
+//     let dvij = InvertorEngine::new();
+//     dbg!(dvij.dvij.get_props());
 //     let _sub = dvij.messages.get_stream()
 //         .subscribe(|message| {dbg!(&message);});
 //         

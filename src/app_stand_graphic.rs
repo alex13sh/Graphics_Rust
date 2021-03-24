@@ -67,9 +67,9 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let mut logic = meln_logic::init::Complect::new();
+        let logic = meln_logic::init::Complect::new();
         let values = logic.make_values(true);
-        logic.init_values(&values);
+//         logic.init_values(&values);
                 
         let mut graphic = Graphic::new();
 //         graphic.set_datetime_start(chrono::Local::now());

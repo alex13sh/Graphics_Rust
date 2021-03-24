@@ -1,22 +1,14 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 
 pub use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
 pub use chrono::{SecondsFormat, Offset, FixedOffset, Duration};
 
-#[derive(Clone, std::fmt::Debug)]
-struct MSK;
-impl Offset for MSK {
-    /// Returns the fixed offset from UTC to the local time stored.
-    fn fix(&self) -> FixedOffset {
-        FixedOffset::east(3*60*60)
-    }
-}
-
 type DateTimeLocal = chrono::DateTime<chrono::Local>;
-type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
-type DateTimeMSK = chrono::DateTime<MSK>;
-type DateTime = DateTimeFix;
+pub type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
+// type DateTimeMSK = chrono::DateTime<MSK>;
+pub type DateTime = DateTimeFix;
 
 pub fn date_time_now() -> DateTime {
     DateTime::from(chrono::Local::now())
@@ -79,7 +71,8 @@ where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    let dt = DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)?;
+    let s = s +" +0300";
+    let dt = DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f %z").map_err(de::Error::custom)?;
     Ok(dt-Duration::hours(3))
 }
 
@@ -89,7 +82,7 @@ where
 {
 //     let s = dt.to_rfc3339_opts(SecondsFormat::Millis, false);
     let s = (*dt+Duration::hours(3))
-    .format("%Y-%m-%dT%H:%M:%S%.f").to_string();
+    .format("%Y-%m-%dT%H:%M:%S%.3f").to_string();
     serializer.serialize_str(&s)
 }
 

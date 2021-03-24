@@ -15,7 +15,7 @@ pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResul
     Ok(())
 }
 
-pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
+pub fn filter_values(file_name: &str, step_sec: u16, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
     let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
     let new_path = crate::get_file_path("csv/").join(format!("{}_filter_{}.csv",file_name,step_sec));
     dbg!(&new_path);
@@ -28,14 +28,14 @@ pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
     dbg!(&stp);
     let stp = stp as usize;
     
-    let name_hash = vec![
-        ("dt", "2) МВ110-24.8АС/5/value"),
-        ("Температура ротора", "2) МВ110-24.8АС/5/value"),
-        ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
-        ("Температура статора", "1) МВ210-101/1/value"),
-        ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
-        ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
-    ];
+//     let name_hash = vec![
+//         ("dt", "2) МВ110-24.8АС/5/value"),
+//         ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+//         ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+//         ("Температура статора", "1) МВ210-101/1/value"),
+//         ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+//         ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+//     ];
 
     let felds: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
     let lst: Vec<_> = name_hash.into_iter().map(|(name, hash)| {
@@ -124,7 +124,7 @@ pub fn filter_values_2(file_name: &str, step_sec: u16) -> crate::MyResult {
     Ok(())
 }
 
-struct MyZip <T, U>
+pub struct MyZip <T, U>
 where T: Iterator<Item=U>
 {
     vec: Vec<T>

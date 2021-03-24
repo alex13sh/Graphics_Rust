@@ -154,7 +154,7 @@ impl Application for App {
                 }
             }
         },
-        Message::GraphicUpdate => {
+        Message::GraphicUpdate => {            
             self.graph.update_svg();
             
             self.proccess_values();
@@ -356,6 +356,15 @@ impl App {
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {
             self.log.new_session(&self.log_values);
+            
+            log::Logger::new_table_fields(&self.log_values, 1, vec![
+            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+            ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+            ("Температура статора", "1) МВ210-101/1/value"),
+            ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+            ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+            ]);
+            
             self.log_values = Vec::new();
         }
     }

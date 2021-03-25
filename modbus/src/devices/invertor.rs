@@ -31,7 +31,7 @@ impl Invertor {
         v_bitmap.set_bit(0, false); // Stop
         v_bitmap.set_bit(1, true); // Run
         
-        self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
+        self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn stop(&self) ->  Result<(), DeviceError> {
@@ -41,7 +41,7 @@ impl Invertor {
         v_bitmap.set_bit(0, true); // Stop
         v_bitmap.set_bit(1, false); // Run
 
-        self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
+        self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {
@@ -57,7 +57,7 @@ impl Invertor {
             v_bitmap.set_bit(5, true);
         }
         }
-        self.device.context()?.borrow_mut().set_value(&v_bitmap)?;
+        self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn set_speed(&self, hz: u32) ->  Result<(), DeviceError> {
@@ -65,7 +65,7 @@ impl Invertor {
 //         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();
         v_set_speed.update_value(hz);
-        self.device.context()?.borrow_mut().set_value(&v_set_speed)?;
+        self.device.context()?.set_value(&v_set_speed)?;
         Ok(())
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {

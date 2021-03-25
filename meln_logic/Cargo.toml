@@ -1,0 +1,28 @@
+[package]
+name = "meln_logic"
+version = "0.1.0"
+authors = ["Алексей (Работа) <alex76sh1@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "meln_logic"
+
+# path = "./src/init_2.rs"
+
+[dependencies]
+epoxy_frp = {path="../../epoxy_rs", optional=true}
+epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1', optional=true}
+
+macros = {path="./macros", package="meln_logic_macro", optional=true}
+modbus = {path = "../modbus", optional=true}
+
+# [workspace]
+# members = ["macros"]
+
+[features]
+default = ["init_clear"]
+init = ["modbus", "macros"]
+init_clear = ["modbus"]
+
+epoxy = ["epoxy_frp", "epoxy_streams"]

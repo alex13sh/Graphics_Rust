@@ -1,15 +1,17 @@
 use iced::{
     Application, executor, Command, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
-    Column, Row, Space,
-    Length,
+    Column, Row, Space, Length,
+    Settings, Clipboard,
 };
 
-use crate::graphic::{self, Graphic};
-use modbus::{Value, ModbusValues, ValueError};
-use modbus::init;
-use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DigitIO};
+fn main() {
+    App::run(Settings::default());
+}
+
+
+use graphic::{self, Graphic};
+use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -23,9 +25,7 @@ pub struct App {
     speed: u32,
     
     values: BTreeMap<String, Arc<Value>>,
-    invertor: Invertor,
-    digit_io: DigitIO,
-    owen_analog: Arc<Device>,
+    logic: meln_logic::init::Complect,
     
     klapans: [bool; 2],
     
@@ -45,7 +45,8 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ModbusUpdate,
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
     ToggleStart(bool),
     ToggleKlapan(usize, bool),
@@ -66,20 +67,10 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let invertor = Invertor::new(init::make_invertor("192.168.1.5".into()).into());
-        let dev_invertor = invertor.device();
-        let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
-        let dev_digit_io = digit_io.device();
-        let dev_owen_analog: Device = init::make_owen_analog("192.168.1.11".into()).into();
-        
-        let mut values = BTreeMap::new();
-        for (dev, (k,v)) in dev_invertor.values_map().iter().map(|v|("Invertor", v))
-            .chain(dev_digit_io.values_map().iter().map(|v|("DigitIO", v)))
-            .chain(dev_owen_analog.values_map().iter().map(|v|("Analog", v)))
-            .filter(|(_dev, (_k,v))| v.is_read_only()) {
-            values.insert(format!("{}/{}", dev, k.clone()), v.clone());
-        }
-        
+        let logic = meln_logic::init::Complect::new();
+        let values = logic.make_values(true);
+//         logic.init_values(&values);
+                
         let mut graphic = Graphic::new();
 //         graphic.set_datetime_start(chrono::Local::now());
         
@@ -89,17 +80,17 @@ impl Application for App {
 //             dbg!(&value_names);
 
         let temp_value_names = [
-            "Analog/Температура Ротора",
-            "Analog/Температура Статора",
-            "Analog/Температура Пер.Под.",
-            "Analog/Температура Зад.Под.",
+            "2) МВ110-24.8АС/Температура ротора Пирометр дв. М1",
+            "1) МВ210-101/Температура статора двигатель М1",
+            "1) МВ210-101/Температура масла на выходе дв. М1 Низ",
+            "1) МВ210-101/Температура подшипника дв. М1 верх",
             "Invertor/Температура радиатора",
         ];
         graphic.add_series("Температуры", false, &temp_value_names);
         
         graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
-        graphic.add_series("Скорость", true, &["Analog/Вибрация 4_20 A"]);
-        graphic.add_series("Ток", true, &["Invertor/Выходной ток (A)"]);
+        graphic.add_series("Скорость", true, &["2) МВ110-24.8АС/Вибродатчик дв. М1"]);
+        graphic.add_series("Ток", false, &["Invertor/Выходной ток (A)"]);
         
         (
             Self {
@@ -111,9 +102,7 @@ impl Application for App {
                 klapans: [false; 2],
                 
                 values: values,
-                invertor: invertor,
-                digit_io: digit_io,
-                owen_analog: Arc::new(dev_owen_analog),
+                logic: logic,
                 
                 log: log::Logger::open_csv(),
                 log_values: Vec::new(),
@@ -127,53 +116,50 @@ impl Application for App {
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(200))
-            .map(|_| Message::ModbusUpdate),
-            time::every(std::time::Duration::from_millis(200))
+            time::every(std::time::Duration::from_millis(500))
+            .map(|_| Message::ModbusUpdateAsync),
+            time::every(std::time::Duration::from_millis(1000))
             .map(|_| Message::GraphicUpdate),
         ])
     }
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+    
         match message {
         Message::ModbusUpdate  => {
-            use std::convert::TryFrom;
-            let devices = [&self.owen_analog, 
-                &self.digit_io.device(), &self.invertor.device()];
+            self.logic.update();
+           
+            self.proccess_values();
+            self.proccess_speed();
+        },
+        Message::ModbusUpdateAsync => {
+            let device_futures = self.logic.update_async();
                 
-            for d in &devices {
-                d.update();
-            }
-            let values = {
-                self.values.iter()
-                .map(|(k, v)| 
-                    if let Ok(value) = f32::try_from(v.as_ref()) {
-                        (&k[..], value)
-                    } else {(&v.name()[..], -1.0)}
-                ).collect()
-            };
-            self.graph.append_values(values);
-            let mut log_values: Vec<_> = {
-                use std::convert::TryFrom;
-                self.values.iter()
-                .map(|(k, v)| v)
-                .filter(|v| v.is_log())
-                .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
-            };
-            self.log_values.append(&mut log_values);
-            
-            let speed_value = self.invertor.get_hz_out_value();
-            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-            if self.is_started == false && speed_value > 5.0 {
-                self.is_started = true;
-                self.reset_values();
-            } else if self.is_started == true && speed_value < 5.0 {
-                self.is_started = false;
-                self.graph.save_svg();
-                self.log_save();
+            return Command::batch(device_futures.into_iter()
+                .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                );
+        },
+        Message::ModbusUpdateAsyncAnswer => {
+//             self.proccess_values();
+//             self.proccess_speed();
+        },
+        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
+//             dbg!(&d);
+            if res.is_ok() {
+//                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                if !d.is_connect() {
+//                     println!("\tis not connect");
+                } else {
+//                     self.proccess_values();
+//                     self.proccess_speed();
+                }
             }
         },
-        Message::GraphicUpdate => self.graph.update_svg(),
+        Message::GraphicUpdate => {            
+            self.graph.update_svg();
+            
+            self.proccess_values();
+            self.proccess_speed();
+        },
         Message::ButtonStart(message) => self.ui.start.update(message),
         
         Message::ToggleStart(start) => {
@@ -182,14 +168,14 @@ impl Application for App {
             // Invertor SetSpeed
             // Invertor Start | Stop
             if start {
-                self.invertor.start();
+                self.logic.invertor.start();
             } else {
-                self.invertor.stop();
+                self.logic.invertor.stop();
             }
             self.log_save();
         },
         Message::ToggleKlapan(ind, enb) => {
-            let device = &self.digit_io;
+            let device = &self.logic.digit_io;
             self.klapans[ind as usize] = enb;
             self.klapans[1-ind as usize] = false;
             match ind {
@@ -207,7 +193,7 @@ impl Application for App {
         Message::SpeedChanged(speed) => {
             self.speed = speed;
 //             dbg!((10*speed)/6);
-            self.invertor.set_speed((10*speed)/6);
+            self.logic.invertor.set_speed((10*speed)/6);
         },
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
@@ -229,7 +215,7 @@ impl Application for App {
             .push(graph);
         
         let controls = {
-            let klapans = if self.digit_io.device().is_connect() {
+            let klapans = if self.logic.digit_io.device().is_connect() {
                 let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
@@ -255,7 +241,7 @@ impl Application for App {
                 Element::from(buttons)
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             
-            let invertor: Element<_> = if self.invertor.device().is_connect() {
+            let invertor: Element<_> = if self.logic.invertor.device().is_connect() {
                 let is_started = self.is_started;
                 let start = self.ui.start.view(
                     self.is_started,
@@ -321,11 +307,64 @@ impl Drop for App {
     }
 }
 
+// logic
+impl App {
+    fn proccess_values(&mut self) {
+        use std::convert::TryFrom;
+        let values = {
+            self.values.iter()
+            .map(|(k, v)| 
+                if let Ok(value) = f32::try_from(v.as_ref()) {
+                    (&k[..], value)
+                } else {(&v.name()[..], -1.0)}
+            ).collect()
+        };
+        self.graph.append_values(values);
+        let mut log_values: Vec<_> = {
+            self.values.iter()
+            .map(|(k, v)| v)
+            .filter(|v| v.is_log())
+            .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+            .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+        };
+        self.log_values.append(&mut log_values);
+    }
+    
+    fn proccess_speed(&mut self) {
+        use std::convert::TryFrom;
+        let speed_value = self.logic.invertor.get_hz_out_value();
+        let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        
+        let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();
+        let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+            
+        if self.is_started == false && speed_value > 5.0 {
+            self.is_started = true;
+            self.reset_values();
+        } else if self.is_started == true 
+                && (speed_value < 2.0 && vibra_value<0.2) {
+            self.is_started = false;
+            self.graph.save_svg();
+            self.log_save();
+        };
+    }
+}
+
+// view
 impl App {
 
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {
             self.log.new_session(&self.log_values);
+            
+            log::Logger::new_table_fields(&self.log_values, 1, vec![
+            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+            ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+            ("Температура статора", "1) МВ210-101/1/value"),
+            ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+            ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+            ]);
+            
             self.log_values = Vec::new();
         }
     }
@@ -337,14 +376,26 @@ impl App {
     
     fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
         let mut map = HashMap::new();
-        map.insert("Analog", vec![
-            "Температура Ротора",
-            "Температура Статора",
-            "Температура Пер.Под.",
-            "Температура Зад.Под.",
+        map.insert("1) МВ210-101", vec![
+            "Температура статора двигатель М1",
+            "Температура масла на выходе дв. М1 Низ",
+//             "Температура масла на выходе дв. М2 Низ",
+//             "Температура масла на выходе маслостанции",
+//             "Температура статора двигатель М2",
+            "Температура подшипника дв. М1 верх",
+//             "Температура подшипника дв. М2 верх"
             
-            "Давление -1_1 V",
-            "Вибрация 4_20 A",
+        ]);
+        
+        map.insert("2) МВ110-24.8АС", vec![
+//             "Давление масла верхний подшипник",
+//             "Давление масла нижний подшипник",
+//             "Давление воздуха компрессора",
+//             "Разрежение воздуха в системе",
+            "Температура ротора Пирометр дв. М1",
+//             "Температура ротора Пирометр дв. М2",
+            "Вибродатчик дв. М1",
+//             "Вибродатчик дв. М2",
         ]);
         
         map.insert("DigitIO", vec![
@@ -372,10 +423,16 @@ impl App {
 //         .width(Length::Units(200));
         let values_name_map = Self::get_values_name_map();
         {
-            let values_name = &values_name_map[&"Analog"];
+            let values_name = &values_name_map[&"1) МВ210-101"];
             
-            let values_map = self.owen_analog.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value_float", name)));
+            let values_map = self.logic.owen_analog_1.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
+        };
+        {
+            let values_name = &values_name_map[&"2) МВ110-24.8АС"];
+            
+            let values_map = self.logic.owen_analog_2.values_map();
+            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
         };
 //         {
 //             let values_name = &values_name_map[&"DigitIO"];
@@ -386,7 +443,7 @@ impl App {
         
         {
             let values_name = &values_name_map[&"Invertor"];
-            let dev = self.invertor.device();
+            let dev = self.logic.invertor.device();
             let values_map = dev.values_map();
             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}", name)));
         };
@@ -399,7 +456,7 @@ impl App {
     {
         pub use std::convert::TryFrom;
         names.into_iter()
-            .fold(Column::new().width(Length::Units(200)).spacing(2),
+            .fold(Column::new().width(Length::Units(250)).spacing(2),
             |lst, &name| {
                 let key = value_key(name);
                 let name = name.into();

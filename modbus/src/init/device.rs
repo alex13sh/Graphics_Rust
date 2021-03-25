@@ -37,4 +37,5 @@ pub enum InvertorFunc {
 pub enum DeviceAddress {
     TcpIP(String),
     Rtu(u8), // String device_convertor_name
+    TcpIp2Rtu(String, u8), // String device_convertor_name
 }

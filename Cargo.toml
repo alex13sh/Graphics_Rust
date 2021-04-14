@@ -48,6 +48,7 @@ git = "https://github.com/hecrj/iced"
 
 [workspace]
 members = [
+    "core",
     "log",
     "modbus",
     "meln_logic",

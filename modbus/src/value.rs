@@ -102,6 +102,49 @@ impl Value {
     }
 }
 
+impl core::ValueExt<f32> for Value {
+    fn name(&self) -> &String {
+        &self.name
+    }
+    fn value(&self) -> f32 {
+        TryFrom::try_from(self).unwrap()
+    }
+    fn set_value(&mut self, _value: f32) {
+    
+    }
+}
+
+impl core::ValueExt<bool> for Value {
+    fn name(&self) -> &String {
+        &self.name
+    }
+    fn value(&self) -> bool {
+        TryFrom::try_from(self).unwrap()
+    }
+    fn set_value(&mut self, bit: bool) {
+        let mut value = self.value.lock().unwrap();
+        match self.size {
+        ValueSize::Bit(num) => 
+             *value = if bit { 
+                *value | 1<<num
+            } else {*value & 0<<num},
+        _ => (),
+        }
+    }
+}
+
+impl core::ValueExt<bool> for crate::init::ValueBit {
+    fn name(&self) -> &String {
+        &self.name
+    }
+    fn value(&self) -> bool {
+        false
+    }
+    fn set_value(&mut self, _bit: bool) {
+        
+    }
+}
+
 impl ValueSize {
     pub fn size(&self) -> u8 {
         use ValueSize::*;
@@ -140,6 +183,15 @@ impl TryFrom<&Value> for f32 {
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value() as f32),
         ValueSize::UInt16Map(f) => Ok(f(val.value())),
+        _ => Err(()),
+        }
+    }
+}
+impl TryFrom<&Value> for bool {
+    type Error = ();
+    fn try_from(val: &Value) -> Result<bool, Self::Error> {
+        match val.size {
+        ValueSize::Bit(num) => Ok(val.value() >> num > 0),
         _ => Err(()),
         }
     }

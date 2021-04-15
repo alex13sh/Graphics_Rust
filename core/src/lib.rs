@@ -1,7 +1,7 @@
 
-trait ValueExt<T> {
+pub trait ValueExt<T> {
     fn name(&self) -> &String;
-    fn value(&self) -> &T;
+    fn value(&self) -> T;
     fn set_value(&mut self, value: T);
 }
 trait NewValue {
@@ -26,8 +26,8 @@ impl ValueExt<f32> for ValueFloat {
     fn name(&self) -> &String {
         &self.name
     }
-    fn value(&self) -> &f32 {
-        &self.value
+    fn value(&self) -> f32 {
+        self.value
     }
     fn set_value(&mut self, value: f32) {
         if self.value != value {
@@ -56,8 +56,8 @@ impl ValueExt<bool> for ValueBit {
     fn name(&self) -> &String {
         &self.name
     }
-    fn value(&self) -> &bool {
-        &self.bit
+    fn value(&self) -> bool {
+        self.bit
     }
     fn set_value(&mut self, value: bool) {
         if self.bit != value {

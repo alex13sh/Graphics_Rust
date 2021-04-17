@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 pub struct Value {
     name: String,
     address: u16,
-    value: Mutex<u32>, // Cell
+    value: Arc<Mutex<u32>>,
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
@@ -23,7 +23,7 @@ impl Value {
             direct: direct,
             size: size,
             log: None,
-            value: Mutex::new(0),
+            value: Arc::new(Mutex::new(0)),
         }
     }
     pub fn name(&self) -> &String {
@@ -72,7 +72,7 @@ impl Value {
         Self {
             name: self.name.clone(),
             address: self.address,
-            value: Mutex::new(value),
+            value: Arc::new(Mutex::new(value)),
             direct: self.direct,
             size: self.size.clone(),
             log: self.log.clone(),
@@ -99,6 +99,20 @@ impl Value {
     }
     pub fn get_bit(&self, num: u8) -> bool {
         self.value() & (1<<num) > 0
+    }
+    
+    pub(crate) fn get_values_bit(&self) -> Vec<Self> {
+//         (0..cnt).map(|i| 
+        if let ValueSize::BitMap(ref bits) = self.size {
+            bits.iter().map(|bit| Self {
+                name: bit.name.clone(),
+                address: self.address.clone(),
+                value: self.value.clone(),
+                size: ValueSize::Bit(bit.bit_num),
+                direct: self.direct.clone(),
+                log: None,
+            }).collect()
+        } else {Vec::new()}
     }
 }
 
@@ -164,7 +178,7 @@ impl From<ValueInit> for Value {
             direct: v.direct,
             size: v.size,
             log: v.log,
-            value: Mutex::new(0),
+            value: Arc::new(Mutex::new(0)),
         }
     }
 }
@@ -271,11 +285,12 @@ fn test_value_ops_bit() {
         address: 1,
         direct: ValueDirect::Write,
         size: ValueSize::BitMap(vec![]),
+        log: None,
     });
     v.set_bit(1, true);
-    assert_eq!(v.value.get(), 2);
+    assert_eq!(v.value(), 2);
     v.set_bit(4, true);
-    assert_eq!(v.value.get(), 18);
+    assert_eq!(v.value(), 18);
     assert_eq!(v.get_bit(3), false);
     assert_eq!(v.get_bit(4), true);
 }
@@ -287,10 +302,44 @@ fn test_value_into_f32() {
         address: 1,
         direct: ValueDirect::Write,
         size: ValueSize::FLOAT,
+        log: None,
     });
-    v.value.set(u32::from_le_bytes([0x00,0x00,0x20,0x3E]));
+    v.update_value(u32::from_le_bytes([0x00,0x00,0x20,0x3E]));
     let f: f32 = (&v).try_into().unwrap();
     assert_eq!(f, 0.15625);
     let f = f32::from_le_bytes([0x00,0x00,0x20,0x3E]);
     assert_eq!(f, 0.15625);
+}
+
+#[test]
+fn test_core_value_bit() {
+//     use init::ValueBit;
+    let vbit = |name: &str, pos: u8| super::init::ValueBit {
+        name: name.into(),
+        bit_num: pos,
+        bit_size: 1,
+    };
+    let v = Value::from(ValueInit{
+        name: "Name_1".into(),
+        address: 1,
+        direct: ValueDirect::Write,
+        size: ValueSize::BitMap(vec![
+            vbit("Bit_1", 0),
+            vbit("Bit_2", 2),
+            vbit("Bit_6", 6),
+        ]),
+        log: None,
+    });
+    let mut bits = v.get_values_bit();
+    dbg!(&bits);
+    let bit: &mut core::ValueExt<bool> = &mut bits[1];
+    bit.set_value(true);
+    
+    let bit: &mut core::ValueExt<bool> = &mut bits[2];
+    assert_eq!(bit.value(), false);
+    bit.set_value(true);
+    assert_eq!(bit.value(), true);
+    
+    dbg!(&v);
+    assert_eq!(v.value(), 0b0100_0100 );
 }

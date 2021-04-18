@@ -22,25 +22,31 @@ macro_rules! map(
 pub struct Complect {
         
     pub invertor: Invertor,
-    pub digit_io: DigitIO,
+    pub digit_i: DigitIO,
+//     pub digit_o: DigitIO,
     pub owen_analog_1: Arc<Device>,
     pub owen_analog_2: Arc<Device>,
     
+    update_values: core::QueueUpdate,
 }
 
 impl Complect {
     pub fn new() -> Self {
         let invertor = init::make_invertor("192.168.1.5".into());
         let invertor = Invertor::new(invertor.into());
-        let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
+        let digit_i = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
+//         let digit_o = DigitIO::new(init::make_io_digit("192.168.1.12".into()).into());
         
         Complect {
             
             invertor: invertor,
-            digit_io: digit_io,
+            digit_i: digit_i,
+//             digit_o: digit_o,
+            
             owen_analog_1: Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11"))),
             owen_analog_2: Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13"))),
             
+            update_values: core::QueueUpdate::empty(),
         }
     }
     pub fn make_values(&self, read_only: bool) -> BTreeMap<String, Arc<Value>> {
@@ -96,9 +102,28 @@ impl Complect {
     
     pub fn get_devices(&self) -> Vec<Arc<Device>> {
         [&self.owen_analog_1, &self.owen_analog_2,
-        &self.digit_io.device(), &self.invertor.device()]
+        &self.digit_i.device(), &self.invertor.device()]
         .iter().map(|&d| d.clone()).collect()
     }
     
+    fn init_update_values(&mut self) {
+        let map = self.make_values(false);
+        for (k,v) in map {
+            if v.is_bit() {
+                println!("type is bit");
+                self.update_values.append::<bool>(&k, &*v);
+            } else {
+                println!("type is float - {}", k);
+                self.update_values.append::<f32>(&k, &*v);
+            }
+        }
+    }
 }
+#[test]
+fn test_init_update_values() {
+    let mut c = Complect::new();
+    c.init_update_values();
+    assert!(false);
+}
+
 }

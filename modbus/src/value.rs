@@ -85,6 +85,12 @@ impl Value {
         self.size.size()
     }
     
+    pub fn is_bit(&self) -> bool {
+        if let ValueSize::Bit(_) = self.size {
+            true
+        } else {false}
+    }
+    
     pub fn set_bit(&self, num: u8, lvl: bool) {
 //         self.value.update(|v| {
 //             v+1

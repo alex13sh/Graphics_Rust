@@ -158,7 +158,8 @@ impl From<DeviceInit> for Device {
         let sens: ModbusSensors = sens.collect();
         for s in sens.values() {
             for v in s.values().values() {
-                values.insert(s.name().clone()+"/"+v.name(),v.clone());
+                let full_name = s.name().clone()+"/"+v.name();
+                values.insert(full_name, v.clone());
             };
         };
         info!("Device from {}", d.name);

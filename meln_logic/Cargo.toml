@@ -16,7 +16,7 @@ epoxy_streams = {path = '../../epoxy_rs/epoxy_streams', version = '0.3.1', optio
 
 macros = {path="./macros", package="meln_logic_macro", optional=true}
 modbus = {path = "../modbus", optional=true}
-
+core = {path = "../core"}
 # [workspace]
 # members = ["macros"]
 

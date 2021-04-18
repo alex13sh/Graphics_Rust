@@ -182,7 +182,7 @@ pub fn make_io_digit(ip_address: String) -> Device {
             let pin = pin as u16;
             vec![
                 make_value("Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
+                make_value("Период низко-частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
                 make_value("Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
                 make_value("bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
             ]
@@ -209,9 +209,9 @@ pub fn make_io_digit(ip_address: String) -> Device {
         sensors: Some(vec![
             SensorValues(make_counter(1, "Скорость ротора дв. Верх", (333, 433))),
             
-//             GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
-//             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
-//             GroupPinValues( make_group(3, "Насос", DO(false)) ),
+            GroupPinValues( make_sensor(1, "Клапан 24В") ),
+            GroupPinValues( make_sensor(2, "Клапан 2") ),
+            GroupPinValues( make_sensor(3, "Насос") ),
         ]),
         values: Some(vec![
             Value {
@@ -450,7 +450,7 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)"),
                 add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)"),
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)"),
-                add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
+                add_simple_value_read_10("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),
                 add_simple_value_read_10("5b28faeb8d", 0x220F, "Температура радиатора"),

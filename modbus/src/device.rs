@@ -82,6 +82,17 @@ impl Device {
         } else {res}
     }
     
+    pub fn update_new_values(&self) -> DeviceResult {
+        let ctx = self.context()?;
+        for (_name, v) in self.values.iter() {
+            if v.is_flag() {
+                v.clear_flag();
+                ctx.set_value(&v)?;
+            }
+        }
+        Ok(())
+    }
+    
     pub fn values(&self) -> Vec<Arc<Value>> {
         self.values.values().map(Arc::clone).collect()
     }

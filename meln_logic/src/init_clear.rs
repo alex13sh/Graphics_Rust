@@ -2,9 +2,9 @@ pub mod init {
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DeviceResult, DigitIO};
+use modbus::{Device, DeviceResult, DeviceError, DigitIO};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 macro_rules! map(
@@ -26,6 +26,7 @@ pub struct Complect {
     pub owen_analog_1: Arc<Device>,
     pub owen_analog_2: Arc<Device>,
     
+    values: ModbusValues,
 }
 
 impl Complect {
@@ -33,13 +34,15 @@ impl Complect {
         let invertor = init::make_invertor("192.168.1.5".into());
         let invertor = Invertor::new(invertor.into());
         let digit_io = DigitIO::new(init::make_io_digit("192.168.1.10".into()).into());
-        
+        let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
+        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13")));
         Complect {
+            values: Self::init_values(&mut [&invertor.device(), &digit_io.device(), &analog_1, &analog_2]),
             
             invertor: invertor,
             digit_io: digit_io,
-            owen_analog_1: Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11"))),
-            owen_analog_2: Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13"))),
+            owen_analog_1: analog_1,
+            owen_analog_2: analog_2,
             
         }
     }
@@ -100,5 +103,54 @@ impl Complect {
         .iter().map(|&d| d.clone()).collect()
     }
     
+    fn init_values(devices: &mut [&Device]) -> ModbusValues {
+        let map: HashMap<_,_> = devices.iter().flat_map(|d|d.values_map().iter())
+            .map(|(name, v)| (name.clone(), v.clone()))
+            .collect();
+        ModbusValues::from(map)
+    }
+    
+    pub fn update_new_values(&self) -> DeviceResult {
+        for d in self.get_devices() {
+            d.update_new_values()?;
+        }
+        Ok(())
+    }
+    
+    pub fn set_value(&self, name: &str, value: u32) {
+        if let Some(v) = self.values.get(name) {
+            v.set_value(value);
+        }
+    }
+    pub fn get_value(&self, name: &str) -> u32 {
+        if let Some(v) = self.values.get(name) {
+            v.value()
+        } else {0}
+    }
+    pub fn get_valuef(&self, name: &str) -> f32 {
+        use std::convert::TryFrom;
+        if let Some(v) = self.values.get(name) {
+            TryFrom::try_from(v.as_ref()).unwrap()
+        } else {0.0}
+    }
+    pub fn set_bit(&self, name: &str, bit: bool) -> DeviceResult {
+        let v = self.values.get(name);
+        let v = if v.is_some() {v} else {
+            self.values.get(&format!("{}/bit",name))
+        };
+        
+        if let Some(v) = v {
+            v.set_bit(bit);
+            Ok(())
+        } else {Err(DeviceError::ValueOut)}
+    }
+    pub fn get_bit(&self, name: &str) -> Result<bool, DeviceError> {
+        let v = self.values.get(name);
+        let v = if v.is_some() {v} else {self.values.get(&format!("{}/bit",name))};
+        
+        if let Some(v) = v {
+            Ok(v.get_bit())
+        } else {Err(DeviceError::ValueOut)}
+    }
 }
 }

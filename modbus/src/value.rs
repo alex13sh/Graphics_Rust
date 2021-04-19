@@ -56,7 +56,7 @@ impl Value {
         }
     }
     
-    pub(super) fn set_value(&self, value: u32) {
+    pub fn set_value(&self, value: u32) {
         if let ValueDirect::Write = self.direct {
             // flag set
             let mut v = self.value.lock().unwrap();
@@ -111,7 +111,7 @@ impl Value {
             } else {
                 v &= !(1<<num);
             };
-            self.update_value(v);
+            self.set_value(v);
         }
     }
     pub fn get_bit(&self) -> bool {

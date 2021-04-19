@@ -67,7 +67,7 @@ impl Application for App {
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let mut logic = meln_logic::init::Complect::new();
         let values = logic.make_values(false);
-        logic.init_values(&values);
+//         logic.init_values(&values);
         
         let txt_values = make_values(&values);
         

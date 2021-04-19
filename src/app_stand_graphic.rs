@@ -180,15 +180,16 @@ impl Application for App {
             self.klapans[1-ind as usize] = false;
             match ind {
             0 => {
-                device.turn_clapan(1, false).unwrap();
-                device.turn_clapan(2, enb).unwrap();
-                device.turn_clapan(3, enb).unwrap();
+                self.logic.set_bit("Клапан 24В", false).unwrap();
+                self.logic.set_bit("Клапан 2", enb).unwrap();
+                self.logic.set_bit("Насос", enb).unwrap();
             }, 1 => {
-                device.turn_clapan(1, enb).unwrap();
-                device.turn_clapan(2, false).unwrap();
-                device.turn_clapan(3, false).unwrap();
+                self.logic.set_bit("Клапан 24В", enb).unwrap();
+                self.logic.set_bit("Клапан 2", false).unwrap();
+                self.logic.set_bit("Насос", false).unwrap();
             }, _ => {}
             }
+            self.logic.update_new_values();
         },
         Message::SpeedChanged(speed) => {
             self.speed = speed;

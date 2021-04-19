@@ -209,9 +209,9 @@ pub fn make_io_digit(ip_address: String) -> Device {
         sensors: Some(vec![
             SensorValues(make_counter(1, "Скорость ротора дв. Верх", (333, 433))),
             
-//             GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
-//             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
-//             GroupPinValues( make_group(3, "Насос", DO(false)) ),
+            GroupPinValues( make_sensor(1, "Клапан 24В") ),
+            GroupPinValues( make_sensor(2, "Клапан 2") ),
+            GroupPinValues( make_sensor(3, "Насос" )),
         ]),
         values: Some(vec![
             Value {

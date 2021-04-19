@@ -156,10 +156,22 @@ impl <'a, T> From<std::sync::TryLockError<MutexGuard<'a, T>>> for DeviceError {
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ: DeviceType<Device> = d.device_type.into();
-        let values = d.values.unwrap_or(Vec::new())
-            .into_iter().map(|v| Arc::new(Value::from(v)));
+        let mut values: ModbusValues  = d.values.unwrap_or(Vec::new())
+            .into_iter().map(|v| Arc::new(Value::from(v)))
+            .collect();
         
-        let mut values: ModbusValues = values.collect();
+        {
+            let mut map: HashMap<_, Arc<Value>> = HashMap::new();
+            for (name, v) in values.iter_mut() {
+                if let Some(v_) = map.get(&v.address()) {
+                    dbg!(true);
+                    if let Some(v) = Arc::get_mut(v) {
+                        dbg!(true);
+                        (*v).merge_value(&v_);
+                    }
+                } else {map.insert(v.address(), v.clone());};
+            }
+        }
         
         info!("Device from {}", d.name);
         

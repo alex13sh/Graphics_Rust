@@ -133,6 +133,9 @@ impl Value {
             }).collect()
         } else {Vec::new()}
     }
+    pub(crate) fn merge_value(&mut self, val: &Value) {
+        self.value = val.value.clone();
+    }
 }
 
 impl ValueSize {

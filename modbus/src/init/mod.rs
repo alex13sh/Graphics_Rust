@@ -368,6 +368,9 @@ pub fn make_invertor(ip_address: String) -> Device {
                             bit_num: 4,
                             bit_size: 2,
                         },
+                        add_simple_value_bit(4, "FWD"),
+                        add_simple_value_bit(5, "REV"),
+                        
                         ValueBit {
                             name: "Выбор времени разгона".into(),
                             bit_num: 8,

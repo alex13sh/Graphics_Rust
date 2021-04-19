@@ -26,46 +26,44 @@ impl Invertor {
     
     pub fn start(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
-        let v_bitmap = vm.get("2000H").unwrap().clone();
+
+        vm.get("Stop").unwrap().set_bit(false);
+        vm.get("Run").unwrap().set_bit(true);
         
-        v_bitmap.set_bit(0, false); // Stop
-        v_bitmap.set_bit(1, true); // Run
-        
-        self.device.context()?.set_value(&v_bitmap)?;
+//         self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn stop(&self) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
-        let v_bitmap = vm.get("2000H").unwrap().clone();
-        
-        v_bitmap.set_bit(0, true); // Stop
-        v_bitmap.set_bit(1, false); // Run
 
-        self.device.context()?.set_value(&v_bitmap)?;
+        vm.get("Stop").unwrap().set_bit(true);
+        vm.get("Run").unwrap().set_bit(false);
+
+//         self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {
 //         dbg!(direct);
         let vm = self.device.values_map();
-        let v_bitmap = vm.get("2000H").unwrap().clone();
+
         match direct {
         DvijDirect::FWD => {
-            v_bitmap.set_bit(4, true);
-            v_bitmap.set_bit(5, false);
+            vm.get("FWD").unwrap().set_bit(true);
+            vm.get("REV").unwrap().set_bit(false);
         }, DvijDirect::REV => {
-            v_bitmap.set_bit(4, false);
-            v_bitmap.set_bit(5, true);
+            vm.get("FWD").unwrap().set_bit(false);
+            vm.get("REV").unwrap().set_bit(true);
         }
         }
-        self.device.context()?.set_value(&v_bitmap)?;
+//         self.device.context()?.set_value(&v_bitmap)?;
         Ok(())
     }
     pub fn set_speed(&self, hz: u32) ->  Result<(), DeviceError> {
         let vm = self.device.values_map();
 //         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();
-        v_set_speed.update_value(hz);
-        self.device.context()?.set_value(&v_set_speed)?;
+        v_set_speed.set_value(hz);
+        
         Ok(())
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {

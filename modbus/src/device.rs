@@ -159,8 +159,13 @@ impl From<DeviceInit> for Device {
         for s in sens.values() {
             for v in s.values().values() {
                 values.insert(s.name().clone()+"/"+v.name(),v.clone());
+                // Добавляю значения битов, если они есть
+                for vb in v.get_values_bit() {
+                    values.insert(s.name().clone()+"/"+vb.name(), Arc::new(vb));
+                }
             };
         };
+        
         info!("Device from {}", d.name);
         
         Device {

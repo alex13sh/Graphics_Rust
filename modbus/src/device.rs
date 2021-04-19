@@ -1,11 +1,9 @@
 // #![allow(dead_code)]
 
-use super::Sensor;
-use super::{Value, ModbusValues, ModbusSensors};
+use super::{Value, ModbusValues};
 
 use super::init::{DeviceType, DeviceAddress};
 use super::init::Device as DeviceInit;
-use super::init::ValueGroup as SensorInit;
 
 use std::collections::HashMap;
 use std::cell::{RefCell}; //, Cell, RefMut};
@@ -19,7 +17,6 @@ type ModbusContext = Arc<super::ModbusContext>;
 pub struct Device {
     name: String,
     address: DeviceAddress,
-    sensors: super::ModbusSensors,
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
@@ -159,30 +156,16 @@ impl <'a, T> From<std::sync::TryLockError<MutexGuard<'a, T>>> for DeviceError {
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ: DeviceType<Device> = d.device_type.into();
-        let ref_typ = &typ;
-        let sens = d.sensors.unwrap_or(Vec::new())
-            .into_iter().map(|s| ref_typ.new_sensor(s));
         let values = d.values.unwrap_or(Vec::new())
             .into_iter().map(|v| Arc::new(Value::from(v)));
         
         let mut values: ModbusValues = values.collect();
-        let sens: ModbusSensors = sens.collect();
-        for s in sens.values() {
-            for v in s.values().values() {
-                values.insert(s.name().clone()+"/"+v.name(),v.clone());
-                // Добавляю значения битов, если они есть
-                for vb in v.get_values_bit() {
-                    values.insert(s.name().clone()+"/"+vb.name(), Arc::new(vb));
-                }
-            };
-        };
         
         info!("Device from {}", d.name);
         
         Device {
             name: d.name,
             address: d.address.clone(),
-            sensors: sens,
             device_type: typ,
 //             ctx: Mutex::new(super::ModbusContext::new(&d.address, &values).map(Arc::new)),
             ctx: Mutex::new(None),
@@ -206,28 +189,6 @@ impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
     }
 }
 
-impl DeviceType<Device> {
-    pub fn new_sensor(&self, s: SensorInit) -> Sensor {
-        let values;
-        let value;
-        match s {
-        SensorInit::SensorValues(ref sv) => {
-            values = sv.values.clone().into();
-            value = None;
-        },
-        SensorInit::GroupPinValues(ref gv) => {
-            values = gv.values.clone().into();
-            value = None;
-        },
-        _ => {
-            values = ModbusValues::new();
-            value = None;
-        }};
-        
-        Sensor::new(s, values, value )
-    }
-}
-
 impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
     fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
         let mut c = ModbusValues::new();
@@ -239,17 +200,7 @@ impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
         c
     }
 }
-impl std::iter::FromIterator<Sensor> for ModbusSensors {
-    fn from_iter<I: IntoIterator<Item=Sensor>>(iter: I) -> Self {
-        let mut c = ModbusSensors::new();
 
-        for i in iter {
-            c.insert(i.name().clone(), Arc::new(i));
-        }
-
-        c
-    }
-}
 
 pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> HashMap<u16, Arc<Value>> {
     values.iter().map(|v| (v.1.address(), v.1.clone())).collect()

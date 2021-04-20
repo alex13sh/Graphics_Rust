@@ -175,7 +175,7 @@ impl Application for App {
             self.log_save();
         },
         Message::ToggleKlapan(ind, enb) => {
-            let device = &self.logic.digit_io;
+            
             self.klapans[ind as usize] = enb;
             self.klapans[1-ind as usize] = false;
             match ind {
@@ -216,7 +216,7 @@ impl Application for App {
             .push(graph);
         
         let controls = {
-            let klapans = if self.logic.digit_io.device().is_connect() {
+            let klapans = if self.logic.digit_o.device().is_connect() {
                 let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());

@@ -17,7 +17,8 @@ pub(crate) fn init_devices() -> Vec<Device> {
     vec![
     make_owen_analog_1("192.168.1.11"),
     make_owen_analog_2("192.168.1.13"),
-    make_io_digit("192.168.1.10".into()),
+    make_i_digit("192.168.1.10".into()),
+    make_o_digit("192.168.1.12".into()),
     make_invertor("192.168.1.5".into()),
     ]
 }
@@ -125,31 +126,18 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
     }
 }
 
-pub fn make_io_digit(ip_address: String) -> Device {
-    
+pub fn make_i_digit(ip_address: String) -> Device {
     let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
-
-    let make_sensor = |pin: u8, name: &str| {
-//         let prefix = format!("{}/{}", "3) МК210-302", name);
-        let prefix = format!("{}", name);
-        let bitn = pin as u8;
-        let pin = pin as u16;
-        vec![
-            make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
-        ]
-    };
-    
+ 
     let make_counter = |pin: u16, name: &str, value_error: (i32, i32)| {
 //         let prefix = format!("{}/{}", "3) МК210-302", name);
         let prefix = format!("{}", name);
+        let pin = pin - 1;
         vec![ // pin = 0; // pin - 1 = 0 - 1
-            make_value(&prefix, "value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read(Some(value_error.into()))),
-            make_value(&prefix, "interval", 128 +(pin-1), ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
-            make_value(&prefix, "reset_counter", 232 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
+            make_value(&prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::Read(Some(value_error.into()))),
+            make_value(&prefix, "interval", 128 +pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "type_input", 64 +pin, ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
+            make_value(&prefix, "reset_counter", 232 +pin*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
         ]
     };
     
@@ -169,10 +157,74 @@ pub fn make_io_digit(ip_address: String) -> Device {
                 },
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
-            make_counter(1, "Скорость ротора дв. Верх", (333, 433)),
-            make_sensor(1, "Клапан 24В"),
-            make_sensor(2, "Клапан 2"),
-            make_sensor(3, "Насос" ),
+//             make_counter(1, "Скорость ротора дв. Верх", (333, 433)),
+
+            make_counter(1, "Наличие потока нижний подшипник", (0, 0)),
+            make_counter(2, "Наличие потока верхний подшипник", (0, 0)),
+        ].into_iter().flatten().collect()),    
+    }
+}
+
+pub fn make_o_digit(ip_address: String) -> Device {
+    
+    let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
+
+    let make_klapan = |pin: u8, name: &str| {
+//         let prefix = format!("{}/{}", "3) МК210-302", name);
+        let prefix = format!("{}", name);
+        let pin = pin - 1;
+        let bitn = pin as u8;
+        let pin = pin as u16;
+        vec![
+            make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
+        ]
+    };
+    
+    let make_shim = |pin: u8, name: &str| {
+//         let prefix = format!("{}/{}", "4) МУ210-410", name);
+        let prefix = format!("{}", name);
+        let pin = pin - 1;
+        let bitn = pin as u8;
+        let pin = pin as u16;
+        vec![
+            make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
+        ]
+    };
+    
+        
+    let prefix = format!("{}", "4) МУ210-410");
+    Device {
+        name: "4) МУ210-410".into(),
+        device_type: DeviceType::OwenDigitalIO,
+        address: DeviceAddress::TcpIP(ip_address),
+        values: Some(vec![
+            vec![
+                Value {
+                    name: format!("{}/{}", prefix,"Битовая маска состояния выходов"), // DO1 - DO8
+                    address: 468,
+                    direct: ValueDirect::Read(None),
+                    size: ValueSize::UINT8,
+                    log: Log::hash("Битовая маска состояния выходов"),
+                },
+                make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
+            ],
+            make_shim(1, "Двигатель подачи материала в камеру"),
+            
+//             make_shim(6, "Двигатель насоса вакуума М5"),
+//             make_shim(7, "Двигатель маслостанции М4"),
+//             make_shim(8, "Двигатель компрессора воздуха М3"),
+            
+//             make_klapan(8, "Двигатель компрессора воздуха М3" ), // "Насос" ??
+            make_klapan(9, "Клапан насоса М5 вакуум"), // "Клапан 24В"
+            make_klapan(10, "Клапан насоса М6 вакуум"), // "Клапан 2"
+            make_klapan(12, "Клапан напуска воздуха" ), // "Насос" 
+            make_klapan(11, "Клапан камеры" ),
+            make_klapan(13, "Клапан подачи материала в камеру" ),
+            make_klapan(14, "Клапан выгрузки материала из камеры" ),
+            make_klapan(15, "Клапан дозатора" ),
         ].into_iter().flatten().collect()),
     }
 }

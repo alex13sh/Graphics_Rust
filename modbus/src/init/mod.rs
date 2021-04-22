@@ -2,6 +2,7 @@
 
 mod value;
 mod device;
+mod devices;
 
 pub use value::*;
 pub use device::*;
@@ -23,7 +24,7 @@ pub(crate) fn init_devices() -> Vec<Device> {
     ]
 }
 
-fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
+pub(super) fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
     Value {
         name: name.into(),
         address: address,
@@ -34,25 +35,8 @@ fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -
 }
 
 pub fn make_owen_analog_1(ip_addres: &str) -> Device {
-    
-    // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
-    
-    let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
-    
-    let make_values = |pin: u16, name: &str, err: (i32, i32)| {
-//         let prefix = format!("{}/{}", "1) МВ210-101", name);
-        let prefix = format!("{}", name);
-    vec![
-        Value {
-            log: Log::hash(&format!("1) МВ210-101/{}/value", pin)),
-            .. make_value(&prefix,"value", 4000+(pin-1)*3, ValueSize::FLOAT, ValueDirect::Read(Some(err.into())))
-        },
-        make_value(&prefix, "type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
-        make_value(&prefix, "point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
-        make_value(&prefix, "Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
-        make_value(&prefix, "Нижняя граница", 4110+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
-        make_value(&prefix, "interval", 4113+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write),
-    ]};
+    use devices::owen_analog::make_sensor;
+    let make_values = |pin, name, err: (i32, i32)| make_sensor(pin, name, err.into(), ValueSize::FLOAT);
     
     Device {
         name: "1) МВ210-101".into(),
@@ -72,34 +56,17 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
 }
 
 pub fn make_owen_analog_2(ip_addres: &str) -> Device {
+    use devices::owen_analog::make_sensor as make_values;
     
-    // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
-    let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
-    
-    let make_values = |pin: u16, name: &str, err: ValueError, val_size: ValueSize|{
-//         let prefix = format!("{}/{}", "2) МВ110-24.8АС", name);
-        let prefix = format!("{}", name);
-    vec![
-        Value {
-            log: Log::hash(&format!("2) МВ110-24.8АС/{}/value", pin)),
-            .. make_value(&prefix, "value", 0x100+(pin-1)*1, val_size, ValueDirect::Read(Some(err)))
-        },
-        make_value(&prefix, "type", 0x00+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
-        make_value(&prefix, "point", 0x20+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
-        make_value(&prefix, "Верхняя граница", 0x68+(pin-1)*2, ValueSize::FLOAT, ValueDirect::Write),
-        make_value(&prefix, "Нижняя граница", 0x58+(pin-1)*2, ValueSize::FLOAT, ValueDirect::Write),
-        make_value(&prefix, "interval", 0x08+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write),
-    ]};
-    
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin as u16, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
 
     let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)|
-        make_values(pin as u16, name, value_error.into(), 
+        make_values(pin, name, value_error.into(), 
             ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
         );
     
     let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
-        make_values(pin as u16, name, value_error.into(), 
+        make_values(pin, name, value_error.into(), 
             ValueSize::UInt16Map(|v| {
                 if v>500 {dbg!(v);}
                 v as f32 / 100.0
@@ -127,19 +94,8 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
 }
 
 pub fn make_i_digit(ip_address: String) -> Device {
-    let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
- 
-    let make_counter = |pin: u16, name: &str, value_error: (i32, i32)| {
-//         let prefix = format!("{}/{}", "3) МК210-302", name);
-        let prefix = format!("{}", name);
-        let pin = pin - 1;
-        vec![ // pin = 0; // pin - 1 = 0 - 1
-            make_value(&prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::Read(Some(value_error.into()))),
-            make_value(&prefix, "interval", 128 +pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "type_input", 64 +pin, ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
-            make_value(&prefix, "reset_counter", 232 +pin*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
-        ]
-    };
+    use devices::make_value;
+    use devices::owen_digit::make_counter;
     
     let prefix = format!("{}", "3) МК210-302");
     Device {
@@ -166,34 +122,8 @@ pub fn make_i_digit(ip_address: String) -> Device {
 }
 
 pub fn make_o_digit(ip_address: String) -> Device {
-    
-    let make_value = |prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect| make_value(&format!("{}/{}", prefix,name), address, size, direct);
-
-    let make_klapan = |pin: u8, name: &str| {
-//         let prefix = format!("{}/{}", "3) МК210-302", name);
-        let prefix = format!("{}", name);
-        let pin = pin - 1;
-        let bitn = pin as u8;
-        let pin = pin as u16;
-        vec![
-            make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
-        ]
-    };
-    
-    let make_shim = |pin: u8, name: &str| {
-//         let prefix = format!("{}/{}", "4) МУ210-410", name);
-        let prefix = format!("{}", name);
-        let pin = pin - 1;
-        let bitn = pin as u8;
-        let pin = pin as u16;
-        vec![
-            make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
-        ]
-    };
-    
+    use devices::make_value;
+    use devices::owen_digit::*;
         
     let prefix = format!("{}", "4) МУ210-410");
     Device {
@@ -228,18 +158,6 @@ pub fn make_o_digit(ip_address: String) -> Device {
         ].into_iter().flatten().collect()),
     }
 }
-
-// pub fn make_io_digit_4(ip_address: String) -> Device {
-//     Device {
-//         name: "4) МУ210-410".into(),
-//         device_type: DeviceType::OwenDigitalIO,
-//         address: DeviceAddress::TcpIP(ip_address),
-//         
-//         sensors: Some(vec![
-//         
-//         ]),
-//     }
-// }
 
 pub fn make_invertor(ip_address: String) -> Device {
     Device {

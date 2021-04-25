@@ -21,14 +21,14 @@ pub struct App {
     
     logic: meln_logic::init::Complect,
     
-    klapans: [bool; 2],
+    klapans: [bool; 7],
     shim_hz: u32,
     speed: u32,
 }
 
 #[derive(Default)]
 struct UI {
-    klapan: [button::State; 3],
+    klapan: [button::State; 7],
     shim_hz: slider::State,
     speed: slider::State,
     
@@ -39,7 +39,7 @@ pub enum Message {
     ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     
-    ToggleKlapan(usize, bool),
+    ToggleKlapan(usize, String, bool),
     
     ShimHzChanged(u32),
     SetShimHz(u16),
@@ -63,7 +63,7 @@ impl Application for App {
                 shim_hz: 0,
                 speed: 0,
                 
-                klapans: [false; 2],
+                klapans: [false; 7],
 
                 logic: logic,
                 
@@ -108,21 +108,11 @@ impl Application for App {
             }
         },
         
-        Message::ToggleKlapan(ind, enb) => {
+        Message::ToggleKlapan(ind, name, enb) => {
             
             self.klapans[ind as usize] = enb;
-            self.klapans[1-ind as usize] = false;
-            match ind {
-            0 => {
-                self.logic.set_bit("Клапан насоса М5 вакуум", false).unwrap();
-                self.logic.set_bit("Клапан насоса М6 вакуум", enb).unwrap();
-                self.logic.set_bit("Клапан напуска воздуха", enb).unwrap();
-            }, 1 => {
-                self.logic.set_bit("Клапан насоса М5 вакуум", enb).unwrap();
-                self.logic.set_bit("Клапан насоса М6 вакуум", false).unwrap();
-                self.logic.set_bit("Клапан напуска воздуха", false).unwrap();
-            }, _ => {}
-            }
+            self.logic.set_bit(&name, enb).unwrap();
+                
             self.logic.update_new_values();
         },
         Message::ShimHzChanged(hz) => {
@@ -141,18 +131,26 @@ impl Application for App {
         
         let controls = {
             let klapans = if self.logic.digit_o.device().is_connect() {
-                let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
+                let klapan_names = vec![
+                    "Клапан насоса М5 вакуум", 
+                    "Клапан насоса М6 вакуум",
+                    "Клапан напуска воздуха",
+                    "Клапан камеры",
+                    "Клапан подачи материала в камеру",
+                    "Клапан выгрузки материала из камеры",
+                    "Клапан дозатора",
+                ];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
         //         let ui = &mut self.ui;
                 let controls_klapan = klapan_names.iter()
                     .zip(0..)
                     .zip(klapans)
-                    .fold(Row::new().spacing(20),
+                    .fold(Column::new().spacing(20),
                         |row, ((&name, ind), (&check, pb))| 
                         row.push(Button::new(pb, Text::new(name))
                         .style(style::Button::Check{checked: check})
-                        .on_press(Message::ToggleKlapan(ind, !check)))
+                        .on_press(Message::ToggleKlapan(ind, name.to_owned(), !check)))
                     );
                 
                 controls_klapan.into()

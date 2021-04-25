@@ -164,9 +164,9 @@ impl From<DeviceInit> for Device {
             let mut map: HashMap<_, Arc<Value>> = HashMap::new();
             for (name, v) in values.iter_mut() {
                 if let Some(v_) = map.get(&v.address()) {
-                    dbg!(true);
+//                     dbg!(true);
                     if let Some(v) = Arc::get_mut(v) {
-                        dbg!(true);
+//                         dbg!(true);
                         (*v).merge_value(&v_);
                     }
                 } else {map.insert(v.address(), v.clone());};

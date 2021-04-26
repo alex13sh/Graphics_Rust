@@ -42,7 +42,7 @@ pub enum Message {
     ToggleKlapan(usize, String, bool),
     
     ShimHzChanged(u32),
-    SetShimHz(u16),
+    SetShimHz(u32),
     
     SpeedChanged(u32),
 }
@@ -117,6 +117,8 @@ impl Application for App {
         },
         Message::ShimHzChanged(hz) => {
             self.shim_hz = hz;
+            self.logic.set_value("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ", hz).unwrap();
+            self.logic.update_new_values();
 //             dbg!((10*speed)/6);
 //             self.logic.invertor.set_speed((10*speed)/6);
         },
@@ -143,7 +145,7 @@ impl Application for App {
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());
         //         let ui = &mut self.ui;
-                let controls_klapan = klapan_names.iter()
+                let mut controls_klapan = klapan_names.iter()
                     .zip(0..)
                     .zip(klapans)
                     .fold(Column::new().spacing(20),
@@ -153,6 +155,24 @@ impl Application for App {
                         .on_press(Message::ToggleKlapan(ind, name.to_owned(), !check)))
                     );
                 
+                let slider = {
+                    let slider = Slider::new(
+                        &mut self.ui.shim_hz,
+                        0..=20,
+                        self.shim_hz,
+                        Message::ShimHzChanged
+                    )
+    //                 .on_release(Message::SetSpeed(self.speed))
+                    .step(1);
+                    
+                    Column::new().spacing(5)
+                        .push(
+                            Row::new().spacing(20)
+                                .push(Text::new(format!("Частота ШИМ: {:0>5}", self.shim_hz)))
+                                .push(slider)
+                        )
+                };
+                controls_klapan = controls_klapan.push(slider);
                 controls_klapan.into()
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             

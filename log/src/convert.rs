@@ -17,16 +17,20 @@ pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResul
 
 pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
     let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
-    let new_path = crate::get_file_path("csv/").join(format!("{}_filter_{}.csv",file_name,step_sec));
-    dbg!(&new_path);
+    
     let values = crate::csv::read_values(&cur_path).ok_or("Error read csv")?;
+    let has_speed = values.iter().any(|v| v.hash == "4bd5c4e0a9" && v.value > 10.0);
+    let speed_str = if has_speed {"+"} else {"-"};
+    let new_path = crate::get_file_path("csv/").join(format!("{}{}_filter_{}.csv",speed_str, file_name,step_sec));
+    dbg!(&new_path);
     
     let dt_dlt = values.last().unwrap().date_time - values.first().unwrap().date_time;
-    let cnt = values.iter().filter(move |v| v.hash == "2) МВ110-24.8АС/5/value").count();
+    let cnt = values.iter().filter(move |v| v.hash == "4bd5c4e0a9").count();
     dbg!(&dt_dlt, &cnt);
     let stp = cnt as f32 / (dt_dlt /step_sec as i32).num_seconds() as f32;
     dbg!(&stp);
-    let stp = stp as usize;
+    let stp = stp.round() as usize;
+    if stp == 0 {dbg!(&stp);return Err("Step = 0".into());}
     
     let name_hash = vec![
         ("dt", "2) МВ110-24.8АС/5/value"),
@@ -37,27 +41,31 @@ pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
         ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
     ];
 
-    let felds: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
+    let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
     let lst: Vec<_> = name_hash.into_iter().map(|(name, hash)| {
         values.iter()
             .filter(move |v| v.hash == hash)
             .zip(0..cnt)
-            .map(move |(v,i)| if name == "dt" {
-                format!("{1};{0}", i/stp, 
-                (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string()
-                )
-            } else {format!("{:.1}", v.value)}
+            .map(move |(v,i)| 
+//             if name == "dt" {
+//                 format!("{1};{0}", i/stp, 
+//                 (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string()
+//                 )
+//             } else {
+                format!("{:.1}", v.value)
+//             }
             ).step_by(stp)
     }).collect();
 //     lst.insert(1, (1..cnt).filter(|v| true).map(|v| v).step_by(stp));
     
 //     let dts: Vec<_> = 
-    
+//     dbg!(&lst);
     let lst : Vec<_> = MyZip::new(lst)
 //     .take(10)
 //     .map(|v| v.into_string())
     .collect();
-//     dbg!(lst);
+//     dbg!(&lst);
+    let cnt = lst.len();
 
     use std::fs::OpenOptions;
 //     use csv::WriterBuilder;
@@ -69,11 +77,13 @@ pub fn filter_values(file_name: &str, step_sec: u16) -> crate::MyResult {
         .delimiter(b';')
 //         .from_writer(file);
         .from_path(new_path)?;
-    dbg!();
+    wrt.write_record(&fields).unwrap();
+    
     for s in lst {
         wrt.write_record(&s)?;
     }
     
+    println!("OK ({})\n", cnt);
     Ok(())
 }
 

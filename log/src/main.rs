@@ -9,10 +9,63 @@ fn main() -> MyResult {
 //     convert_json2csv()?;
 //     test_read_csv_2()?;
 //     convert_session()?;
-//     filter_values("value_18_03_2021__13_02_08_848344819_1", 1)?;
-    convert::filter_values_2("value_18_03_2021__13_18_44_814534674", 1)?;
+    let names = [
+        "value_31_03_2021__14_12_08_930132406",
+        "value_31_03_2021__13_59_03_931437825",
+        "value_31_03_2021__13_29_36_936566327",
+        "value_31_03_2021__12_55_57_935172440",
+        "value_27_03_2021__10_30_04_350159882",
+        "value_27_03_2021__10_10_12_351061927",
+        "value_26_03_2021__15_51_07_103115722",
+        "value_26_03_2021__10_32_03_180526206",
+        "value_26_03_2021__10_18_35_179238322",
+        "value_25_03_2021__10_00_19_490602852",
+        "value_25_03_2021__09_59_07_326277170",
+        "value_25_03_2021__09_36_48_195405053",
+        "value_24_03_2021__14_05_34_052870297",
+        "value_24_03_2021__14_03_11_721712547",
+        "value_24_03_2021__13_15_32_660929803",
+        "value_24_03_2021__13_12_15_176051776",
+        "value_24_03_2021__13_06_44_748405478",
+        
+    ];
+    for name in &names {
+        if let Err(txt) = filter_values(name) {
+            println!("Error: {:?}", txt);
+        }
+    }
+//     convert::filter_values_2("value_18_03_2021__13_18_44_814534674", 1)?;
 //     find_1("value_18_03_2021__13_18_44_814534674");
     
+    Ok(())
+}
+
+fn filter_values(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Напряжение", "5369886757"),
+        ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+        ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+        ("Температура статора", "1) МВ210-101/1/value"),
+        ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+        ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+    ];
+    convert::filter_values(file_name, 1, hashs)?;
+    Ok(())
+}
+
+fn filter_values_2(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Вибродатчик", "OwenAnalog/3/value"),
+        ("Температура ротора", "OwenAnalog/1/value"),
+        ("Температура статора", "OwenAnalog/4/value"),
+        ("Температура масла на выходе дв. М1 Низ", "OwenAnalog/6/value"),
+        ("Температура подшипника дв. М1 верх", "OwenAnalog/5/value"),
+    ];
+    convert::filter_values(file_name, 1, hashs)?;
     Ok(())
 }
 
@@ -86,23 +139,6 @@ fn convert_json2csv() -> MyResult {
         convert::json2csv(name.to_str().unwrap(), "tmp/", "csv/")?;
     }
     
-    Ok(())
-}
-
-// <<<<<<< Updated upstream
-fn convert_session() -> MyResult {
-    let session_path_1 = get_file_path("log/sessions_1.csv");
-    let session_path_2 = get_file_path("csv/sessions.csv");
-    
-    let sessions = csv::read_session(&session_path_1).ok_or("")?;
-    let sessions: Vec<_> = sessions.into_iter()
-        .map(|mut s| {
-            s.set_file_name(s.start.format("value_%d_%m_%Y__%H_%M_%S_%.f.csv")
-                .to_string().replace("_.", "_"));
-            s
-        })
-        .collect();
-    csv::write_session(&session_path_2, sessions)?;
     Ok(())
 }
 

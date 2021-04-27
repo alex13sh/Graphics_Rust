@@ -112,13 +112,13 @@ impl Application for App {
     }
     
     fn title(&self) -> String {
-        String::from("GraphicsApp - Iced")
+        String::from("GraphicsApp (2 fps) - Iced")
     }
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(500))
             .map(|_| Message::ModbusUpdateAsync),
-            time::every(std::time::Duration::from_millis(1000))
+            time::every(std::time::Duration::from_millis(500))
             .map(|_| Message::GraphicUpdate),
         ])
     }
@@ -359,8 +359,11 @@ impl App {
             self.log.new_session(&self.log_values);
             
             log::Logger::new_table_fields(&self.log_values, 1, vec![
-            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+            ("Скорость", "4bd5c4e0a9"),
+            ("Ток", "5146ba6795"),
+            ("Напряжение", "5369886757"),
             ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
             ("Температура статора", "1) МВ210-101/1/value"),
             ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
             ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),

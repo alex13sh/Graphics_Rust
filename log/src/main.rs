@@ -9,10 +9,53 @@ fn main() -> MyResult {
 //     convert_json2csv()?;
 //     test_read_csv_2()?;
 //     convert_session()?;
-//     filter_values("value_18_03_2021__13_02_08_848344819_1", 1)?;
-    convert::filter_values_2("value_18_03_2021__13_18_44_814534674", 1)?;
+    let names = [
+        "value_23_04_2021__14_10_44_951678936",
+        "value_27_04_2021__12_48_14_722166742",
+        "value_27_04_2021__13_36_14_460047525",
+        "value_27_04_2021__13_37_46_459645663",
+        "value_27_04_2021__13_38_46_459439921",
+        "value_27_04_2021__13_39_32_958736343",
+        "value_27_04_2021__13_43_35_959273451",
+        
+    ];
+    for name in &names {
+        if let Err(txt) = filter_values(name) {
+            println!("Error: {:?}", txt);
+        }
+    }
+//     convert::filter_values_2("value_18_03_2021__13_18_44_814534674", 1)?;
 //     find_1("value_18_03_2021__13_18_44_814534674");
     
+    Ok(())
+}
+
+fn filter_values(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Напряжение", "5369886757"),
+        ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+        ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+        ("Температура статора", "1) МВ210-101/1/value"),
+        ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+        ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+    ];
+    convert::filter_values(file_name, 1, hashs)?;
+    Ok(())
+}
+
+fn filter_values_2(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Вибродатчик", "OwenAnalog/3/value"),
+        ("Температура ротора", "OwenAnalog/1/value"),
+        ("Температура статора", "OwenAnalog/4/value"),
+        ("Температура масла на выходе дв. М1 Низ", "OwenAnalog/6/value"),
+        ("Температура подшипника дв. М1 верх", "OwenAnalog/5/value"),
+    ];
+    convert::filter_values(file_name, 1, hashs)?;
     Ok(())
 }
 
@@ -90,20 +133,6 @@ fn convert_json2csv() -> MyResult {
 }
 
 // <<<<<<< Updated upstream
-fn convert_session() -> MyResult {
-    let session_path_1 = get_file_path("log/sessions_1.csv");
-    let session_path_2 = get_file_path("csv/sessions.csv");
-    
-    let sessions = csv::read_session(&session_path_1).ok_or("")?;
-    let sessions: Vec<_> = sessions.into_iter()
-        .map(|mut s| {
-            s.set_file_name(format!("value_{}.csv", date_time_to_string_name(&start)));
-            s
-        })
-        .collect();
-    csv::write_session(&session_path_2, sessions)?;
-    Ok(())
-}
 
 // fn convert_session() -> MyResult {
 //     let session_path_1 = get_file_path("log/sessions_1.csv");

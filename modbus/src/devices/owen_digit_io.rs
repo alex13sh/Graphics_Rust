@@ -13,26 +13,24 @@ impl DigitIO {
         }
     }
     
-    pub fn turn_clapan(&self, num: u8, enb: bool)  ->  Result<(), DeviceError> {
-        if let 1..=8 = num  {
-            let vm = self.device.values_map();
-            let v_bitmap = vm.get("Битовая маска установки состояния выходов").unwrap().clone();
-            v_bitmap.set_bit(num-1, enb);
-            self.device.context()?.set_value(&v_bitmap)?;
+    pub fn turn_clapan(&self, name: &str, enb: bool)  ->  Result<(), DeviceError> {
+        let vm = self.device.values_map();
+//             let v_bitmap = vm.get("Битовая маска установки состояния выходов").unwrap().clone();
+//             v_bitmap.set_bit(num-1, enb);
+        if let Some(v) = vm.get(name) {
+            v.set_bit(enb);
+//             self.device.context()?.set_value(&v_bitmap)?;
             Ok(())
         } else {
             Err(DeviceError::ValueOut)
         }
     }
-    pub fn get_turn_clapan(&self, num: u8)  ->  Result<bool, DeviceError> {
-        if let 1..=8 = num  {
-            let vm = self.device.values_map();
-            let v_bitmap = vm.get("Битовая маска состояния выходов").unwrap().clone();
-            self.device.context()?.get_value(&v_bitmap)?;
-            Ok(v_bitmap.get_bit(num-1))
-        } else {
-            Err(DeviceError::ValueOut)
-        }
+    pub fn get_turn_clapan(&self, name: &str)  ->  Result<bool, DeviceError> {
+        let vm = self.device.values_map();
+        if let Some(v) = vm.get(name) {
+//             self.device.context()?.get_value(&v_bitmap)?;
+            Ok(v.get_bit())
+        } else {Err(DeviceError::ValueOut)}
     }
     
     

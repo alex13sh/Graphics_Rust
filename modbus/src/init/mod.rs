@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
 mod value;
-mod sensor;
 mod device;
+mod devices;
 
 pub use value::*;
-pub use sensor::*;
 pub use device::*;
 
 
@@ -19,12 +18,13 @@ pub(crate) fn init_devices() -> Vec<Device> {
     vec![
     make_owen_analog_1("192.168.1.11"),
     make_owen_analog_2("192.168.1.13"),
-    make_io_digit("192.168.1.10".into()),
+    make_i_digit("192.168.1.10".into()),
+    make_o_digit("192.168.1.12".into()),
     make_invertor("192.168.1.5".into()),
     ]
 }
 
-fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
+pub(super) fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
     Value {
         name: name.into(),
         address: address,
@@ -33,210 +33,131 @@ fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -
         log: None,
     }
 }
+
 pub fn make_owen_analog_1(ip_addres: &str) -> Device {
-    use SensorAnalogType::*;
-    use ValueGroup::*;
-    use sensor::SensorValues as SV;
-    
-    // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
-    
-    let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
-        Value {
-            log: Log::hash(&format!("1) МВ210-101/{}/value", pin)),
-            .. make_value("value", 4000+(pin-1)*3, val_size, ValueDirect::Read(Some(err)))
-        },
-        make_value("type", 4100+(pin-1)*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
-        make_value("point", 4103+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
-        make_value("Верхняя граница", 4108+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
-        make_value("Нижняя граница", 4110+(pin-1)*16, ValueSize::FLOAT, ValueDirect::Write),
-        make_value("interval", 4113+(pin-1)*16, ValueSize::UINT16, ValueDirect::Write),
-    ];
-    
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)| SV {
-            name: name.into(),
-            pin: pin,
-            interval: 800,
-            value_error: value_error.into(),
-            sensor_type: SensorType::Analog(Pt_100),
-            values: make_values(pin as u16, value_error.into(), ValueSize::FLOAT),
-    };
+    use devices::owen_analog::make_sensor;
+    let make_values = |pin, name, err: (i32, i32)| make_sensor(pin, name, err.into(), ValueSize::FLOAT);
     
     Device {
         name: "1) МВ210-101".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIP(ip_addres.into()),
-        sensors: Some(vec![
-            SensorValues(make_sensor(1, "Температура статора двигатель М1", (60, 85))),
-            SensorValues(make_sensor(2, "Температура масла на выходе дв. М1 Низ", (60, 85))), // <<-- ValueError
-            SensorValues(make_sensor(3, "Температура масла на выходе дв. М2 Низ", (60, 85))), // <<-- ValueError
-            SensorValues(make_sensor(4, "Температура масла на выходе маслостанции", (60, 85))), // <<-- ValueError
-            SensorValues(make_sensor(5, "Температура статора двигатель М2", (60, 85))),
-            SensorValues(make_sensor(6, "Температура подшипника дв. М1 верх", (60, 80))),
-            SensorValues(make_sensor(7, "Температура подшипника дв. М2 верх", (60, 80))),
+        values: Some(vec![
+            make_values(1, "Температура статора двигатель М1", (60, 85)),
+            make_values(2, "Температура масла на выходе дв. М1 Низ", (60, 85)), // <<-- ValueError
+            make_values(3, "Температура масла на выходе дв. М2 Низ", (60, 85)), // <<-- ValueError
+            make_values(4, "Температура масла на выходе маслостанции", (60, 85)), // <<-- ValueError
+            make_values(5, "Температура статора двигатель М2", (60, 85)),
+            make_values(6, "Температура подшипника дв. М1 верх", (60, 80)),
+            make_values(7, "Температура подшипника дв. М2 верх", (60, 80)),
             
-        ]),
-        values: None,
+        ].into_iter().flatten().collect()),
     }
 }
 
 pub fn make_owen_analog_2(ip_addres: &str) -> Device {
-    use SensorAnalogType::*;
-    use ValueGroup::*;
-    use sensor::SensorValues as SV;
+    use devices::owen_analog::make_sensor as make_values;
     
-    // (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
-    
-    let make_values = |pin: u16, err: ValueError, val_size: ValueSize| vec![
-        Value {
-            log: Log::hash(&format!("2) МВ110-24.8АС/{}/value", pin)),
-            .. make_value("value", 0x100+(pin-1)*1, val_size, ValueDirect::Read(Some(err)))
-        },
-        make_value("type", 0x00+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
-        make_value("point", 0x20+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
-        make_value("Верхняя граница", 0x68+(pin-1)*2, ValueSize::FLOAT, ValueDirect::Write),
-        make_value("Нижняя граница", 0x58+(pin-1)*2, ValueSize::FLOAT, ValueDirect::Write),
-        make_value("interval", 0x08+(pin-1)*1, ValueSize::UINT16, ValueDirect::Write),
-    ];
-    
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)| SV {
-            name: name.into(),
-            pin: pin,
-            interval: 800,
-            value_error: value_error.into(),
-            sensor_type: SensorType::Analog(Amper_4_20),
-            values: make_values(pin as u16, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0)),
-    };
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
 
-    let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)| {
-        SV {
-            sensor_type: SensorType::Analog(Amper_4_20),
-            value_error: value_error.into(),
-            values: make_values(pin as u16, value_error.into(), 
-                ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
-            ),
-            .. make_sensor(pin, name, (0,0))
-        }
-    };
+    let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)|
+        make_values(pin, name, value_error.into(), 
+            ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
+        );
     
-    let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)| {
-        SV {
-            sensor_type: SensorType::Analog(Amper_4_20),
-            value_error: value_error.into(),
-            values: make_values(pin as u16, value_error.into(), 
-                ValueSize::UInt16Map(|v| {
-                    if v>500 {dbg!(v);}
-                    v as f32 / 100.0
-                })
-            ),
-            .. make_sensor(pin, name, (0,0))
-        }
-    };
+    let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
+        make_values(pin, name, value_error.into(), 
+            ValueSize::UInt16Map(|v| {
+                if v>500 {dbg!(v);}
+                v as f32 / 100.0
+            })
+        );
     
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 11), // <<--
         
-        sensors: Some(vec![
-            SensorValues(make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5))),
-            SensorValues(make_sensor_davl(2, "Давление масла нижний подшипник", (0.1, 0.5))),
-            SensorValues(make_sensor_davl(3, "Давление воздуха компрессора", (0.1, 0.5))),
-            SensorValues( SV {
-                sensor_type: SensorType::Analog(Amper_4_20),
-                .. make_sensor(4, "Разрежение воздуха в системе", (100, 106))
-            }),
+        values: Some(vec![
+            make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5)),
+            make_sensor_davl(2, "Давление масла нижний подшипник", (0.1, 0.5)),
+            make_sensor_davl(3, "Давление воздуха компрессора", (0.1, 0.5)),
+            make_sensor(4, "Разрежение воздуха в системе", (100, 106)),
             
-            SensorValues(make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90))),
-            SensorValues(make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90))),
+            make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
+            make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90)),
             
-            SensorValues(make_sensor(8, "Вибродатчик дв. М2", (10, 16))),
-            SensorValues(make_sensor_vibra(7, "Вибродатчик дв. М1", (10.0, 16.0))),
-        ]),
-        values: None,
+            make_sensor(8, "Вибродатчик дв. М2", (10, 16)),
+            make_sensor_vibra(7, "Вибродатчик дв. М1", (10.0, 16.0)),
+        ].into_iter().flatten().collect()),
     }
 }
 
-pub fn make_io_digit(ip_address: String) -> Device {
-    use GroupValueType::DigitalOutput as DO;
-    use ValueGroup::*;
-    use sensor::SensorValues as SV;
-    use sensor::GroupPinValues as GV;
+pub fn make_i_digit(ip_address: String) -> Device {
+    use devices::make_value;
+    use devices::owen_digit::make_counter;
     
-    let make_values = |_pin: u16, _output: bool| vec![
-    
-    ];
-    
-    let _make_group = |pin: u8, name: &str, typ| GV {
-        name: name.into(),
-        group_type: typ,
-        pin: pin, 
-        values: make_values(pin as u16, false),
-    };
-    
-    let make_sensor = |pin: u8, name: &str| GV {
-        name: name.into(),
-        group_type: DO(false),
-        pin: pin,
-        values: {
-            let bitn = pin as u8;
-            let pin = pin as u16;
-            vec![
-                make_value("Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
-                make_value("bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
-            ]
-        }
-    };
-    
-    let make_counter = |pin: u16, name: &str, value_error: (i32, i32)| SV{ 
-        name: name.into(),
-        sensor_type: SensorType::Counter(0),
-        pin: pin as u8, interval: 2,
-        value_error: value_error.into(),
-        values: vec![ // pin = 0; // pin - 1 = 0 - 1
-            make_value("value", 160 +(pin-1)*2, ValueSize::UINT32, ValueDirect::Read(Some((333, 433).into()))),
-            make_value("interval", 128 +(pin-1), ValueSize::UINT16, ValueDirect::Write),
-            make_value("type_input", 64 +(pin-1), ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
-            make_value("reset_counter", 232 +(pin-1)*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"
-        ]
-    };
-    
+    let prefix = format!("{}", "3) МК210-302");
     Device {
         name: "3) МК210-302".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
-        sensors: Some(vec![
-            SensorValues(make_counter(1, "Скорость ротора дв. Верх", (333, 433))),
-            
-//             GroupPinValues( make_group(1, "Клапан 24В", DO(false)) ),
-//             GroupPinValues( make_group(2, "Клапан 2", DO(false)) ),
-//             GroupPinValues( make_group(3, "Насос", DO(false)) ),
-        ]),
         values: Some(vec![
-            Value {
-                name: "Битовая маска состояния выходов".into(), // DO1 - DO8
-                address: 468,
-                direct: ValueDirect::Read(None),
-                size: ValueSize::UINT8,
-                log: Log::hash("Битовая маска состояния выходов"),
-            },
-            make_value("Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
-        ]),
+            vec![
+                Value {
+                    name: format!("{}/{}", prefix,"Битовая маска состояния выходов"), // DO1 - DO8
+                    address: 468,
+                    direct: ValueDirect::Read(None),
+                    size: ValueSize::UINT8,
+                    log: Log::hash("Битовая маска состояния выходов"),
+                },
+                make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
+            ],
+//             make_counter(1, "Скорость ротора дв. Верх", (333, 433)),
+
+            make_counter(1, "Наличие потока нижний подшипник", (0, 0)),
+            make_counter(2, "Наличие потока верхний подшипник", (0, 0)),
+        ].into_iter().flatten().collect()),    
     }
 }
 
-// pub fn make_io_digit_4(ip_address: String) -> Device {
-//     Device {
-//         name: "4) МУ210-410".into(),
-//         device_type: DeviceType::OwenDigitalIO,
-//         address: DeviceAddress::TcpIP(ip_address),
-//         
-//         sensors: Some(vec![
-//         
-//         ]),
-//     }
-// }
+pub fn make_o_digit(ip_address: String) -> Device {
+    use devices::make_value;
+    use devices::owen_digit::*;
+        
+    let prefix = format!("{}", "4) МУ210-410");
+    Device {
+        name: "4) МУ210-410".into(),
+        device_type: DeviceType::OwenDigitalIO,
+        address: DeviceAddress::TcpIP(ip_address),
+        values: Some(vec![
+            vec![
+                Value {
+                    name: format!("{}/{}", prefix,"Битовая маска состояния выходов"), // DO1 - DO8
+                    address: 468,
+                    direct: ValueDirect::Read(None),
+                    size: ValueSize::UINT8,
+                    log: Log::hash("Битовая маска состояния выходов"),
+                },
+                make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
+            ],
+            make_shim(1, "Двигатель подачи материала в камеру"),
+            
+//             make_shim(6, "Двигатель насоса вакуума М5"),
+//             make_shim(7, "Двигатель маслостанции М4"),
+//             make_shim(8, "Двигатель компрессора воздуха М3"),
+            
+//             make_klapan(8, "Двигатель компрессора воздуха М3" ), // "Насос" ??
+            make_klapan(9, "Клапан насоса М5 вакуум"), // "Клапан 24В"
+            make_klapan(10, "Клапан насоса М6 вакуум"), // "Клапан 2"
+            make_klapan(12, "Клапан напуска воздуха" ), // "Насос" 
+            make_klapan(11, "Клапан камеры" ),
+            make_klapan(13, "Клапан подачи материала в камеру" ),
+            make_klapan(14, "Клапан выгрузки материала из камеры" ),
+            make_klapan(15, "Клапан дозатора" ),
+        ].into_iter().flatten().collect()),
+    }
+}
 
 pub fn make_invertor(ip_address: String) -> Device {
     Device {
@@ -252,12 +173,6 @@ pub fn make_invertor(ip_address: String) -> Device {
                 
             ]
         },
-        sensors: Some(vec![
-//             Group {
-//                 name: "".into(),
-//                 values: vec![],
-//             },
-        ]),
         values: {
             let add_simple_invertor_value = |name: &str, p: u16, adr: u16| Value {
                 name: name.into(),
@@ -368,6 +283,9 @@ pub fn make_invertor(ip_address: String) -> Device {
                             bit_num: 4,
                             bit_size: 2,
                         },
+                        add_simple_value_bit(4, "FWD"),
+                        add_simple_value_bit(5, "REV"),
+                        
                         ValueBit {
                             name: "Выбор времени разгона".into(),
                             bit_num: 8,

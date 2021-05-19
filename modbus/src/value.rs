@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 pub struct Value {
     name: String,
     address: u16,
-    value: Mutex<u32>, // Cell
+    value: Arc<Mutex<(u32, bool)>>,
     // value: [u16, 2]
     pub(super) direct: ValueDirect,
     pub(super) size: ValueSize,
@@ -23,7 +23,7 @@ impl Value {
             direct: direct,
             size: size,
             log: None,
-            value: Mutex::new(0),
+            value: Arc::new(Mutex::new((0, false))),
         }
     }
     pub fn name(&self) -> &String {
@@ -56,6 +56,21 @@ impl Value {
         }
     }
     
+    pub fn set_value(&self, value: u32) {
+        if let ValueDirect::Write = self.direct {
+            // flag set
+            let mut v = self.value.lock().unwrap();
+            (*v).0 = value;
+            (*v).1 = true;
+        }
+    }
+    pub(super) fn clear_flag(&self) {
+        (*self.value.lock().unwrap()).1 = false;
+    }
+    pub(super) fn is_flag(&self) -> bool {
+        (*self.value.lock().unwrap()).1
+    }
+    
     pub(super) fn update_value(&self, value: u32) {
         if value >= std::u32::MAX/2 {
 //             dbg!(value);
@@ -65,40 +80,61 @@ impl Value {
             dbg!(value);
             return;
         }
-        *self.value.lock().unwrap() = value;
+        (*self.value.lock().unwrap()).0 = value;
     }
     
     pub fn new_value(&self, value: u32) -> Self {
         Self {
             name: self.name.clone(),
             address: self.address,
-            value: Mutex::new(value),
+            value: Arc::new(Mutex::new((value,false))),
             direct: self.direct,
             size: self.size.clone(),
             log: self.log.clone(),
         }
     }
     pub fn value(&self) -> u32 {
-        *self.value.lock().unwrap()
+        (*self.value.lock().unwrap()).0
     }
     pub fn size(&self) -> u8 {
         self.size.size()
     }
     
-    pub fn set_bit(&self, num: u8, lvl: bool) {
+    pub fn set_bit(&self, lvl: bool) {
 //         self.value.update(|v| {
 //             v+1
 //         });
-        let mut v = self.value();
-        if lvl {
-            v |= 1<<num;
-        } else {
-            v &= !(1<<num);
-        };
-        self.update_value(v);
+        if let ValueSize::Bit(ref num) = self.size {
+            let mut v = self.value();
+            if lvl {
+                v |= 1<<num;
+            } else {
+                v &= !(1<<num);
+            };
+            self.set_value(v);
+        }
     }
-    pub fn get_bit(&self, num: u8) -> bool {
-        self.value() & (1<<num) > 0
+    pub fn get_bit(&self) -> bool {
+        if let ValueSize::Bit(ref num) = self.size {
+            self.value() & (1<<num) > 0
+        } else {false}
+    }
+    
+    pub(crate) fn get_values_bit(&self) -> Vec<Self> {
+//         (0..cnt).map(|i| 
+        if let ValueSize::BitMap(ref bits) = self.size {
+            bits.iter().map(|bit| Self {
+                name: bit.name.clone(),
+                address: self.address.clone(),
+                value: self.value.clone(),
+                size: ValueSize::Bit(bit.bit_num),
+                direct: self.direct.clone(),
+                log: None,
+            }).collect()
+        } else {Vec::new()}
+    }
+    pub(crate) fn merge_value(&mut self, val: &Value) {
+        self.value = val.value.clone();
     }
 }
 
@@ -121,7 +157,7 @@ impl From<ValueInit> for Value {
             direct: v.direct,
             size: v.size,
             log: v.log,
-            value: Mutex::new(0),
+            value: Arc::new(Mutex::new((0,false))),
         }
     }
 }

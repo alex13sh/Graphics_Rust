@@ -175,20 +175,21 @@ impl Application for App {
             self.log_save();
         },
         Message::ToggleKlapan(ind, enb) => {
-            let device = &self.logic.digit_io;
+            
             self.klapans[ind as usize] = enb;
             self.klapans[1-ind as usize] = false;
             match ind {
             0 => {
-                device.turn_clapan(1, false).unwrap();
-                device.turn_clapan(2, enb).unwrap();
-                device.turn_clapan(3, enb).unwrap();
+                self.logic.set_bit("Клапан 24В", false).unwrap();
+                self.logic.set_bit("Клапан 2", enb).unwrap();
+                self.logic.set_bit("Насос", enb).unwrap();
             }, 1 => {
-                device.turn_clapan(1, enb).unwrap();
-                device.turn_clapan(2, false).unwrap();
-                device.turn_clapan(3, false).unwrap();
+                self.logic.set_bit("Клапан 24В", enb).unwrap();
+                self.logic.set_bit("Клапан 2", false).unwrap();
+                self.logic.set_bit("Насос", false).unwrap();
             }, _ => {}
             }
+            self.logic.update_new_values();
         },
         Message::SpeedChanged(speed) => {
             self.speed = speed;
@@ -215,7 +216,7 @@ impl Application for App {
             .push(graph);
         
         let controls = {
-            let klapans = if self.logic.digit_io.device().is_connect() {
+            let klapans = if self.logic.digit_o.device().is_connect() {
                 let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
                 let klapans = self.klapans.iter()
                     .zip(self.ui.klapan.iter_mut());

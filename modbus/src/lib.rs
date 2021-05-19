@@ -4,13 +4,11 @@ pub mod init;
 // use init::*;
 
 pub mod value;
-pub mod sensor;
 pub mod device;
 pub mod devices;
 
 pub use value::*;
 pub use init::ValueError;
-pub use sensor::*;
 pub use device::*;
 pub use devices::*;
 

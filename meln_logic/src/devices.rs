@@ -21,14 +21,16 @@ impl Dozator {
         stream! {
         use tokio::time::sleep;
         use std::time::Duration;
+        let steps = 20;
+        let step_ms = 5_000/steps;
         let start_value = hz_value.value();
-        let dlt_value = (finish_value as i32 - start_value as i32) as f32 / 10_f32;
-        for i in 0..10 {
+        let dlt_value = (finish_value as i32 - start_value as i32) as f32 / steps as f32;
+        for i in 0..steps {
             let i = i as f32;
             let v = (start_value as f32 + dlt_value as f32 * i) as u32;
             hz_value.set_value(v);
             yield v;
-            sleep(Duration::from_millis(500)).await;
+            sleep(Duration::from_millis(step_ms)).await;
         }
         }
     }

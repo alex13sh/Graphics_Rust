@@ -23,6 +23,7 @@ pub struct App {
     
     klapans: [bool; 7],
     shim_hz: u32,
+    shim_hz_enb: bool,
     speed: u32,
 }
 
@@ -43,6 +44,7 @@ pub enum Message {
     
     ShimHzChanged(u32),
     SetShimHz(u32),
+    SetShimHzFinished,
     
     SpeedChanged(u32),
 }
@@ -61,6 +63,7 @@ impl Application for App {
                 ui: UI::default(),
                 
                 shim_hz: 0,
+                shim_hz_enb: true,
                 speed: 0,
                 
                 klapans: [false; 7],
@@ -115,13 +118,32 @@ impl Application for App {
                 
             self.logic.update_new_values();
         },
-        Message::ShimHzChanged(hz) => {
+        Message::ShimHzChanged(hz) => if self.shim_hz_enb {
+            self.shim_hz_enb = false;
             self.shim_hz = hz;
-            self.logic.set_value("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ", hz).unwrap();
-            self.logic.update_new_values();
-//             dbg!((10*speed)/6);
-//             self.logic.invertor.set_speed((10*speed)/6);
+//             self.logic.set_value("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ", hz).unwrap();
+            use futures_util::pin_mut;
+            use futures_util::stream::StreamExt;
+            let s = self.logic.dozator.set_value(hz);
+            let devices = vec![self.logic.digit_o.device().clone()];//self.logic.get_devices();
+            let f =  async move {
+                pin_mut!(s);
+                while let Some(value) = s.next().await {
+//                     self.shim_hz = value;
+                    println!("Dozator: new value: {}", value);
+                    if let Err(_) = meln_logic::init::Complect::update_new_values_static(&devices) {
+                        println!("Dozator: after update; Error!!");
+                    } else {println!("Dozator: after update; Ok!");}
+                };
+                println!("Dozator: finished!");
+                return Message::SetShimHzFinished;
+            };
+//             self.logic.update_new_values();
+//             return Command::perform(f, move |_| Message::SetShimHzFinished);
+            return f.into();
         },
+//         Message::SetShimHz(hz) => self.shim_hz = hz,
+        Message::SetShimHzFinished => self.shim_hz_enb = true,
 //         Message::SetSpeed(speed) => {},
         _ => {}
         };

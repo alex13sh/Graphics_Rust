@@ -134,6 +134,12 @@ impl Complect {
         }
         Ok(())
     }
+    pub fn update_new_values_static(devices: &Vec<Arc<Device>>) -> DeviceResult {
+        for d in devices {
+            d.update_new_values()?;
+        }
+        Ok(())
+    }
 }
 
 // Изменения отделбных значений

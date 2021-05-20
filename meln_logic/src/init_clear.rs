@@ -138,10 +138,13 @@ impl Complect {
 
 // Изменения отделбных значений
 impl Complect {
-    pub fn set_value(&self, name: &str, value: u32) {
+//     pub fn set_value(&self, name: &str, value: u32) {
+    
+    pub fn set_value(&self, name: &str, value: u32) -> DeviceResult {
         if let Some(v) = self.values.get(name) {
             v.set_value(value);
-        }
+            Ok(())
+        } else {Err(DeviceError::ValueOut)}
     }
     pub fn get_value(&self, name: &str) -> u32 {
         if let Some(v) = self.values.get(name) {

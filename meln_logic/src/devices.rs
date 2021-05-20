@@ -9,7 +9,7 @@ pub struct Dozator {
 impl Dozator {
     pub fn new(values: ModbusValues) -> Option<Self> {
         Some(Self {
-            hz_value: values.get("Двигатель подачи материала в камеру/Период низко частотного ШИМ")?.clone(),
+            hz_value: values.get("Двигатель подачи материала в камеру/Период низкочастотного ШИМ")?.clone(),
 //             hz: 0,
         })
     }

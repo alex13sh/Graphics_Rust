@@ -70,7 +70,7 @@ impl Device {
             return Err(DeviceError::ContextBusy);
         }
         info!("Device: {} - {:?}", self.name, self.address);
-        let res = ctx.update_async(None).await;
+        let res = ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await;
         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
             info!("update_async TimeOut");
@@ -164,9 +164,9 @@ impl From<DeviceInit> for Device {
             let mut map: HashMap<_, Arc<Value>> = HashMap::new();
             for (name, v) in values.iter_mut() {
                 if let Some(v_) = map.get(&v.address()) {
-                    dbg!(true);
+//                     dbg!(true);
                     if let Some(v) = Arc::get_mut(v) {
-                        dbg!(true);
+//                         dbg!(true);
                         (*v).merge_value(&v_);
                     }
                 } else {map.insert(v.address(), v.clone());};

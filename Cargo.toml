@@ -17,6 +17,10 @@ name = "app_stand_graphic"
 path = "./src/app_stand_graphic.rs"
 
 [[bin]]
+name = "app_test_klapan"
+path = "./src/app_test_klapan.rs"
+
+[[bin]]
 name = "app_config"
 path = "./src/app_config.rs"
 

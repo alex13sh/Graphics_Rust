@@ -207,6 +207,22 @@ impl ModbusValues {
         val.update_value(value);
         val
     }
+    pub fn get_values_by_name(&self, names: &[&str]) -> ModbusValues {
+        ModbusValues (
+            names.iter().filter_map(
+                |&name| self.get(name).map(|v|
+                    (String::from(name), Arc::clone(v))
+                )
+            ).collect()
+        )
+    }
+    pub fn get_values_by_name_starts(&self, names: &[&str]) -> ModbusValues {
+        ModbusValues (
+            self.0.iter().filter(|(k, v)| {
+                names.iter().any(|&name| k.starts_with(name))
+            }).map(|(k,v)|(k.clone(), v.clone())).collect()
+        )
+    }
 }
 
 impl From<Vec<ValueInit>> for ModbusValues {

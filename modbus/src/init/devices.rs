@@ -57,7 +57,7 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Периоднизко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "Период низко частотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
             make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
         ]
     }

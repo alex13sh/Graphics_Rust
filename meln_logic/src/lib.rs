@@ -16,3 +16,4 @@ pub mod init_clear;
 #[cfg(feature = "init_clear")]
 pub use init_clear::init;
 
+pub mod devices;

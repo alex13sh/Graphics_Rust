@@ -19,6 +19,8 @@ macro_rules! map(
  };
 );
 
+use crate::devices::{Dozator};
+
 pub struct Complect {
         
     pub invertor: Invertor,
@@ -28,6 +30,8 @@ pub struct Complect {
     pub owen_analog_2: Arc<Device>,
     
     values: ModbusValues,
+
+    pub dozator: Dozator,
 }
 
 // Инициализация
@@ -39,8 +43,11 @@ impl Complect {
         let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).into());
         let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
         let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13")));
+
+        let values = Self::init_values(&mut [&invertor.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2]);
+        let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/"]);
         Complect {
-            values: Self::init_values(&mut [&invertor.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2]),
+            values: values,
             
             invertor: invertor,
             digit_i: digit_i,
@@ -48,6 +55,7 @@ impl Complect {
             owen_analog_1: analog_1,
             owen_analog_2: analog_2,
             
+            dozator: Dozator::new(values_dozator).unwrap(),
         }
     }
     pub fn make_values(&self, read_only: bool) -> BTreeMap<String, Arc<Value>> {

@@ -30,6 +30,7 @@ pub struct Complect {
     values: ModbusValues,
 }
 
+// Инициализация
 impl Complect {
     pub fn new() -> Self {
         let invertor = init::make_invertor("192.168.1.5".into());
@@ -64,6 +65,18 @@ impl Complect {
         }
         values
     }
+    
+    fn init_values(devices: &mut [&Device]) -> ModbusValues {
+        let map: HashMap<_,_> = devices.iter().flat_map(|d|d.values_map().iter())
+            .map(|(name, v)| (name.clone(), v.clone()))
+            .collect();
+        dbg!(map.keys());
+        ModbusValues::from(map)
+    }
+}
+
+// Обновление всех устройств
+impl Complect {
     
     pub fn update(&self) {
         for d in &self.get_devices() {
@@ -107,20 +120,16 @@ impl Complect {
         .iter().map(|&d| d.clone()).collect()
     }
     
-    fn init_values(devices: &mut [&Device]) -> ModbusValues {
-        let map: HashMap<_,_> = devices.iter().flat_map(|d|d.values_map().iter())
-            .map(|(name, v)| (name.clone(), v.clone()))
-            .collect();
-        ModbusValues::from(map)
-    }
-    
     pub fn update_new_values(&self) -> DeviceResult {
         for d in self.get_devices() {
             d.update_new_values()?;
         }
         Ok(())
     }
-    
+}
+
+// Изменения отделбных значений
+impl Complect {
     pub fn set_value(&self, name: &str, value: u32) {
         if let Some(v) = self.values.get(name) {
             v.set_value(value);

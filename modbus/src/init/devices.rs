@@ -21,6 +21,22 @@ pub mod owen_analog {
             make_value(prefix, "interval", 4113+pin*16, ValueSize::UINT16, ValueDirect::Write),
         ]
     }
+
+    pub fn make_sensor_rtu(pin: u8, name: &str, err: ValueError, val_size: ValueSize) -> Vec<Value> {
+        let pin = pin as u16 - 1;
+        let prefix = name;
+        vec![
+            Value {
+                log: Log::hash(&format!("{}/value", name)),
+                .. make_value(prefix,"value", 0x100+pin*1, val_size, ValueDirect::Read(Some(err.into())))
+            },
+            make_value(prefix, "type", 0x00+pin*1, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
+            make_value(prefix, "point", 0x20+pin*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
+            make_value(prefix, "Верхняя граница", 0x68+pin*2, ValueSize::FLOAT, ValueDirect::Write),
+            make_value(prefix, "Нижняя граница", 0x58+pin*16, ValueSize::FLOAT, ValueDirect::Write),
+            make_value(prefix, "interval", 0x08+pin*1, ValueSize::UINT16, ValueDirect::Write),
+        ]
+    }
 }
 
 pub mod owen_digit {

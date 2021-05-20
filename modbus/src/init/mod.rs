@@ -56,7 +56,7 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
 }
 
 pub fn make_owen_analog_2(ip_addres: &str) -> Device {
-    use devices::owen_analog::make_sensor as make_values;
+    use devices::owen_analog::make_sensor_rtu as make_values;
     
     let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
 

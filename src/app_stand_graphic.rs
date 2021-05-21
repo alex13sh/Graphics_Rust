@@ -1,5 +1,5 @@
 use iced::{
-    Application, executor, Command, Subscription, time,
+    Application, executor, Command, window::Mode, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
     Column, Row, Space, Length,
     Settings, Clipboard,
@@ -31,6 +31,8 @@ pub struct App {
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
+
+    has_exit: bool,
 }
 
 #[derive(Default)]
@@ -41,6 +43,8 @@ struct UI {
     
     pb_svg_save: button::State,
     pb_reset: button::State,
+
+    pb_exit: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +63,8 @@ pub enum Message {
     
     SaveSvg,
     LogReset,
+
+    ButtonExit,
 }
 
 impl Application for App {
@@ -106,6 +112,8 @@ impl Application for App {
                 
                 log: log::Logger::open_csv(),
                 log_values: Vec::new(),
+
+                has_exit: false,
             },
             Command::none()
         )
@@ -114,6 +122,13 @@ impl Application for App {
     fn title(&self) -> String {
         String::from("GraphicsApp (2 fps) - Iced")
     }
+    fn mode(&self) -> Mode {
+        Mode::Fullscreen
+    }
+    fn should_exit(&self) -> bool {
+        self.has_exit
+    }
+
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(500))
@@ -199,6 +214,7 @@ impl Application for App {
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
         Message::LogReset => self.reset_values(),
+        Message::ButtonExit => self.has_exit = true,
         _ => {}
         };
         Command::none()
@@ -281,6 +297,12 @@ impl Application for App {
                 .push(klapans)
                 .push(invertor)
                 .push(Space::with_height(Length::Fill))
+                .push(Row::new()
+                    .push(Space::with_width(Length::Fill))
+                    .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
+                        .on_press(Message::ButtonExit)
+                        .style(style::Button::Exit))
+                )
         };
         
         let content: Element<_> = Column::new()
@@ -499,6 +521,7 @@ mod style {
 
     pub enum Button {
         Check { checked: bool },
+        Exit
     }
 
     impl button::StyleSheet for Button {
@@ -523,6 +546,14 @@ mod style {
                     ..button::Style::default()
                 }
             },
+            Button::Exit => button::Style {
+                background: Some(Background::Color(
+                    Color::from_rgb8(150, 0,0),
+                )),
+                border_radius: 10_f32,
+                text_color: Color::WHITE,
+                ..button::Style::default()
+            }
             }
         }
 

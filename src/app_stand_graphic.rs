@@ -17,17 +17,20 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+mod ui;
+use ui::style;
+
 pub struct App {
     ui: UI,
     
     graph: Graphic,
-    is_started: bool,
-    speed: u32,
+
     shim_hz: u32,
     shim_hz_enb: bool,
     
     values: BTreeMap<String, Arc<Value>>,
     logic: meln_logic::init::Complect,
+    invertor: ui::Invertor,
     
     klapans: [bool; 2],
     
@@ -39,9 +42,8 @@ pub struct App {
 
 #[derive(Default)]
 struct UI {
-    start: ui_button_start::State,
     klapan: [button::State; 3],
-    speed: slider::State,
+
     shim_hz: slider::State,
     
     pb_svg_save: button::State,
@@ -52,19 +54,17 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    InvertorUI(ui::invertor::Message),
     ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
-    ToggleStart(bool),
+
     ToggleKlapan(usize, bool),
     
-    SpeedChanged(u32),
-    SetSpeed(u16),
     ShimHzChanged(u32),
     SetShimHz,
     
     GraphicMessage(graphic::Message),
-    ButtonStart(ui_button_start::Message),
     
     SaveSvg,
     LogReset,
@@ -107,14 +107,15 @@ impl Application for App {
             Self {
                 ui: UI::default(),
                 graph: graphic,
-                is_started: false,
-                speed: 0,
+
                 shim_hz: 0,
                 shim_hz_enb: true,
 
                 klapans: [false; 2],
                 
                 values: values,
+
+                invertor: ui::Invertor::new(logic.invertor.device().clone()),
                 logic: logic,
                 
                 log: log::Logger::open_csv(),
@@ -147,6 +148,15 @@ impl Application for App {
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
         match message {
+        Message::InvertorUI(m) => {
+            use ui::invertor::Message as M;
+            match &m {
+                M::ToggleStart(_) => self.log_save(),
+                _ => {}
+            }
+            self.invertor.update(m);
+        },
+
         Message::ModbusUpdate  => {
             self.logic.update();
            
@@ -182,20 +192,7 @@ impl Application for App {
             self.proccess_values();
             self.proccess_speed();
         },
-        Message::ButtonStart(message) => self.ui.start.update(message),
         
-        Message::ToggleStart(start) => {
-            self.is_started = start;
-            self.ui.start = Default::default();
-            // Invertor SetSpeed
-            // Invertor Start | Stop
-            if start {
-                self.logic.invertor.start();
-            } else {
-                self.logic.invertor.stop();
-            }
-            self.log_save();
-        },
         Message::ToggleKlapan(ind, enb) => {
             
             self.klapans[ind as usize] = enb;
@@ -213,11 +210,7 @@ impl Application for App {
             }
             self.logic.update_new_values();
         },
-        Message::SpeedChanged(speed) => {
-            self.speed = speed;
-//             dbg!((10*speed)/6);
-            self.logic.invertor.set_speed((10*speed)/6);
-        },
+
         Message::ShimHzChanged(hz) => self.shim_hz = hz,
         Message::SetShimHz => {
             println!("Set HZ: {}", self.shim_hz);
@@ -290,39 +283,7 @@ impl Application for App {
                 Element::from(controls)
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             
-            let invertor: Element<_> = if self.logic.invertor.device().is_connect() {
-                let is_started = self.is_started;
-                let start = self.ui.start.view(
-                    self.is_started,
-//                     Message::ToggleStart(!self.is_started)
-                ).map(move |message| {
-                    if let ui_button_start::Message::ToggleStart(start) = message {
-                        Message::ToggleStart(start)
-                    } else {
-                        Message::ButtonStart(message)
-                    }
-                });
-                
-                let slider = Slider::new(
-                    &mut self.ui.speed,
-                    0..=24_000,
-                    self.speed,
-                    Message::SpeedChanged
-                )
-//                 .on_release(Message::SetSpeed(self.speed))
-                .step(3_000);
-                
-                Column::new().spacing(5)
-                    .push(
-                        Row::new().spacing(20)
-                            .push(Text::new(format!("Speed: {:0>5}", self.speed)))
-                            .push(slider)
-                    ).push(start)
-                    .into()
-            } else {
-                Text::new("Инвертор не подключен")
-                    .into()
-            };
+            let invertor: Element<_> = self.invertor.view().map(Message::InvertorUI);
             
             Column::new()
                 .spacing(20)
@@ -393,12 +354,12 @@ impl App {
         let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();
         let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
             
-        if self.is_started == false && speed_value > 5.0 {
-            self.is_started = true;
+        if self.invertor.is_started == false && speed_value > 5.0 {
+            self.invertor.is_started = true;
             self.reset_values();
-        } else if self.is_started == true 
+        } else if self.invertor.is_started == true
                 && (speed_value < 2.0 && vibra_value<0.2) {
-            self.is_started = false;
+            self.invertor.is_started = false;
             self.graph.save_svg();
             self.log_save();
         };
@@ -548,161 +509,4 @@ impl App {
     
 }
 
-mod style {
-    use iced::{button, container, Background, Color, Vector};
 
-    pub enum Button {
-        Check { checked: bool },
-        Exit
-    }
-
-    impl button::StyleSheet for Button {
-        fn active(&self) -> button::Style {
-            match self {
-            Button::Check { checked } => if *checked {
-                button::Style {
-                    background: Some(Background::Color(
-                        Color::from_rgb8(150, 0,0),
-                    )),
-                    border_radius: 10_f32,
-                    text_color: Color::WHITE,
-                    ..button::Style::default()
-                }
-            } else {
-                button::Style {
-                    background: Some(Background::Color(
-                        Color::from_rgb8(0, 150, 0),
-                    )),
-                    border_radius: 10_f32,
-                    text_color: Color::WHITE,
-                    ..button::Style::default()
-                }
-            },
-            Button::Exit => button::Style {
-                background: Some(Background::Color(
-                    Color::from_rgb8(150, 0,0),
-                )),
-                border_radius: 10_f32,
-                text_color: Color::WHITE,
-                ..button::Style::default()
-            }
-            }
-        }
-
-        fn hovered(&self) -> button::Style {
-            let active = self.active();
-
-            button::Style {
-                text_color: match self {
-                Button::Check { checked } if !checked => {
-                    Color::from_rgb(0.2, 0.2, 0.7)
-                }
-                _ => active.text_color,
-                },
-                shadow_offset: active.shadow_offset + Vector::new(0.0, 1.0),
-                ..active
-            }
-        }
-    }
-
-    pub(super) struct MainContainer;
-    impl container::StyleSheet for MainContainer {
-        fn style(&self) -> container::Style {
-            container::Style {
-                background: Some(Background::Color([0.8, 0.8, 0.8].into())),
-                .. Default::default()
-            }
-        }
-    }
-    
-    pub(super) struct ValueContainer;
-    impl container::StyleSheet for ValueContainer {
-        fn style(&self) -> container::Style {
-            container::Style {
-                background: Some(Background::Color([0.3, 0.3, 0.3].into())),
-                .. Default::default()
-            }
-        }
-    }
-}
-
-mod ui_button_start {
-    use super::*;
-    
-    pub enum State {
-        Start {
-            start: button::State,
-        },
-        Confirm {
-            confirm: button::State,
-            cancel: button::State,
-        },
-    }
-    
-    #[derive(Debug, Clone)]
-    pub enum Message {
-        TryStart,
-        Confirm,
-        Cancel,
-        ToggleStart(bool),
-    }
-    
-    impl Default for State {
-        fn default() -> State {
-            State::Start {
-                start: Default::default(),
-            }
-        }
-    }
-    
-    impl State {
-        pub fn update(&mut self, message: Message) {
-            match self {
-            Self::Start {..} => if let Message::TryStart = message {
-                *self = Self::Confirm {
-                    confirm: Default::default(),
-                    cancel: Default::default(),
-                }
-            },
-            Self::Confirm {..} => {
-                *self = Self::Start {
-                    start: Default::default(),
-                };
-            },
-            _ => {}
-            };
-        }
-        
-        pub fn view(&mut self, is_started: bool) -> Element<Message> {
-            match self {
-            Self::Start {start} => {
-                let pb = Button::new(start, 
-                    if !is_started { Text::new("Start") }
-                    else {Text::new("Stop")}
-                ).style(style::Button::Check{
-                    checked: is_started
-                });
-                let pb = if !is_started {
-                    pb.on_press(Message::TryStart)
-                } else {
-                    pb.on_press(Message::ToggleStart(false))
-                };
-                
-                pb.into()
-            }, Self::Confirm {confirm, cancel} => {
-                let pb_cancel = Button::new(cancel, 
-                    Text::new("Отмена")
-                ).on_press(Message::Cancel);
-                let pb_start = Button::new(confirm, 
-                    Text::new("Запустить")
-                ).on_press(Message::ToggleStart(true));
-                
-                Row::new().spacing(50)
-                    .push(pb_cancel)
-                    .push(pb_start)
-                    .into()
-            }
-            }
-        }
-    }
-}

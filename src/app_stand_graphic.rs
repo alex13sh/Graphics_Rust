@@ -23,6 +23,8 @@ pub struct App {
     graph: Graphic,
     is_started: bool,
     speed: u32,
+    shim_hz: u32,
+    shim_hz_enb: bool,
     
     values: BTreeMap<String, Arc<Value>>,
     logic: meln_logic::init::Complect,
@@ -40,6 +42,7 @@ struct UI {
     start: ui_button_start::State,
     klapan: [button::State; 3],
     speed: slider::State,
+    shim_hz: slider::State,
     
     pb_svg_save: button::State,
     pb_reset: button::State,
@@ -57,6 +60,8 @@ pub enum Message {
     
     SpeedChanged(u32),
     SetSpeed(u16),
+    ShimHzChanged(u32),
+    SetShimHz,
     
     GraphicMessage(graphic::Message),
     ButtonStart(ui_button_start::Message),
@@ -104,7 +109,9 @@ impl Application for App {
                 graph: graphic,
                 is_started: false,
                 speed: 0,
-                
+                shim_hz: 0,
+                shim_hz_enb: true,
+
                 klapans: [false; 2],
                 
                 values: values,
@@ -211,6 +218,10 @@ impl Application for App {
 //             dbg!((10*speed)/6);
             self.logic.invertor.set_speed((10*speed)/6);
         },
+        Message::ShimHzChanged(hz) => self.shim_hz = hz,
+        Message::SetShimHz => {
+            println!("Set HZ: {}", self.shim_hz);
+        },
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
         Message::LogReset => self.reset_values(),
@@ -247,6 +258,24 @@ impl Application for App {
                         .on_press(Message::ToggleKlapan(ind, !check)))
                     );
                 
+                let slider = {
+                    let slider = Slider::new(
+                        &mut self.ui.shim_hz,
+                        0..=20,
+                        self.shim_hz,
+                        Message::ShimHzChanged
+                    )
+                    .on_release(Message::SetShimHz)
+                    .step(1);
+
+                    Column::new().spacing(5)
+                        .push(
+                            Row::new().spacing(20)
+                                .push(Text::new(format!("Частота ШИМ: {:0>5}", self.shim_hz)))
+                                .push(slider)
+                        )
+                };
+
                 let buttons = controls_klapan.push(
                     Button::new(&mut self.ui.pb_svg_save, Text::new("Сохранить график"))
                         .on_press(Message::SaveSvg)
@@ -255,7 +284,10 @@ impl Application for App {
                         .on_press(Message::LogReset)
                     );
     //             controls_klapan.into()
-                Element::from(buttons)
+                let controls = Column::new().spacing(2)
+                    .push(buttons)
+                    .push(slider);
+                Element::from(controls)
             } else {Element::from(Text::new("Цифровой модуль ОВЕН не подключен"))};
             
             let invertor: Element<_> = if self.logic.invertor.device().is_connect() {

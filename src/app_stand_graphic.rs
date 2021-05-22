@@ -11,7 +11,7 @@ fn main() {
 
 
 use graphic::{self, Graphic};
-use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
+use modbus::{Value, ModbusValues, ValueFloatResult, ValueFloatError, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -520,23 +520,33 @@ impl App {
                 let name = name.into();
                 if let Some(value) = map.get(&key) {
                     let err = value.get_error();
-                    let value = f32::try_from(value.as_ref()).unwrap();
+                    let value = f32::try_from(value.as_ref());
                     lst.push(Self::view_value(name, value, err))
                 } else {lst}
             }
         ).into()
     }
     
-    fn view_value<'a>(text: String, value: f32, err: Option<ValueError>) -> Element<'a, Message> {
-        let color = match err {
-            Some(err) if err.red <= value =>
-                [1.0, 0.0, 0.0],
-            Some(err) if err.yellow <= value => 
-                [1.0, 1.0, 0.0],
-            Some(_) | None => [0.0, 0.8, 0.0],
-        };
+    fn view_value<'a>(text: String, value: ValueFloatResult, err: Option<ValueError>) -> Element<'a, Message> {
+        let color;
+        let txt_value;
+        match value {
+        Ok(value) => {
+            color = match err {
+                Some(err) if err.red <= value =>
+                    [1.0, 0.0, 0.0],
+                Some(err) if err.yellow <= value =>
+                    [1.0, 1.0, 0.0],
+                Some(_) | None => [0.0, 0.8, 0.0],
+            };
+            txt_value = format!("Value: {:.2}", value);
+        },
+        Err(e) => {
+            color = [1.0, 0.0, 0.0];
+            txt_value = format!("Error: {:?}", e);
+        }}
         let text = Text::new(
-            format!("{}\nValue: {:.2}", text, value)
+            format!("{}\n{}", text, txt_value)
         ).size(20)
         .color(color);
         

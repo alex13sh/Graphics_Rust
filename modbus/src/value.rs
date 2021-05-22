@@ -162,13 +162,60 @@ impl From<ValueInit> for Value {
     }
 }
 
+#[derive(Debug)]
+pub enum ValueFloatError {
+//     None, // Измерение успешно
+    ValueFalse, // 0xF0 -- Значение заведомо неверно
+    SensorDisconnect, // 0xF7 -- Датчик отключен
+    TemperHight, // 0XF8 -- Велика температура свободных концов ТП
+    TemperLow, // 0XF9 -- Мала температура свободных концов ТП
+    ValueHigth, // 0xFA -- Измеренное значение слишком велико
+    ValueLow, // 0xFB -- Измеренное значение слишком мало
+    ShortCircuit, // 0xFC -- Короткое замыкание датчика
+//     SensorDisconnect, // 0xFD -- Обрыв датчика
+    AdcError, // 0xFE -- Отсутствие связи с АЦП
+    RatioError, // 0xFF -- Некорректный калибровочный коэффициент
+
+//     CriticalValue(super::ValueError),
+}
+
+impl ValueFloatError {
+    fn new(value: u32) -> Option<Self> {
+        let lb = value >> 24;
+        let res = match lb {
+        0xF0 => Some(Self::ValueFalse),
+        0xF7 | 0xFD => Some(Self::SensorDisconnect),
+        0xF8 => Some(Self::TemperHight),
+        0xF9 => Some(Self::TemperLow),
+        0xFA => Some(Self::ValueHigth),
+        0xFB => Some(Self::ValueLow),
+        0xFC => Some(Self::ShortCircuit),
+        0xFE => Some(Self::AdcError),
+        0xFF => Some(Self::RatioError),
+        _ => None,
+        };
+//         if let Some(ref err) = res {
+//             println!("ValueFloatError: {:#X} - {:#X} -- {:?}", value, lb, res);
+//         }
+        res
+    }
+}
+
+pub type ValueFloatResult = Result<f32, ValueFloatError>;
+
 pub use std::convert::{TryInto, TryFrom};
 impl TryFrom<&Value> for f32 {
-    type Error = ();
+    type Error = ValueFloatError;
     fn try_from(val: &Value) -> Result<f32, Self::Error> {
-        match val.size {
-        ValueSize::FLOAT => Ok(f32::from_bits(val.value())),
-        ValueSize::FloatMap(f) => Ok(f(f32::from_bits(val.value()))),
+        let res = match val.size {
+        ValueSize::FLOAT =>
+            if let Some(err) = ValueFloatError::new(val.value()) {
+                Err(err)
+            } else {Ok(f32::from_bits(val.value()))},
+        ValueSize::FloatMap(f) =>
+            if let Some(err) = ValueFloatError::new(val.value()) {
+                Err(err)
+            } else {Ok(f(f32::from_bits(val.value())))},
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16
@@ -176,8 +223,12 @@ impl TryFrom<&Value> for f32 {
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value() as f32),
         ValueSize::UInt16Map(f) => Ok(f(val.value())),
-        _ => Err(()),
-        }
+        _ => Err(ValueFloatError::ValueFalse),
+        };
+//         if let Ok(v) = res {
+//
+//         }
+        res
     }
 }
 

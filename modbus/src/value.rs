@@ -225,6 +225,18 @@ impl ModbusValues {
     }
 }
 
+impl ModbusValues {
+    pub fn set_bit(&self, name: &str, bit: bool) -> Result<(), ()> {
+        let v = self.get(name).ok_or_else(|| ())?;
+        v.set_bit(bit);
+        Ok(())
+    }
+    pub fn get_bit(&self, name: &str) -> Result<bool, ()> {
+        let v = self.get(name).ok_or_else(|| ())?;
+        Ok(v.get_bit())
+    }
+}
+
 impl From<Vec<ValueInit>> for ModbusValues {
     fn from(values: Vec<ValueInit>) -> Self {
         ModbusValues(

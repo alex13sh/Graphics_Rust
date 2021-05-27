@@ -164,23 +164,19 @@ impl Complect {
         } else {0.0}
     }
     pub fn set_bit(&self, name: &str, bit: bool) -> DeviceResult {
-        let v = self.values.get(name);
-        let v = if v.is_some() {v} else {
-            self.values.get(&format!("{}/bit",name))
-        };
-        
-        if let Some(v) = v {
-            v.set_bit(bit);
-            Ok(())
-        } else {Err(DeviceError::ValueOut)}
+        if let Err(_) = self.values.set_bit(name, bit) {
+            self.values.set_bit(&format!("{}/bit",name), bit)
+                .map_err(|_| DeviceError::ValueOut)?;
+        }
+        Ok(())
     }
     pub fn get_bit(&self, name: &str) -> Result<bool, DeviceError> {
-        let v = self.values.get(name);
-        let v = if v.is_some() {v} else {self.values.get(&format!("{}/bit",name))};
-        
-        if let Some(v) = v {
-            Ok(v.get_bit())
-        } else {Err(DeviceError::ValueOut)}
+        return if let Ok(v) = self.values.get_bit(name) {
+            Ok(v)
+        } else {
+            self.values.get_bit(&format!("{}/bit",name))
+                .map_err(|_| DeviceError::ValueOut)
+        }
     }
 }
 }

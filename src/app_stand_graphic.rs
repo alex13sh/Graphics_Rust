@@ -54,21 +54,23 @@ struct UI {
 pub enum Message {
     InvertorUI(ui::invertor::Message),
     KlapansUI(ui::klapans::Message),
-
-    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
-    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
-    GraphicUpdate,
-
+    GraphicMessage(graphic::Message),
+    MessageUpdate(MessageMudbusUpdate),
     
     ShimHzChanged(u32),
     SetShimHz,
-    
-    GraphicMessage(graphic::Message),
     
     SaveSvg,
     LogReset,
 
     ButtonExit,
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageMudbusUpdate {
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
+    GraphicUpdate,
 }
 
 impl Application for App {
@@ -138,10 +140,10 @@ impl Application for App {
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(500))
-            .map(|_| Message::ModbusUpdateAsync),
+            .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
             time::every(std::time::Duration::from_millis(500))
-            .map(|_| Message::GraphicUpdate),
-        ])
+            .map(|_| MessageMudbusUpdate::GraphicUpdate),
+        ]).map(Message::MessageUpdate)
     }
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
@@ -158,42 +160,7 @@ impl Application for App {
             self.klapans.update(m);
             self.logic.update_new_values();
         },
-        Message::ModbusUpdate  => {
-            self.logic.update();
-           
-            self.proccess_values();
-            self.proccess_speed();
-        },
-        Message::ModbusUpdateAsync => {
-            let device_futures = self.logic.update_async();
-                
-            return Command::batch(device_futures.into_iter()
-                .map(|(d, f)| Command::perform(f, move |res| Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
-                );
-        },
-        Message::ModbusUpdateAsyncAnswer => {
-//             self.proccess_values();
-//             self.proccess_speed();
-        },
-        Message::ModbusUpdateAsyncAnswerDevice(d, res) => {
-//             dbg!(&d);
-            if res.is_ok() {
-//                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
-                if !d.is_connect() {
-//                     println!("\tis not connect");
-                } else {
-//                     self.proccess_values();
-//                     self.proccess_speed();
-                }
-            }
-        },
-        Message::GraphicUpdate => {            
-            self.graph.update_svg();
-            
-            self.proccess_values();
-            self.proccess_speed();
-        },
-
+        Message::MessageUpdate(m) => return self.modbus_update(m),
         Message::ShimHzChanged(hz) => self.shim_hz = hz,
         Message::SetShimHz => {
             println!("Set HZ: {}", self.shim_hz);
@@ -293,6 +260,52 @@ impl Application for App {
 impl Drop for App {
     fn drop(&mut self) {
         self.log_save();
+    }
+}
+
+// modbus update
+impl App {
+    fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
+        match message {
+            MessageMudbusUpdate::ModbusUpdate  => {
+                self.logic.update();
+
+                self.proccess_values();
+                self.proccess_speed();
+            },
+            MessageMudbusUpdate::ModbusUpdateAsync => {
+                let device_futures = self.logic.update_async();
+
+                return Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                    ));
+            },
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
+    //             self.proccess_values();
+    //             self.proccess_speed();
+            },
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
+    //             dbg!(&d);
+                if res.is_ok() {
+    //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                    if !d.is_connect() {
+    //                     println!("\tis not connect");
+                    } else {
+    //                     self.proccess_values();
+    //                     self.proccess_speed();
+                    }
+                }
+            },
+            MessageMudbusUpdate::GraphicUpdate => {
+                self.graph.update_svg();
+
+                self.proccess_values();
+                self.proccess_speed();
+
+            },
+        }
+        Command::none()
     }
 }
 

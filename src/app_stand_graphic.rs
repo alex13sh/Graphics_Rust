@@ -31,8 +31,7 @@ pub struct App {
     values: BTreeMap<String, Arc<Value>>,
     logic: meln_logic::init::Complect,
     invertor: ui::Invertor,
-    
-    klapans: [bool; 2],
+    klapans: ui::Klapans,
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
@@ -42,7 +41,6 @@ pub struct App {
 
 #[derive(Default)]
 struct UI {
-    klapan: [button::State; 3],
 
     shim_hz: slider::State,
     
@@ -55,11 +53,12 @@ struct UI {
 #[derive(Debug, Clone)]
 pub enum Message {
     InvertorUI(ui::invertor::Message),
+    KlapansUI(ui::klapans::Message),
+
     ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
     GraphicUpdate,
 
-    ToggleKlapan(usize, bool),
     
     ShimHzChanged(u32),
     SetShimHz,
@@ -85,9 +84,9 @@ impl Application for App {
         let mut graphic = Graphic::new();
 //         graphic.set_datetime_start(chrono::Local::now());
         
-        let value_names: Vec<_> = values.keys().into_iter()
-            .map(|k| k.as_str())
-            .collect();
+//         let value_names: Vec<_> = values.keys().into_iter()
+//             .map(|k| k.as_str())
+//             .collect();
 //             dbg!(&value_names);
 
         let temp_value_names = [
@@ -111,12 +110,11 @@ impl Application for App {
                 shim_hz: 0,
                 shim_hz_enb: true,
 
-                klapans: [false; 2],
-                
-                values: values,
-
                 invertor: ui::Invertor::new(logic.invertor.device().clone()),
+                klapans: ui::Klapans::new(logic.digit_o.device().values_map()
+                    .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
                 logic: logic,
+                values: values,
                 
                 log: log::Logger::open_csv(),
                 log_values: Vec::new(),
@@ -156,7 +154,10 @@ impl Application for App {
             }
             self.invertor.update(m);
         },
-
+        Message::KlapansUI(m) => {
+            self.klapans.update(m);
+            self.logic.update_new_values();
+        },
         Message::ModbusUpdate  => {
             self.logic.update();
            
@@ -192,24 +193,6 @@ impl Application for App {
             self.proccess_values();
             self.proccess_speed();
         },
-        
-        Message::ToggleKlapan(ind, enb) => {
-            
-            self.klapans[ind as usize] = enb;
-            self.klapans[1-ind as usize] = false;
-            match ind {
-            0 => {
-                self.logic.set_bit("Клапан 24В", false).unwrap();
-                self.logic.set_bit("Клапан 2", enb).unwrap();
-                self.logic.set_bit("Насос", enb).unwrap();
-            }, 1 => {
-                self.logic.set_bit("Клапан 24В", enb).unwrap();
-                self.logic.set_bit("Клапан 2", false).unwrap();
-                self.logic.set_bit("Насос", false).unwrap();
-            }, _ => {}
-            }
-            self.logic.update_new_values();
-        },
 
         Message::ShimHzChanged(hz) => self.shim_hz = hz,
         Message::SetShimHz => {
@@ -237,19 +220,9 @@ impl Application for App {
         
         let controls = {
             let klapans = if self.logic.digit_o.device().is_connect() {
-                let klapan_names = vec!["Уменьшить давление", "Увеличить давление"];
-                let klapans = self.klapans.iter()
-                    .zip(self.ui.klapan.iter_mut());
-        //         let ui = &mut self.ui;
-                let controls_klapan = klapan_names.iter()
-                    .zip(0..)
-                    .zip(klapans)
-                    .fold(Row::new().spacing(20),
-                        |row, ((&name, ind), (&check, pb))| 
-                        row.push(Button::new(pb, Text::new(name))
-                        .style(style::Button::Check{checked: check})
-                        .on_press(Message::ToggleKlapan(ind, !check)))
-                    );
+                let controls_klapan = self.klapans.view().map(Message::KlapansUI);
+                let controls = Row::new().spacing(20)
+                    .push(controls_klapan);
                 
                 let slider = {
                     let slider = Slider::new(
@@ -269,7 +242,7 @@ impl Application for App {
                         )
                 };
 
-                let buttons = controls_klapan.push(
+                let buttons = controls.push(
                     Button::new(&mut self.ui.pb_svg_save, Text::new("Сохранить график"))
                         .on_press(Message::SaveSvg)
                     ).push(

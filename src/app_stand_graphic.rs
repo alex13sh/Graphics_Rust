@@ -24,14 +24,12 @@ pub struct App {
     ui: UI,
     
     graph: Graphic,
-
-    shim_hz: u32,
-    shim_hz_enb: bool,
     
     values: BTreeMap<String, Arc<Value>>,
     logic: meln_logic::init::Complect,
     invertor: ui::Invertor,
     klapans: ui::Klapans,
+    dozator: ui::Dozator,
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
@@ -41,9 +39,6 @@ pub struct App {
 
 #[derive(Default)]
 struct UI {
-
-    shim_hz: slider::State,
-    
     pb_svg_save: button::State,
     pb_reset: button::State,
 
@@ -54,11 +49,10 @@ struct UI {
 pub enum Message {
     InvertorUI(ui::invertor::Message),
     KlapansUI(ui::klapans::Message),
+    DozatorUI(ui::dozator::Message),
     GraphicMessage(graphic::Message),
     MessageUpdate(MessageMudbusUpdate),
     
-    ShimHzChanged(u32),
-    SetShimHz,
     
     SaveSvg,
     LogReset,
@@ -109,12 +103,11 @@ impl Application for App {
                 ui: UI::default(),
                 graph: graphic,
 
-                shim_hz: 0,
-                shim_hz_enb: true,
-
                 invertor: ui::Invertor::new(logic.invertor.device().clone()),
                 klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                     .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
+                dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),
+
                 logic: logic,
                 values: values,
                 
@@ -160,11 +153,11 @@ impl Application for App {
             self.klapans.update(m);
             self.logic.update_new_values();
         },
-        Message::MessageUpdate(m) => return self.modbus_update(m),
-        Message::ShimHzChanged(hz) => self.shim_hz = hz,
-        Message::SetShimHz => {
-            println!("Set HZ: {}", self.shim_hz);
+        Message::DozatorUI(m) => {
+            self.dozator.update(m);
+//             self.logic.update_new_values();
         },
+        Message::MessageUpdate(m) => return self.modbus_update(m),
 //         Message::SetSpeed(speed) => {},
         Message::SaveSvg => self.graph.save_svg(),
         Message::LogReset => self.reset_values(),
@@ -191,23 +184,7 @@ impl Application for App {
                 let controls = Row::new().spacing(20)
                     .push(controls_klapan);
                 
-                let slider = {
-                    let slider = Slider::new(
-                        &mut self.ui.shim_hz,
-                        0..=20,
-                        self.shim_hz,
-                        Message::ShimHzChanged
-                    )
-                    .on_release(Message::SetShimHz)
-                    .step(1);
-
-                    Column::new().spacing(5)
-                        .push(
-                            Row::new().spacing(20)
-                                .push(Text::new(format!("Частота ШИМ: {:0>5}", self.shim_hz)))
-                                .push(slider)
-                        )
-                };
+                let slider = self.dozator.view().map(Message::DozatorUI);
 
                 let buttons = controls.push(
                     Button::new(&mut self.ui.pb_svg_save, Text::new("Сохранить график"))

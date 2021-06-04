@@ -160,6 +160,14 @@ impl From<Device> for Invertor {
     }
 }
 
+impl From<Arc<Device>> for Invertor {
+    fn from(d: Arc<Device>) -> Self {
+        Invertor {
+            device: d.clone(),
+        }
+    }
+}
+
 // Funcs
 impl Invertor {
     fn read_digit_func(_func: &InvertorFunc) -> bool {

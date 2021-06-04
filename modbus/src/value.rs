@@ -181,7 +181,23 @@ impl TryFrom<&Value> for f32 {
     }
 }
 
-pub struct ValueArc (Arc<Value>);
+#[derive(Debug, Clone)]
+pub struct ValueArc (String, Arc<Value>);
+impl ValueArc {
+    pub fn full_name(&self) -> &String {
+        &self.0
+    }
+    pub fn name(&self) -> Option<&str> {
+        let mut parts = self.0.rsplit("/");
+        match parts.next()? {
+        "value" | "bit" => parts.next(),
+        name @ _ => Some(name)
+        }
+    }
+    pub fn value(&self) -> Arc<Value> {
+        self.1.clone()
+    }
+}
 
 // impl TryFrom<ValueArc> for f32 {
 // impl TryFrom<Arc<Value>> for f32 {
@@ -202,6 +218,14 @@ impl ModbusValues {
     pub fn new() -> Self {
         ModbusValues(HashMap::new())
     }
+
+    pub fn get_value_arc(&self, name: &str) -> Option<ValueArc> {
+        let v = self.get(name)
+            .or_else(||self.get(&format!("{}/value", name)))
+            .or_else(||self.get(&format!("{}/bit", name)))?;
+        Some(ValueArc(name.into(), v.clone()))
+    }
+
     pub fn set_value(&self, name: &str, value: u32) -> Arc<Value> {
         let val = self.get(name).unwrap().clone();
         val.update_value(value);
@@ -222,6 +246,18 @@ impl ModbusValues {
                 names.iter().any(|&name| k.starts_with(name))
             }).map(|(k,v)|(k.clone(), v.clone())).collect()
         )
+    }
+}
+
+impl ModbusValues {
+    pub fn set_bit(&self, name: &str, bit: bool) -> Result<(), ()> {
+        let v = self.get(name).ok_or_else(|| ())?;
+        v.set_bit(bit);
+        Ok(())
+    }
+    pub fn get_bit(&self, name: &str) -> Result<bool, ()> {
+        let v = self.get(name).ok_or_else(|| ())?;
+        Ok(v.get_bit())
     }
 }
 
@@ -258,7 +294,7 @@ impl DerefMut for ModbusValues {
 impl Deref for ValueArc {
     type Target = Value;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.1
     }
 }
 

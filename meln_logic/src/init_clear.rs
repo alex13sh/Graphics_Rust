@@ -73,6 +73,10 @@ impl Complect {
         }
         values
     }
+
+    pub fn get_values(&self) -> &ModbusValues {
+        &self.values
+    }
     
     fn init_values(devices: &mut [&Device]) -> ModbusValues {
         let map: HashMap<_,_> = devices.iter().flat_map(|d|d.values_map().iter())

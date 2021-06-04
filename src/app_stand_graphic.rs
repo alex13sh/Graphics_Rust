@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+// #[macro_use]
 mod ui;
 use ui::style;
 
@@ -30,6 +31,7 @@ pub struct App {
     invertor: ui::Invertor,
     klapans: ui::Klapans,
     dozator: ui::Dozator,
+    values_list: Vec<ui::ValuesList>,
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
@@ -107,6 +109,36 @@ impl Application for App {
                 klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                     .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
                 dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),
+                values_list: ui::make_value_lists(logic.get_values(), map!{BTreeMap,
+                    "1) МВ210-101" => [
+                        "Температура статора двигатель М1",
+                        "Температура масла на выходе дв. М1 Низ",
+            //             "Температура масла на выходе дв. М2 Низ",
+            //             "Температура масла на выходе маслостанции",
+            //             "Температура статора двигатель М2",
+                        "Температура подшипника дв. М1 верх"
+            //             "Температура подшипника дв. М2 верх"
+                        
+                    ],
+                    "2) МВ110-24.8АС" => [
+                        //"Давление масла верхний подшипник",
+                        // "Давление масла нижний подшипник",
+                        //"Давление воздуха компрессора",
+                        //"Разрежение воздуха в системе",
+                        "Температура ротора Пирометр дв. М1",
+                        //"Температура ротора Пирометр дв. М2",
+                        "Вибродатчик дв. М1",
+                        //"Вибродатчик дв. М2",
+                    ],
+                    "Invertor" => [
+                        "Заданная частота (F)",
+                        "Выходная частота (H)",
+                        "Выходной ток (A)",
+                        "Температура радиатора",
+                        "Наработка двигателя (дни)",
+                        "Наработка двигателя (мин)",
+                    ]
+                }),
 
                 logic: logic,
                 values: values,
@@ -169,7 +201,9 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
 //         let content = Text::new("Пустое окно");
 
-        let list_value = self.view_list_value();
+//         let list_value = self.view_list_value();
+        let list_value = self.values_list.iter()
+            .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
         let graph = self.graph.view()
             .map(Message::GraphicMessage);
             
@@ -327,15 +361,10 @@ impl App {
             self.log_save();
         };
     }
-}
-
-// view
-impl App {
-
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {
             self.log.new_session(&self.log_values);
-            
+
             log::Logger::new_table_fields(&self.log_values, 1, vec![
             ("Скорость", "4bd5c4e0a9"),
             ("Ток", "5146ba6795"),
@@ -346,130 +375,14 @@ impl App {
             ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
             ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
             ]);
-            
+
             self.log_values = Vec::new();
         }
     }
-    
+
     fn reset_values(&mut self) {
         self.log_values = Vec::new();
         self.graph.reset_values()
     }
-    
-    fn get_values_name_map<'a>() -> HashMap<&'a str, Vec<&'a str>> {
-        let mut map = HashMap::new();
-        map.insert("1) МВ210-101", vec![
-            "Температура статора двигатель М1",
-            "Температура масла на выходе дв. М1 Низ",
-//             "Температура масла на выходе дв. М2 Низ",
-//             "Температура масла на выходе маслостанции",
-//             "Температура статора двигатель М2",
-            "Температура подшипника дв. М1 верх",
-//             "Температура подшипника дв. М2 верх"
-            
-        ]);
-        
-        map.insert("2) МВ110-24.8АС", vec![
-//             "Давление масла верхний подшипник",
-//             "Давление масла нижний подшипник",
-//             "Давление воздуха компрессора",
-//             "Разрежение воздуха в системе",
-            "Температура ротора Пирометр дв. М1",
-//             "Температура ротора Пирометр дв. М2",
-            "Вибродатчик дв. М1",
-//             "Вибродатчик дв. М2",
-        ]);
-        
-        map.insert("DigitIO", vec![
-            "Клапан 24В",
-            "Клапан 2",
-            "Насос",
-        ]);
-        
-        map.insert("Invertor", vec![
-            "Заданная частота (F)",
-            "Выходная частота (H)",
-            "Выходной ток (A)",
-            "Температура радиатора",
-            "Наработка двигателя (дни)",
-            "Наработка двигателя (мин)",
-        ]);
-        
-        map
-    }
-
-    fn view_list_value<'a>(&self) -> Element<'a, Message> {
-    
-        let mut lst = Column::new()
-        .spacing(20);
-//         .width(Length::Units(200));
-        let values_name_map = Self::get_values_name_map();
-        {
-            let values_name = &values_name_map[&"1) МВ210-101"];
-            
-            let values_map = self.logic.owen_analog_1.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
-        };
-        {
-            let values_name = &values_name_map[&"2) МВ110-24.8АС"];
-            
-            let values_map = self.logic.owen_analog_2.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
-        };
-//         {
-//             let values_name = &values_name_map[&"DigitIO"];
-//             let dev = self.digit_io.device();
-//             let values_map = dev.values_map();
-//             lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}/value", name)));
-//         };
-        
-        {
-            let values_name = &values_name_map[&"Invertor"];
-            let dev = self.logic.invertor.device();
-            let values_map = dev.values_map();
-            lst = lst.push( Self::view_map_values(values_name, &values_map, |name| format!("{}", name)));
-        };
-        
-        lst.into()
-    }
-    
-    fn view_map_values<'a, F>(names: &Vec<&str>, map: &ModbusValues, value_key: F) -> Element<'a, Message> 
-    where F: Fn(&str) -> String
-    {
-        pub use std::convert::TryFrom;
-        names.into_iter()
-            .fold(Column::new().width(Length::Units(250)).spacing(2),
-            |lst, &name| {
-                let key = value_key(name);
-                let name = name.into();
-                if let Some(value) = map.get(&key) {
-                    let err = value.get_error();
-                    let value = f32::try_from(value.as_ref()).unwrap();
-                    lst.push(Self::view_value(name, value, err))
-                } else {lst}
-            }
-        ).into()
-    }
-    
-    fn view_value<'a>(text: String, value: f32, err: Option<ValueError>) -> Element<'a, Message> {
-        let color = match err {
-            Some(err) if err.red <= value =>
-                [1.0, 0.0, 0.0],
-            Some(err) if err.yellow <= value => 
-                [1.0, 1.0, 0.0],
-            Some(_) | None => [0.0, 0.8, 0.0],
-        };
-        let text = Text::new(
-            format!("{}\nValue: {:.2}", text, value)
-        ).size(20)
-        .color(color);
-        
-        Container::new(text)
-            .width(Length::Fill)
-            .style(style::ValueContainer)
-            .into()
-    }
-    
 }
-
 

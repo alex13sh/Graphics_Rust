@@ -20,7 +20,8 @@ pub(crate) fn init_devices() -> Vec<Device> {
     make_owen_analog_2("192.168.1.13"),
     make_i_digit("192.168.1.10".into()),
     make_o_digit("192.168.1.12".into()),
-    make_invertor("192.168.1.5".into()),
+    make_invertor("192.168.1.5".into(), 5),
+    make_invertor("192.168.1.6".into(), 6),
     ]
 }
 
@@ -159,9 +160,9 @@ pub fn make_o_digit(ip_address: String) -> Device {
     }
 }
 
-pub fn make_invertor(ip_address: String) -> Device {
+pub fn make_invertor(ip_address: String, num: u8) -> Device {
     Device {
-        name: "Invertor".into(),
+        name: format!("{}) Invertor", num),
         address: DeviceAddress::TcpIP(ip_address), // "192.168.1.7"
         device_type: DeviceType::Invertor {
             functions: vec![

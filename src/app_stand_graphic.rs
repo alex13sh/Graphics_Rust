@@ -105,7 +105,7 @@ impl Application for App {
                 ui: UI::default(),
                 graph: graphic,
 
-                invertor: ui::Invertor::new(logic.invertor.device().clone()),
+                invertor: ui::Invertor::new(logic.invertor_1.device().clone()),
                 klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                     .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
                 dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),
@@ -345,7 +345,7 @@ impl App {
     
     fn proccess_speed(&mut self) {
         use std::convert::TryFrom;
-        let speed_value = self.logic.invertor.get_hz_out_value();
+        let speed_value = self.logic.invertor_1.get_hz_out_value();
         let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
         
         let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();

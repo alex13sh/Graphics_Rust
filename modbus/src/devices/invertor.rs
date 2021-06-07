@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 mod error;
 
+#[derive(Clone)]
 pub struct Invertor {
     device: Arc<Device>, // make mut
     // device_analog_output: Arc<Device>, // Owen Analog

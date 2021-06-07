@@ -28,12 +28,12 @@ pub enum Message {
 }
 
 impl Invertor {
-    pub fn new(d: Arc<modbus::Device>) -> Self {
+    pub fn new(invertor: modbus::Invertor) -> Self {
         Invertor {
             ui: UI::default(),
             is_started: false,
             speed: 0,
-            device: modbus::Invertor::from(d),
+            device: invertor,
         }
     }
 

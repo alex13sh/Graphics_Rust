@@ -105,7 +105,7 @@ impl Application for App {
                 ui: UI::default(),
                 graph: graphic,
 
-                invertor: ui::Invertor::new(logic.invertor_1.device().clone()),
+                invertor: ui::Invertor::new(logic.invertor_1.clone()),
                 klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                     .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
                 dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),

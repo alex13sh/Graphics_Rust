@@ -17,6 +17,11 @@ name = "app_stand_graphic"
 path = "./src/app_stand_graphic.rs"
 
 [[bin]]
+name = "app_complect_simple_ui"
+path = "./src/app_complect_simple_ui.rs"
+
+
+[[bin]]
 name = "app_test_klapan"
 path = "./src/app_test_klapan.rs"
 

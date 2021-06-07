@@ -247,6 +247,13 @@ impl ModbusValues {
             }).map(|(k,v)|(k.clone(), v.clone())).collect()
         )
     }
+    pub fn get_values_by_name_contains(&self, names: &[&str]) -> ModbusValues {
+        ModbusValues (
+            self.0.iter().filter(|(k, v)| {
+                names.iter().any(|&name| k.contains(name))
+            }).map(|(k,v)|(k.clone(), v.clone())).collect()
+        )
+    }
 }
 
 impl ModbusValues {

@@ -1,4 +1,4 @@
-use modbus::{Value, ValueArc, ModbusValues, ValueError};
+use modbus::{Value, ValueArc, ModbusValues, ValueError, ValueFloatResult};
 use super::style;
 
 use std::collections::{BTreeMap};
@@ -44,16 +44,27 @@ impl ValuesList {
     fn view_value<'a, Message: 'a>(value: &ValueArc) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
         let err = value.get_error();
-        let valuef = f32::try_from(value.value().as_ref()).unwrap();
-        let color = match err {
-            Some(err) if err.red <= valuef =>
-                [1.0, 0.0, 0.0],
-            Some(err) if err.yellow <= valuef =>
-                [1.0, 1.0, 0.0],
-            Some(_) | None => [0.0, 0.8, 0.0],
-        };
+        let name = value.name().unwrap();
+        let value = f32::try_from(value.value().as_ref());
+        let color;
+        let txt_value;
+        match value {
+        Ok(value) => {
+            color = match err {
+                Some(err) if err.red <= value =>
+                    [1.0, 0.0, 0.0],
+                Some(err) if err.yellow <= value =>
+                    [1.0, 1.0, 0.0],
+                Some(_) | None => [0.0, 0.8, 0.0],
+            };
+            txt_value = format!("Value: {:.2}", value);
+        },
+        Err(e) => {
+            color = [1.0, 0.0, 0.0];
+            txt_value = format!("Error: {:?}", e);
+        }}
         let text = Text::new(
-            format!("{}\nValue: {:.2}", value.name().unwrap(), valuef)
+            format!("{}\n{}", name, txt_value)
         ).size(28)
         .color(color);
 

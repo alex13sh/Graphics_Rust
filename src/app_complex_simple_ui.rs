@@ -115,7 +115,7 @@ impl Application for App {
         Message::DozatorUI(m) => {
             let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
                 .map(Message::DozatorUI);
-            self.logic.update_new_values();
+//             self.logic.update_new_values();
             return res;
         },
         Message::KlapansUI(m) => {

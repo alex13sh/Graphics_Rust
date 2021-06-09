@@ -11,7 +11,7 @@ fn main() {
 
 
 use graphic::{self, Graphic};
-use modbus::{Value, ModbusValues, ValueError, Device, DeviceError };
+use modbus::{Value, ModbusValues, ValueFloatResult, ValueFloatError, ValueError, Device, DeviceError };
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -108,7 +108,7 @@ impl Application for App {
                 invertor: ui::Invertor::new(logic.invertor_1.clone()),
                 klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                     .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
-                dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),
+                dozator: ui::Dozator::new(logic.dozator.clone()),
                 values_list: ui::make_value_lists(logic.get_values(), map!{BTreeMap,
                     "1) МВ210-101" => [
                         "Температура статора двигатель М1",
@@ -187,8 +187,10 @@ impl Application for App {
             self.logic.update_new_values();
         },
         Message::DozatorUI(m) => {
-            self.dozator.update(m);
+            let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
+                .map(Message::DozatorUI);
 //             self.logic.update_new_values();
+            return res;
         },
         Message::MessageUpdate(m) => return self.modbus_update(m),
 //         Message::SetSpeed(speed) => {},
@@ -386,4 +388,3 @@ impl App {
         self.graph.reset_values()
     }
 }
-

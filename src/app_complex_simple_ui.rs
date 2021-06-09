@@ -11,9 +11,10 @@ fn main() {
 
 mod ui;
 
-use modbus::{ModbusValues, Device};
+use modbus::{ModbusValues, Device, DeviceError};
 use std::collections::HashMap;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 pub struct App {
     ui: UI,
@@ -43,6 +44,15 @@ pub enum Message {
     
     DozatorUI(ui::dozator::Message),
     
+    MessageUpdate(MessageMudbusUpdate),
+    
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageMudbusUpdate {
+    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
+//     GraphicUpdate,
 }
 
 impl Application for App {
@@ -82,6 +92,15 @@ impl Application for App {
     }
     fn scale_factor(&self) -> f64 {0.8}
 
+        fn subscription(&self) -> Subscription<Self::Message> {
+        Subscription::batch(vec![
+            time::every(std::time::Duration::from_millis(500))
+            .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
+//             time::every(std::time::Duration::from_millis(500))
+//             .map(|_| MessageMudbusUpdate::GraphicUpdate),
+        ]).map(Message::MessageUpdate)
+    }
+    
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
         match message {
@@ -94,6 +113,7 @@ impl Application for App {
             self.logic.update_new_values();
             return res;
         },
+        Message::MessageUpdate(m) => return self.modbus_update(m),
         }
         Command::none()
     }
@@ -124,6 +144,52 @@ impl Application for App {
     }
 }
 
+// modbus update
+impl App {
+    fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
+        match message {
+            MessageMudbusUpdate::ModbusUpdate  => {
+                self.logic.update();
+
+//                 self.proccess_values();
+//                 self.proccess_speed();
+            },
+            MessageMudbusUpdate::ModbusUpdateAsync => {
+                let device_futures = self.logic.update_async();
+
+                return Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                    ));
+            },
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
+    //             self.proccess_values();
+    //             self.proccess_speed();
+            },
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
+    //             dbg!(&d);
+                if res.is_ok() {
+    //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                    if !d.is_connect() {
+    //                     println!("\tis not connect");
+                    } else {
+    //                     self.proccess_values();
+    //                     self.proccess_speed();
+                    }
+                }
+            },
+//             MessageMudbusUpdate::GraphicUpdate => {
+//                 self.graph.update_svg();
+
+//                 self.proccess_values();
+//                 self.proccess_speed();
+
+//             },
+        }
+        Command::none()
+    }
+}
+
 use half_complect::HalfComplect;
 mod half_complect {
     use super::*;
@@ -143,7 +209,7 @@ mod half_complect {
     #[derive(Debug, Clone)]
     pub enum Message {
         InvertorUI(ui::invertor::Message),
-        
+        UpdateValues,
     }
 
     impl HalfComplect {
@@ -172,8 +238,11 @@ mod half_complect {
             }
         }
         
-        pub fn update(&mut self, _message: Message) {
-        
+        pub fn update(&mut self, message: Message) {
+            match message {
+            Message::InvertorUI(m) => self.invertor.update(m),
+            Message::UpdateValues => {},
+            }
         }
         
         pub fn view(&mut self) -> Element<Message> {

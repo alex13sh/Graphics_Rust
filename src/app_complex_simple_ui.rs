@@ -43,6 +43,7 @@ pub enum Message {
     LowHalfComplectUI(half_complect::Message),
     
     DozatorUI(ui::dozator::Message),
+    KlapansUI(ui::klapans::Message),
     
     MessageUpdate(MessageMudbusUpdate),
     
@@ -113,6 +114,10 @@ impl Application for App {
             self.logic.update_new_values();
             return res;
         },
+        Message::KlapansUI(m) => {
+            self.klapans.update(m);
+            self.logic.update_new_values();
+        }
         Message::MessageUpdate(m) => return self.modbus_update(m),
         }
         Command::none()
@@ -129,10 +134,12 @@ impl Application for App {
             .push(low)
             .push(top);
         let dozator = self.dozator.view().map(Message::DozatorUI);
+        let klapans = self.klapans.view().map(Message::KlapansUI);
         let col = Column::new()
             .spacing(10)
             .push(half_2)
-            .push(dozator);
+            .push(dozator)
+            .push(klapans);
         col.into()
 //         Container::new(col)
 //             .width(Length::Fill)

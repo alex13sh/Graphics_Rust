@@ -85,8 +85,15 @@ impl Application for App {
     }
     fn view(&mut self) -> Element<Self::Message> {
 //         Text::new("Complex View").into()
-        self.low.view()
-            .map(Message::LowHalfComplectUI)
+        let low = self.low.view()
+            .map(Message::LowHalfComplectUI);
+        let top = self.top.view()
+            .map(Message::TopHalfComplectUI);
+            
+        Row::new()
+            .spacing(20)
+            .push(low)
+            .push(top)
             .into()
     }
 }
@@ -114,6 +121,7 @@ mod half_complect {
     }
 
     impl HalfComplect {
+//         pub fn new_by_name(values: ModbusValues
         pub fn new(values: ModbusValues, invertor: modbus::Invertor) -> Self {
 //             dbg!(values.keys());
             let values: HashMap<_,_> = values.iter()
@@ -138,11 +146,12 @@ mod half_complect {
             }
         }
         
-        pub fn view(&self) -> Element<Message> {
+        pub fn view(&mut self) -> Element<Message> {
 //             Text::new("Half Complect View").into()
             let list_value = self.values_list.iter()
                 .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
-                
+            let inv = self.invertor.view().map(Message::InvertorUI);
+            let list_value = list_value.push(inv);
             list_value.into()
         }
     }

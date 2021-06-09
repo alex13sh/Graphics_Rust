@@ -13,6 +13,7 @@ mod ui;
 
 use modbus::{ModbusValues, Device};
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub struct App {
     ui: UI,
@@ -83,7 +84,10 @@ impl Application for App {
         Command::none()
     }
     fn view(&mut self) -> Element<Self::Message> {
-        Text::new("LOL").into()
+//         Text::new("Complex View").into()
+        self.low.view()
+            .map(Message::LowHalfComplectUI)
+            .into()
     }
 }
 
@@ -94,6 +98,8 @@ mod half_complect {
     pub struct HalfComplect {
         invertor: ui::Invertor,
         values: ModbusValues,
+        
+        values_list: Vec<ui::ValuesList>,
     }
 
     #[derive(Default)]
@@ -119,9 +125,25 @@ mod half_complect {
             
             HalfComplect {
                 invertor: ui::Invertor::new(invertor),
+                
+                values_list: ui::make_value_lists_start(&values, map!{BTreeMap,
+                    "Температуры" => [
+                        "Температура статора",
+                        "Температура ротора Пирометр",
+                        "Температура масла на выходе",
+                        "Температура подшипника",
+                    ]
+                }),
                 values: values,
             }
         }
-
+        
+        pub fn view(&self) -> Element<Message> {
+//             Text::new("Half Complect View").into()
+            let list_value = self.values_list.iter()
+                .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
+                
+            list_value.into()
+        }
     }
 }

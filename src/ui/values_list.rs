@@ -70,9 +70,20 @@ pub fn make_value_lists(modbus_values: &ModbusValues, values_groups: BTreeMap<St
             ValuesList {
                 name: name,
                 values: values.into_iter().flat_map(|name| { 
-                    dbg!(&name);
-                modbus_values.get_value_arc(&name)
+                    modbus_values.get_value_arc(&name)
                 }).collect(),
+            }
+        ).collect()
+}
+
+pub fn make_value_lists_start(modbus_values: &ModbusValues, values_groups: BTreeMap<String, Vec<String>>) -> Vec<ValuesList> {
+    values_groups.into_iter()
+        .map(|(name, values)|
+            ValuesList {
+                name: name,
+                values: modbus_values
+                    .get_values_by_name_starts(&values.iter().map(|n| &n[..]).collect::<Vec<_>>())
+                    .get_values_by_name_ends(&["/value"]).into(),
             }
         ).collect()
 }

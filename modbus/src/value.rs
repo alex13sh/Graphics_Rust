@@ -247,6 +247,13 @@ impl ModbusValues {
             }).map(|(k,v)|(k.clone(), v.clone())).collect()
         )
     }
+    pub fn get_values_by_name_ends(&self, names: &[&str]) -> ModbusValues {
+        ModbusValues (
+            self.0.iter().filter(|(k, v)| {
+                names.iter().any(|&name| k.ends_with(name))
+            }).map(|(k,v)|(k.clone(), v.clone())).collect()
+        )
+    }
     pub fn get_values_by_name_contains(&self, names: &[&str]) -> ModbusValues {
         ModbusValues (
             self.0.iter().filter(|(k, v)| {
@@ -281,6 +288,14 @@ impl From<Vec<ValueInit>> for ModbusValues {
 impl From<HashMap<String, Arc<Value>>> for ModbusValues {
     fn from(values: HashMap<String, Arc<Value>>) -> Self {
         ModbusValues(values)
+    }
+}
+
+impl From<ModbusValues> for Vec<ValueArc> {
+    fn from(values: ModbusValues) -> Self {
+        values.0.into_iter()
+            .map(|(n, v)| ValueArc (n, v))
+            .collect()
     }
 }
 

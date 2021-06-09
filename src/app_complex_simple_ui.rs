@@ -105,7 +105,7 @@ impl Application for App {
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
         match message {
-        Message::ButtonExit => {},
+        Message::ButtonExit => self.has_exit = true,
         Message::LowHalfComplectUI(m) => self.low.update(m),
         Message::TopHalfComplectUI(m) => self.top.update(m),
         Message::DozatorUI(m) => {
@@ -139,7 +139,10 @@ impl Application for App {
             .spacing(10)
             .push(half_2)
             .push(dozator)
-            .push(klapans);
+            .push(klapans)
+            .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
+                .on_press(Message::ButtonExit)
+                .style(ui::style::Button::Exit));
         col.into()
 //         Container::new(col)
 //             .width(Length::Fill)

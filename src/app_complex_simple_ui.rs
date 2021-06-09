@@ -26,6 +26,8 @@ pub struct App {
     top: HalfComplect,
     low: HalfComplect,
     
+    log: log::Logger,
+    log_values: Vec<log::LogValue>,
 }
 
 
@@ -78,6 +80,8 @@ impl Application for App {
             dozator: ui::Dozator::new(logic.dozator.clone()),
         
             logic: logic,
+            log: log::Logger::open_csv(),
+            log_values: Vec::new(),
         },
         Command::none())
     }
@@ -161,8 +165,8 @@ impl App {
             MessageMudbusUpdate::ModbusUpdate  => {
                 self.logic.update();
 
-//                 self.proccess_values();
-//                 self.proccess_speed();
+                self.proccess_values();
+                self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 let device_futures = self.logic.update_async();
@@ -173,8 +177,8 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
-    //             self.proccess_values();
-    //             self.proccess_speed();
+                self.proccess_values();
+                self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
     //             dbg!(&d);
@@ -183,8 +187,8 @@ impl App {
                     if !d.is_connect() {
     //                     println!("\tis not connect");
                     } else {
-    //                     self.proccess_values();
-    //                     self.proccess_speed();
+                        self.proccess_values();
+                        self.proccess_speed();
                     }
                 }
             },
@@ -198,6 +202,59 @@ impl App {
         }
         Command::none()
     }
+    
+    fn proccess_values(&mut self) {
+        use std::convert::TryFrom;
+        let values = self.logic.get_values();
+        let mut log_values: Vec<_> = {
+            values.iter()
+            .map(|(k, v)| v)
+            .filter(|v| v.is_log())
+            .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+            .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+        };
+        self.log_values.append(&mut log_values);
+    }
+    
+    fn proccess_speed(&mut self) {
+        use std::convert::TryFrom;
+        let speed_value = self.logic.invertor_1.get_hz_out_value();
+        let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        
+        let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();
+        let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+            
+        if self.low.invertor.is_started == false && speed_value > 5.0 {
+            self.low.invertor.is_started = true;
+            self.reset_values();
+        } else if self.low.invertor.is_started == true
+                && (speed_value < 2.0 && vibra_value<0.2) {
+            self.low.invertor.is_started = false;
+            self.log_save();
+        };
+    }
+    fn log_save(&mut self) {
+        if self.log_values.len() > 0 {
+            self.log.new_session(&self.log_values);
+
+            log::Logger::new_table_fields(&self.log_values, 1, vec![
+            ("Скорость", "4bd5c4e0a9"),
+            ("Ток", "5146ba6795"),
+            ("Напряжение", "5369886757"),
+            ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
+            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
+            ("Температура статора", "1) МВ210-101/1/value"),
+            ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
+            ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+            ]);
+
+            self.log_values = Vec::new();
+        }
+    }
+
+    fn reset_values(&mut self) {
+        self.log_values = Vec::new();
+    }
 }
 
 use half_complect::HalfComplect;
@@ -205,7 +262,7 @@ mod half_complect {
     use super::*;
     
     pub struct HalfComplect {
-        invertor: ui::Invertor,
+        pub invertor: ui::Invertor,
         values: ModbusValues,
         
         values_list: Vec<ui::ValuesList>,

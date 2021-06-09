@@ -30,17 +30,18 @@ pub struct ValuesList {
     pub values: Vec<ValueArc>,
 }
 
-pub type Message = crate::Message;
+// pub type Message = crate::Message;
 impl ValuesList {
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view<'a, Message: 'a>(&'a self) -> Element<'a, Message> {
         let mut lst = Column::new().width(Length::Units(250)).spacing(2);
         for v in &self.values {
+            dbg!(v.name());
             lst = lst.push(Self::view_value(v));
         }
         lst.into()
     }
-    fn view_value(value: &ValueArc) -> Element<Message> {
+    fn view_value<'a, Message: 'a>(value: &ValueArc) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
         let err = value.get_error();
         let valuef = f32::try_from(value.value().as_ref()).unwrap();

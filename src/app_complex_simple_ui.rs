@@ -64,7 +64,7 @@ impl Application for App {
             top: HalfComplect::new(values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                 .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
-            dozator: ui::Dozator::new(logic.digit_o.device().values_map().clone()),
+            dozator: ui::Dozator::new(logic.dozator.clone()),
         
             logic: logic,
         },
@@ -88,7 +88,12 @@ impl Application for App {
         Message::ButtonExit => {},
         Message::LowHalfComplectUI(m) => self.low.update(m),
         Message::TopHalfComplectUI(m) => self.top.update(m),
-        Message::DozatorUI(m) => self.dozator.update(m),
+        Message::DozatorUI(m) => {
+            let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
+                .map(Message::DozatorUI);
+            self.logic.update_new_values();
+            return res;
+        },
         }
         Command::none()
     }

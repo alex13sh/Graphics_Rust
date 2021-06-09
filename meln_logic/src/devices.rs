@@ -4,6 +4,7 @@ use std::sync::Arc;
 use futures_core::stream::Stream;
 use async_stream::stream;
 
+#[derive(Clone)]
 pub struct Dozator {
     hz_value: Arc<Value>,
 //     hz: u32,

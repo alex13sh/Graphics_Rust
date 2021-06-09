@@ -161,6 +161,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
+    fn scale_factor(&self) -> f64 {0.5}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![

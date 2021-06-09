@@ -41,6 +41,8 @@ pub enum Message {
     TopHalfComplectUI(half_complect::Message),
     LowHalfComplectUI(half_complect::Message),
     
+    DozatorUI(ui::dozator::Message),
+    
 }
 
 impl Application for App {
@@ -78,9 +80,16 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
+    fn scale_factor(&self) -> f64 {0.8}
 
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
     
+        match message {
+        Message::ButtonExit => {},
+        Message::LowHalfComplectUI(m) => self.low.update(m),
+        Message::TopHalfComplectUI(m) => self.top.update(m),
+        Message::DozatorUI(m) => self.dozator.update(m),
+        }
         Command::none()
     }
     fn view(&mut self) -> Element<Self::Message> {
@@ -90,11 +99,23 @@ impl Application for App {
         let top = self.top.view()
             .map(Message::TopHalfComplectUI);
             
-        Row::new()
+        let half_2 = Row::new()
             .spacing(20)
             .push(low)
-            .push(top)
-            .into()
+            .push(top);
+        let dozator = self.dozator.view().map(Message::DozatorUI);
+        let col = Column::new()
+            .spacing(10)
+            .push(half_2)
+            .push(dozator);
+        col.into()
+//         Container::new(col)
+//             .width(Length::Fill)
+//             .height(Length::Fill)
+//             .padding(10)
+//             .center_x()
+//             .center_y()
+//             .into()
     }
 }
 
@@ -144,6 +165,10 @@ mod half_complect {
                 }),
                 values: values,
             }
+        }
+        
+        pub fn update(&mut self, _message: Message) {
+        
         }
         
         pub fn view(&mut self) -> Element<Message> {

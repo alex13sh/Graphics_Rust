@@ -240,6 +240,15 @@ impl ModbusValues {
             ).collect()
         )
     }
+    
+    pub fn get_value_arc_stars(&self, name: &str) -> Option<ValueArc> {
+        let (name, v) = self.0.iter().find(|&(n,_)| 
+            n.starts_with(name) &&
+            (n.ends_with("/value") ||
+            n.ends_with("/bit"))
+        )?;
+        Some(ValueArc(name.into(), v.clone()))
+    }
     pub fn get_values_by_name_starts(&self, names: &[&str]) -> ModbusValues {
         ModbusValues (
             self.0.iter().filter(|(k, v)| {

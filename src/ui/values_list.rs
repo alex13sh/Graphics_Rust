@@ -34,7 +34,7 @@ pub struct ValuesList {
 impl ValuesList {
 
     pub fn view<'a, Message: 'a>(&'a self) -> Element<'a, Message> {
-        let mut lst = Column::new().width(Length::Units(500)).spacing(2);
+        let mut lst = Column::new().width(Length::Units(550)).spacing(2);
         for v in &self.values {
             dbg!(v.name());
             lst = lst.push(Self::view_value(v));
@@ -77,6 +77,18 @@ pub fn make_value_lists(modbus_values: &ModbusValues, values_groups: BTreeMap<St
 }
 
 pub fn make_value_lists_start(modbus_values: &ModbusValues, values_groups: BTreeMap<String, Vec<String>>) -> Vec<ValuesList> {
+    values_groups.into_iter()
+        .map(|(name, values)|
+            ValuesList {
+                name: name,
+                values: values.into_iter().flat_map(|name| { 
+                    modbus_values.get_value_arc_stars(&name)
+                }).collect(),
+            }
+        ).collect()
+}
+
+pub fn make_value_lists_start_2(modbus_values: &ModbusValues, values_groups: BTreeMap<String, Vec<String>>) -> Vec<ValuesList> {
     values_groups.into_iter()
         .map(|(name, values)|
             ValuesList {

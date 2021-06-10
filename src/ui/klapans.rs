@@ -38,13 +38,13 @@ impl Klapans {
             self.klapans[1-ind as usize] = false;
             match ind {
             0 => {
-                self.values.set_bit("Клапан 24В", false).unwrap();
-                self.values.set_bit("Клапан 2", enb).unwrap();
-                self.values.set_bit("Насос", enb).unwrap();
+                self.values.set_bit("Клапан напуска воздуха", false).unwrap();
+                self.values.set_bit("Клапан насоса М5 вакуум", enb).unwrap();
+                self.values.set_bit("Клапан насоса М6 вакуум", enb).unwrap();
             }, 1 => {
-                self.values.set_bit("Клапан 24В", enb).unwrap();
-                self.values.set_bit("Клапан 2", false).unwrap();
-                self.values.set_bit("Насос", false).unwrap();
+                self.values.set_bit("Клапан напуска воздуха", enb).unwrap();
+                self.values.set_bit("Клапан насоса М5 вакуум", false).unwrap();
+                self.values.set_bit("Клапан насоса М6 вакуум", false).unwrap();
             }, _ => {}
             }
         }}

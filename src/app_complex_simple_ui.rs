@@ -76,7 +76,8 @@ impl Application for App {
             low: HalfComplect::new(values_1, logic.invertor_1.clone()),
             top: HalfComplect::new(values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
-                .get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])),
+                //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
+                .clone()),
             dozator: ui::Dozator::new(logic.dozator.clone()),
         
             logic: logic,
@@ -97,7 +98,7 @@ impl Application for App {
     }
     fn scale_factor(&self) -> f64 {0.8}
 
-        fn subscription(&self) -> Subscription<Self::Message> {
+    fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             time::every(std::time::Duration::from_millis(500))
             .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
@@ -136,7 +137,8 @@ impl Application for App {
         let half_2 = Row::new()
             .spacing(20)
             .push(low)
-            .push(top);
+//             .push(top)
+            ;
         let dozator = self.dozator.view().map(Message::DozatorUI);
         let klapans = self.klapans.view().map(Message::KlapansUI);
         let col = Column::new()

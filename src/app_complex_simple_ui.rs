@@ -96,7 +96,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.8}
+    fn scale_factor(&self) -> f64 {0.6}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
@@ -137,8 +137,7 @@ impl Application for App {
         let half_2 = Row::new()
             .spacing(20)
             .push(low)
-//             .push(top)
-            ;
+            .push(top);
         let dozator = self.dozator.view().map(Message::DozatorUI);
         let klapans = self.klapans.view().map(Message::KlapansUI);
         let col = Column::new()
@@ -149,14 +148,15 @@ impl Application for App {
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
                 .style(ui::style::Button::Exit));
-        col.into()
-//         Container::new(col)
-//             .width(Length::Fill)
-//             .height(Length::Fill)
-//             .padding(10)
-//             .center_x()
-//             .center_y()
-//             .into()
+//         col.into()
+        let col = col.push(Space::with_height(Length::Fill));
+        Container::new(col)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(20)
+            .center_x()
+            .center_y()
+            .into()
     }
 }
 
@@ -319,7 +319,8 @@ mod half_complect {
             let list_value = self.values_list.iter()
                 .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
             let inv = self.invertor.view().map(Message::InvertorUI);
-            let list_value = list_value.push(inv);
+            let list_value = list_value.push(inv)
+                .width(Length::Fill);
             list_value.into()
         }
     }

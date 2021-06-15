@@ -219,20 +219,13 @@ impl App {
     }
     
     fn proccess_speed(&mut self) {
-        use std::convert::TryFrom;
-        let speed_value = self.logic.invertor_1.get_hz_out_value();
-        let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+        use half_complect::SpeedChange;
+        let changed = self.low.proccess_speed();
         
-        let vibra_value = self.logic.owen_analog_2.values_map().get("Вибродатчик дв. М1/value").unwrap().clone();
-        let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
-            
-        if self.low.invertor.is_started == false && speed_value > 5.0 {
-            self.low.invertor.is_started = true;
-            self.reset_values();
-        } else if self.low.invertor.is_started == true
-                && (speed_value < 2.0 && vibra_value<0.2) {
-            self.low.invertor.is_started = false;
-            self.log_save();
+        match changed {
+        SpeedChange::Up => self.reset_values(),
+        SpeedChange::Down => self.log_save(),
+        SpeedChange::None => {}
         };
     }
     fn log_save(&mut self) {
@@ -280,6 +273,12 @@ mod half_complect {
         InvertorUI(ui::invertor::Message),
         UpdateValues,
     }
+    
+    pub enum SpeedChange {
+        None,
+        Up, 
+        Down,
+    }
 
     impl HalfComplect {
 //         pub fn new_by_name(values: ModbusValues
@@ -322,6 +321,40 @@ mod half_complect {
             let list_value = list_value.push(inv)
                 .width(Length::Fill);
             list_value.into()
+        }
+    }
+    
+    impl HalfComplect {
+        pub fn has_speed(&self) -> bool {
+            use std::convert::TryFrom;
+            let speed_value = self.invertor.get_hz_out_value();
+            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+            speed_value > 5.0
+        }
+        
+//         pub fn has_vibra(&self) -> bool {
+//         
+//         }
+        
+        pub fn proccess_speed(&mut self) -> SpeedChange {
+            use std::convert::TryFrom;
+            let speed_value = self.invertor.get_hz_out_value();
+            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
+            
+            let vibra_value = self.values.get("Вибродатчик дв. М1/value").unwrap().clone();
+            let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+                
+            if self.invertor.is_started == false && speed_value > 5.0 {
+                self.invertor.is_started = true;
+// //                 self.reset_values();
+                return SpeedChange::Up;
+            } else if self.invertor.is_started == true
+                    && (speed_value < 2.0 && vibra_value<0.2) {
+                self.invertor.is_started = false;
+// //                 self.log_save();
+                return SpeedChange::Down;
+            };
+            return SpeedChange::None;
         }
     }
 }

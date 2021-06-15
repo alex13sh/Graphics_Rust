@@ -93,7 +93,7 @@ pub fn make_value_lists_start(modbus_values: &ModbusValues, values_groups: BTree
             ValuesList {
                 name: name,
                 values: values.into_iter().flat_map(|name| { 
-                    modbus_values.get_value_arc_stars(&name)
+                    modbus_values.get_value_arc_starts(&name)
                 }).collect(),
             }
         ).collect()

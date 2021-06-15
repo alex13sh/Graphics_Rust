@@ -232,7 +232,7 @@ impl App {
         if self.log_values.len() > 0 {
             self.log.new_session(&self.log_values);
 
-            log::Logger::new_table_fields(&self.log_values, 1, vec![
+            let vec_map = vec![
             ("Скорость", "4bd5c4e0a9"),
             ("Ток", "5146ba6795"),
             ("Напряжение", "5369886757"),
@@ -241,7 +241,21 @@ impl App {
             ("Температура статора", "1) МВ210-101/1/value"),
             ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
             ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
-            ]);
+            ];
+            
+            let values: Vec<modbus::ValueArc> = {
+            let values = self.logic.get_values().get_values_by_name_ends(&["value", "bit"]);
+            let values: HashMap<_,_> = values.iter()
+                .filter(|(k,_)| k.matches("/").count()<=1)
+                .map(|(k,v)| (k.clone(), v.clone()))
+                .collect();
+            let values = ModbusValues::from(values);
+                values.into()
+            };
+            let vec_map: Vec<(&str, &str)> = values.iter()
+                .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
+            
+            log::Logger::new_table_fields(&self.log_values, 1, vec_map);
 
             self.log_values = Vec::new();
         }
@@ -289,7 +303,7 @@ mod half_complect {
                 .map(|(k,v)| (k.clone(), v.clone()))
                 .collect();
             let values = ModbusValues::from(values);
-            dbg!(values.keys());
+//             dbg!(values.get_values_by_name_ends(&["value", "bit"]).keys());
             
             HalfComplect {
                 invertor: ui::Invertor::new(invertor),

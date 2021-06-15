@@ -292,7 +292,7 @@ impl ModbusValues {
         )
     }
     
-    pub fn get_value_arc_stars(&self, name: &str) -> Option<ValueArc> {
+    pub fn get_value_arc_starts(&self, name: &str) -> Option<ValueArc> {
         let (name, v) = self.0.iter().find(|&(n,_)| 
             n.starts_with(name) &&
             (n.ends_with("/value") ||

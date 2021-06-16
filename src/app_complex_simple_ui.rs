@@ -219,13 +219,16 @@ impl App {
     }
     
     fn proccess_speed(&mut self) {
-        use half_complect::SpeedChange;
-        let changed = self.low.proccess_speed();
-        
-        match changed {
-        SpeedChange::Up => self.reset_values(),
-        SpeedChange::Down => self.log_save(),
-        SpeedChange::None => {}
+        use half_complect::SpeedChange::*;
+        let is_started_1 = self.low.is_started() | self.top.is_started();
+        let changed_low = self.low.proccess_speed();
+        let changed_top = self.top.proccess_speed();
+        let is_started_2 = self.low.is_started() | self.top.is_started();
+        let _change = changed_low.or(changed_top);
+        match (is_started_1, is_started_2) {
+        (false, true) => self.reset_values(),
+        (true, false) => self.log_save(),
+        _ => {}
         };
     }
     fn log_save(&mut self) {
@@ -289,7 +292,6 @@ mod half_complect {
     }
     
     pub enum SpeedChange {
-        None,
         Up, 
         Down,
     }
@@ -346,11 +348,14 @@ mod half_complect {
             speed_value > 5.0
         }
         
+        pub fn is_started(&self) -> bool {
+            self.invertor.is_started
+        }
 //         pub fn has_vibra(&self) -> bool {
 //         
 //         }
         
-        pub fn proccess_speed(&mut self) -> SpeedChange {
+        pub fn proccess_speed(&mut self) -> Option<SpeedChange> {
             use std::convert::TryFrom;
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
@@ -361,14 +366,14 @@ mod half_complect {
             if self.invertor.is_started == false && speed_value > 5.0 {
                 self.invertor.is_started = true;
 // //                 self.reset_values();
-                return SpeedChange::Up;
+                return Some(SpeedChange::Up);
             } else if self.invertor.is_started == true
                     && (speed_value < 2.0 && vibra_value<0.2) {
                 self.invertor.is_started = false;
 // //                 self.log_save();
-                return SpeedChange::Down;
+                return Some(SpeedChange::Down);
             };
-            return SpeedChange::None;
+            return None;
         }
     }
 }

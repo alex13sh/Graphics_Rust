@@ -223,6 +223,7 @@ impl TryFrom<&Value> for f32 {
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value() as f32),
         ValueSize::UInt16Map(f) => Ok(f(val.value())),
+        ValueSize::Bit(_pin) => Ok(if val.get_bit() {1.0} else {0.0}),
         _ => Err(ValueFloatError::ValueFalse),
         };
 //         if let Ok(v) = res {

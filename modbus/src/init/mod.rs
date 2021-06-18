@@ -96,7 +96,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
 
 pub fn make_i_digit(ip_address: String) -> Device {
     use devices::make_value;
-    use devices::owen_digit::make_counter;
+    use devices::owen_digit::{make_counter, make_read_bit};
     
     let prefix = format!("{}", "3) МК210-302");
     Device {
@@ -118,6 +118,8 @@ pub fn make_i_digit(ip_address: String) -> Device {
 
             make_counter(1, "Наличие потока нижний подшипник", (0, 0)),
             make_counter(2, "Наличие потока верхний подшипник", (0, 0)),
+            make_read_bit(11, "Уровень масла в маслостанции 1"),
+            make_read_bit(12, "Уровень масла в маслостанции 2"),
         ].into_iter().flatten().collect()),    
     }
 }

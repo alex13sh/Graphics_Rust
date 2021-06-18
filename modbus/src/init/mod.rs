@@ -143,6 +143,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
             make_shim(1, "Двигатель подачи материала в камеру"),
+            make_klapan(2, "Направление вращения двигателя ШД" ),
             
 //             make_shim(6, "Двигатель насоса вакуума М5"),
 //             make_shim(7, "Двигатель маслостанции М4"),

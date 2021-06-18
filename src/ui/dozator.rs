@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 pub struct Dozator {
     ui: UI,
-    shim_hz: u32,
+    shim_hz: i32,
     shim_hz_enb: bool,
     device: meln_logic::devices::Dozator,
 }
@@ -22,7 +22,7 @@ struct UI {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ShimHzChanged(u32),
+    ShimHzChanged(i32),
     SetShimHz, SetShimHzFinished,
 }
 
@@ -70,7 +70,7 @@ impl Dozator {
         let slider = {
             let slider = Slider::new(
                 &mut self.ui.shim_hz,
-                0..=20,
+                -20..=20,
                 self.shim_hz,
                 Message::ShimHzChanged
             )

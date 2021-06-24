@@ -161,6 +161,15 @@ impl From<DeviceInit> for Device {
             .collect();
         
         {
+            let new_values: Vec<_> = values.iter()
+                .flat_map(|(_name, v)| v.get_values_bit())
+                .collect();
+
+            for v in new_values {
+                values.insert(v.name().clone(), Arc::new(v));
+            }
+        }
+        {
             let mut map: HashMap<_, Arc<Value>> = HashMap::new();
             for (name, v) in values.iter_mut() {
                 if let Some(v_) = map.get(&v.address()) {

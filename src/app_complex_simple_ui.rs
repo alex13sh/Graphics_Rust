@@ -35,11 +35,13 @@ pub struct App {
 #[derive(Default)]
 struct UI {
     pb_exit: button::State,
+    pb_stop: button::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ButtonExit,
+    EmergencyStop, // Аварийная остановка
     
     TopHalfComplectUI(half_complect::Message),
     LowHalfComplectUI(half_complect::Message),
@@ -111,6 +113,10 @@ impl Application for App {
     
         match message {
         Message::ButtonExit => self.has_exit = true,
+        Message::EmergencyStop => {
+            self.top.invertor.stop();
+            self.low.invertor.stop();
+        },
         Message::LowHalfComplectUI(m) => self.low.update(m),
         Message::TopHalfComplectUI(m) => self.top.update(m),
         Message::DozatorUI(m) => {
@@ -145,6 +151,9 @@ impl Application for App {
             .push(half_2)
             .push(dozator)
             .push(klapans)
+            .push(Button::new(&mut self.ui.pb_stop, Text::new("Аварийная Остановка!"))
+                .on_press(Message::EmergencyStop)
+                .style(ui::style::Button::Exit))
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
                 .style(ui::style::Button::Exit));

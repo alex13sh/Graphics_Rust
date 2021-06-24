@@ -49,7 +49,7 @@ impl Complect {
         let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13")));
 
         let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2]);
-        let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/"]);
+        let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/", "Направление вращения двигателя ШД/"]);
         Complect {
             values: values,
             

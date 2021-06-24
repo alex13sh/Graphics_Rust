@@ -45,6 +45,16 @@ impl Value {
         ValueDirect::Write => None,
         }
     }
+    pub fn is_error(&self) -> bool {
+        use std::convert::TryFrom;
+        let v = f32::try_from(self);
+        if let Ok(v) = v {
+            if let Some(err) = self.get_error() {
+                err.yellow > v
+            } else {false}
+        } else {true}
+    }
+
     pub fn is_log(&self) -> bool {
         self.log.is_some()
     }

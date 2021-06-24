@@ -20,6 +20,7 @@ pub struct App {
     ui: UI,
     has_exit: bool,
     logic: meln_logic::init::Complect,
+    txt_status: String,
     
     klapans: ui::Klapans,
     dozator: ui::Dozator,
@@ -74,6 +75,7 @@ impl Application for App {
         (App {
             ui: Default::default(),
             has_exit: false,
+            txt_status: "".into(),
             
             low: HalfComplect::new(values_1, logic.invertor_1.clone()),
             top: HalfComplect::new(values_2, logic.invertor_2.clone()),
@@ -153,12 +155,21 @@ impl Application for App {
             .push(klapans)
             .push(Button::new(&mut self.ui.pb_stop, Text::new("Аварийная Остановка!"))
                 .on_press(Message::EmergencyStop)
-                .style(ui::style::Button::Exit))
+                .style(ui::style::Button::Exit));
+//         col.into()
+
+        let txt_status = Text::new(format!("Status: {}", self.txt_status));
+        let row_exit = Row::new()
+            .push(txt_status)
+            .push(Space::with_width(Length::Fill))
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
                 .style(ui::style::Button::Exit));
-//         col.into()
-        let col = col.push(Space::with_height(Length::Fill));
+
+        let col = col
+            .push(Space::with_height(Length::Fill))
+            .push(row_exit);
+
         Container::new(col)
             .width(Length::Fill)
             .height(Length::Fill)
@@ -219,12 +230,17 @@ impl App {
         let values = self.logic.get_values();
         let mut log_values: Vec<_> = {
             values.iter()
-            .map(|(k, v)| v)
+            .map(|(_k, v)| v)
             .filter(|v| v.is_log())
             .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
             .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
         };
         self.log_values.append(&mut log_values);
+
+        let warn = values.iter().map(|(_,v)| v)
+            .map(|v| v.is_error())
+            .any(|err| err);
+        self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
     
     fn proccess_speed(&mut self) {

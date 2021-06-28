@@ -45,9 +45,9 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
         address: DeviceAddress::TcpIP(ip_addres.into()),
         values: Some(vec![
             make_values(1, "Температура статора двигатель М1", (60, 85)),
-            make_values(2, "Температура масла на выходе дв. М1 Низ", (60, 85)), // <<-- ValueError
-            make_values(3, "Температура масла на выходе дв. М2 Низ", (60, 85)), // <<-- ValueError
-            make_values(4, "Температура масла на выходе маслостанции", (60, 85)), // <<-- ValueError
+            make_values(2, "Температура масла на выходе дв. М1 Низ", (100, 120)), // <<-- ValueError
+            make_values(3, "Температура масла на выходе дв. М2 Низ", (100, 120)), // <<-- ValueError
+            make_values(4, "Температура масла на выходе маслостанции", (100, 120)), // <<-- ValueError
             make_values(5, "Температура статора двигатель М2", (60, 85)),
             make_values(6, "Температура подшипника дв. М1 верх", (60, 80)),
             make_values(7, "Температура подшипника дв. М2 верх", (60, 80)),

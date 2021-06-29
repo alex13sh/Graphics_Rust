@@ -77,8 +77,8 @@ impl Application for App {
             has_exit: false,
             txt_status: "".into(),
             
-            low: HalfComplect::new(values_1, logic.invertor_1.clone()),
-            top: HalfComplect::new(values_2, logic.invertor_2.clone()),
+            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
+            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
                 .clone()),
@@ -142,16 +142,16 @@ impl Application for App {
         let top = self.top.view()
             .map(Message::TopHalfComplectUI);
             
-        let half_2 = Row::new()
+        let half_2 = Column::new()
             .spacing(20)
-            .push(low)
-            .push(top);
+            .push(top)
+            .push(low);
         let dozator = self.dozator.view().map(Message::DozatorUI);
         let klapans = self.klapans.view().map(Message::KlapansUI);
         let col = Column::new()
             .spacing(10)
-            .push(half_2)
             .push(dozator)
+            .push(half_2)
             .push(klapans)
             .push(Button::new(&mut self.ui.pb_stop, Text::new("Аварийная Остановка!"))
                 .on_press(Message::EmergencyStop)
@@ -294,7 +294,7 @@ impl App {
     }
 }
 
-use half_complect::HalfComplect;
+use half_complect::{HalfComplect, HalfPart};
 mod half_complect {
     use super::*;
     
@@ -303,6 +303,11 @@ mod half_complect {
         values: ModbusValues,
         
         values_list: Vec<ui::ValuesList>,
+        part: HalfPart,
+    }
+    pub enum HalfPart {
+        Top, // Верхняя часть
+        Low, // Нижняя часть
     }
 
     #[derive(Default)]
@@ -323,7 +328,7 @@ mod half_complect {
 
     impl HalfComplect {
 //         pub fn new_by_name(values: ModbusValues
-        pub fn new(values: ModbusValues, invertor: modbus::Invertor) -> Self {
+        pub fn new(part: HalfPart, values: ModbusValues, invertor: modbus::Invertor) -> Self {
 //             dbg!(values.keys());
             let values: HashMap<_,_> = values.iter()
                 .filter(|(k,_)| k.matches("/").count()<=1)
@@ -344,6 +349,7 @@ mod half_complect {
                     ]
                 }),
                 values: values,
+                part: part,
             }
         }
         
@@ -359,9 +365,18 @@ mod half_complect {
             let list_value = self.values_list.iter()
                 .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
             let inv = self.invertor.view().map(Message::InvertorUI);
-            let list_value = list_value.push(inv)
-                .width(Length::Fill);
-            list_value.into()
+
+            let mut column = Column::new().spacing(10);
+            column = match self.part {
+            HalfPart::Top =>
+                column.push(list_value)
+                .push(inv),
+            HalfPart::Low =>
+                column.push(inv)
+                .push(list_value)
+            };
+            column = column.width(Length::Fill);
+            column.into()
         }
     }
     

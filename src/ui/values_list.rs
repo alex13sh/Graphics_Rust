@@ -34,7 +34,7 @@ pub struct ValuesList {
 impl ValuesList {
 
     pub fn view<'a, Message: 'a>(&'a self) -> Element<'a, Message> {
-        let mut lst = Column::new().width(Length::Units(550)).spacing(2);
+        let mut lst = Column::new().width(Length::Units(700)).spacing(2);
         for v in &self.values {
             dbg!(v.name());
             lst = lst.push(Self::view_value(v));
@@ -65,7 +65,7 @@ impl ValuesList {
         }}
         let text = Text::new(
             format!("{}\n{}", name, txt_value)
-        ).size(28)
+        ).size(34)
         .color(color);
 
         Container::new(text)

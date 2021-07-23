@@ -19,7 +19,11 @@ impl Dozator {
 //             hz: 0,
         })
     }
-    pub fn set_value(&self, finish_value: i32) -> impl Stream<Item = i32>  {
+    pub fn set_value(&self, value: f32) {
+        self.direct.set_bit(value>=0.0);
+        self.hz_value.set_value(value as u32);
+    }
+    pub fn set_value_stream(&self, finish_value: i32) -> impl Stream<Item = i32>  {
         let hz_value = self.hz_value.clone();
         let direct = self.direct.clone();
         stream! {

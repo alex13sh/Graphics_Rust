@@ -36,7 +36,7 @@ impl ValuesList {
     pub fn view<'a, Message: 'a>(&'a self) -> Element<'a, Message> {
         let mut lst = Column::new().width(Length::Units(700)).spacing(2);
         for v in &self.values {
-            dbg!(v.name());
+//             dbg!(v.name());
             lst = lst.push(Self::view_value(v));
         }
         lst.into()

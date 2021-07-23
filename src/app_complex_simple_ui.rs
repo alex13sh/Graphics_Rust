@@ -104,11 +104,15 @@ impl Application for App {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-            time::every(std::time::Duration::from_millis(500))
-            .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
-//             time::every(std::time::Duration::from_millis(500))
-//             .map(|_| MessageMudbusUpdate::GraphicUpdate),
-        ]).map(Message::MessageUpdate)
+//             Subscription::batch(vec![
+//                 time::every(std::time::Duration::from_millis(500))
+//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
+//     //             time::every(std::time::Duration::from_millis(500))
+//     //             .map(|_| MessageMudbusUpdate::GraphicUpdate),
+//
+//             ]).map(Message::MessageUpdate),
+            self.dozator.subscription().map(Message::DozatorUI),
+        ])
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {

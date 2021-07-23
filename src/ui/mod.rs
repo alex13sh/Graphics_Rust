@@ -9,3 +9,15 @@ pub mod values_list;
 pub use values_list::{ValuesList, make_value_lists, make_value_lists_start};
 
 pub mod style;
+
+mod liner_animation;
+
+pub mod animations {
+    pub use super::liner_animation::LinerAnimation;
+
+    #[derive(Debug, Clone)]
+    pub enum Progress {
+        Value(f32),
+        Finished,
+    }
+}

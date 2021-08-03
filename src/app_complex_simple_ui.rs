@@ -26,6 +26,7 @@ pub struct App {
     dozator: ui::Dozator,
     top: HalfComplect,
     low: HalfComplect,
+    oil_station: ui::OilStation,
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
@@ -47,6 +48,7 @@ pub enum Message {
     TopHalfComplectUI(half_complect::Message),
     LowHalfComplectUI(half_complect::Message),
     
+    OilStation(ui::oil_station::Message),
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
     
@@ -83,6 +85,7 @@ impl Application for App {
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
                 .clone()),
             dozator: ui::Dozator::new(logic.dozator.clone()),
+            oil_station: ui::OilStation::new(logic.get_values().clone()),
         
             logic: logic,
             log: log::Logger::open_csv(),
@@ -131,6 +134,7 @@ impl Application for App {
 //             self.logic.update_new_values();
             return res;
         },
+        Message::OilStation(m) => self.oil_station.update(m),
         Message::KlapansUI(m) => {
             self.klapans.update(m);
             self.logic.update_new_values();
@@ -150,12 +154,19 @@ impl Application for App {
             .spacing(20)
             .push(top)
             .push(low);
+        let oil_station = self.oil_station.view()
+            .map(Message::OilStation);
+        let oil_station = Container::new(oil_station);
+        let half_2_oil = Row::new().spacing(20)
+            .push(half_2.width(Length::FillPortion(10)))
+            .push(oil_station.width(Length::FillPortion(10)));
+
         let dozator = self.dozator.view().map(Message::DozatorUI);
         let klapans = self.klapans.view().map(Message::KlapansUI);
         let col = Column::new()
             .spacing(10)
             .push(dozator)
-            .push(half_2)
+            .push(half_2_oil)
             .push(klapans)
             .push(Button::new(&mut self.ui.pb_stop, Text::new("Аварийная Остановка!"))
                 .on_press(Message::EmergencyStop)

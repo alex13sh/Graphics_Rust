@@ -4,9 +4,12 @@ pub mod klapans;
 pub use klapans::Klapans;
 pub mod dozator;
 pub use dozator::Dozator;
-// #[macro_use]
+#[macro_use]
 pub mod values_list;
 pub use values_list::{ValuesList, make_value_lists, make_value_lists_start};
+
+pub mod oil_station;
+pub use oil_station::OilStation;
 
 pub mod style;
 

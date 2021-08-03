@@ -80,7 +80,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: Some(vec![
-            make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5)),
+            make_sensor_davl(1, "Давление масла на выходе маслостанции", (0.1, 0.5)),
             make_sensor_davl(3, "Давление воздуха компрессора", (0.1, 0.5)),
             make_sensor(4, "Разрежение воздуха в системе", (100, 106)),
             

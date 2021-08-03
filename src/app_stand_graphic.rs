@@ -204,8 +204,12 @@ impl Application for App {
 //         let content = Text::new("Пустое окно");
 
 //         let list_value = self.view_list_value();
+        let list_view_style = ui::values_list::Style {
+            text_size: 22,
+            column_width: 500,
+        };
         let list_value = self.values_list.iter()
-            .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
+            .fold(Column::new().spacing(20), |lst, v| lst.push(v.view_with_style(list_view_style.clone())));
         let graph = self.graph.view()
             .map(Message::GraphicMessage);
             

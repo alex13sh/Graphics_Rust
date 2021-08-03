@@ -34,14 +34,23 @@ pub struct ValuesList {
 impl ValuesList {
 
     pub fn view<'a, Message: 'a>(&'a self) -> Element<'a, Message> {
-        let mut lst = Column::new().width(Length::Units(700)).spacing(2);
+        self.view_with_style( Style {
+            text_size: 34,
+            column_width: 700,
+        })
+    }
+
+    pub fn view_with_style<'a, Message: 'a>(&'a self, style: Style) -> Element<'a, Message> {
+        let mut lst = Column::new()
+            .width(Length::Units(style.column_width))
+            .spacing(2);
         for v in &self.values {
 //             dbg!(v.name());
-            lst = lst.push(Self::view_value(v));
+            lst = lst.push(Self::view_value(v, &style));
         }
         lst.into()
     }
-    fn view_value<'a, Message: 'a>(value: &ValueArc) -> Element<'a, Message> {
+    fn view_value<'a, Message: 'a>(value: &ValueArc, style: &Style) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
         let err = value.get_error();
         let name = value.name().unwrap();
@@ -65,7 +74,7 @@ impl ValuesList {
         }}
         let text = Text::new(
             format!("{}\n{}", name, txt_value)
-        ).size(34)
+        ).size(style.text_size)
         .color(color);
 
         Container::new(text)
@@ -109,4 +118,10 @@ pub fn make_value_lists_start_2(modbus_values: &ModbusValues, values_groups: BTr
                     .get_values_by_name_ends(&["/value"]).into(),
             }
         ).collect()
+}
+
+#[derive(Clone)]
+pub struct Style {
+    pub text_size: u16,
+    pub column_width: u16,
 }

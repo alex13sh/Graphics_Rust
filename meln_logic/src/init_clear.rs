@@ -29,6 +29,7 @@ pub struct Complect {
     pub digit_o: DigitIO,
     pub owen_analog_1: Arc<Device>,
     pub owen_analog_2: Arc<Device>,
+    pub analog_pdu_rs: Arc<Device>,
     
     values: ModbusValues,
 
@@ -46,9 +47,10 @@ impl Complect {
         let digit_i = DigitIO::new(init::make_i_digit("192.168.1.10".into()).into());
         let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).into());
         let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
-        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13")));
+        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11)));
+        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12)));
 
-        let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2]);
+        let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
         let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/", "Направление вращения двигателя ШД/"]);
         Complect {
             values: values,
@@ -59,6 +61,7 @@ impl Complect {
             digit_o: digit_o,
             owen_analog_1: analog_1,
             owen_analog_2: analog_2,
+            analog_pdu_rs: pdu_rs,
             
             dozator: Dozator::new(values_dozator).unwrap(),
         }

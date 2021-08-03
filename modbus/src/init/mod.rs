@@ -17,7 +17,7 @@ pub(crate) fn tst() {
 pub(crate) fn init_devices() -> Vec<Device> {    
     vec![
     make_owen_analog_1("192.168.1.11"),
-    make_owen_analog_2("192.168.1.13"),
+    make_owen_analog_2("192.168.1.13", 11),
     make_i_digit("192.168.1.10".into()),
     make_o_digit("192.168.1.12".into()),
     make_invertor("192.168.1.5".into(), 5),
@@ -56,7 +56,7 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
     }
 }
 
-pub fn make_owen_analog_2(ip_addres: &str) -> Device {
+pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
     use devices::owen_analog::make_sensor_rtu as make_values;
     
     let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
@@ -77,7 +77,7 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
     Device {
         name: "2) МВ110-24.8АС".into(),
         device_type: DeviceType::OwenAnalog,
-        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), 11), // <<--
+        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: Some(vec![
             make_sensor_davl(1, "Давление масла верхний подшипник", (0.1, 0.5)),
@@ -91,6 +91,29 @@ pub fn make_owen_analog_2(ip_addres: &str) -> Device {
             make_sensor(8, "Вибродатчик дв. М2", (10, 16)),
             make_sensor_vibra(7, "Вибродатчик дв. М1", (10.0, 16.0)),
         ].into_iter().flatten().collect()),
+    }
+}
+
+pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
+    Device {
+        name: "PDU-RS".into(),
+        device_type: DeviceType::OwenAnalog,
+        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
+
+        values: Some(vec![
+            Value {
+                log: Log::hash("Значение уровня масла"),
+                .. make_value("value", 0x898, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+            },
+            Value {
+                log: Log::hash("Верхний предел уровня масла"),
+                .. make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+            },
+            Value {
+                log: Log::hash("Нижний предел уровня масла"),
+                .. make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+            },
+        ]),
     }
 }
 

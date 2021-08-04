@@ -90,15 +90,15 @@ impl Application for App {
         let temp_value_names = [
             "2) МВ110-24.8АС/Температура ротора Пирометр дв. М1",
             "1) МВ210-101/Температура статора двигатель М1",
-            "1) МВ210-101/Температура масла на выходе дв. М1 Низ",
-            "1) МВ210-101/Температура подшипника дв. М1 верх",
-            "Invertor/Температура радиатора",
+            "1) МВ210-101/Температура масла на верхн. выходе дв. М1",
         ];
         graphic.add_series("Температуры", false, &temp_value_names);
-        
-        graphic.add_series("Скорость", false, &["Invertor/Выходная частота (H)"]);
+        graphic.add_series("Температуры", true, &["2) МВ110-24.8АС/Давление масла на выходе маслостанции"]);
+
+        graphic.add_series("Скорость", false, &["5) Invertor/Выходная частота (H)"]);
         graphic.add_series("Скорость", true, &["2) МВ110-24.8АС/Вибродатчик дв. М1"]);
-        graphic.add_series("Ток", false, &["Invertor/Выходной ток (A)"]);
+        graphic.add_series("Ток", false, &["5) Invertor/Выходной ток (A)"]);
+        graphic.add_series("Ток", true, &["5) Invertor/Выходное напряжение (E)"]);
         
         (
             Self {

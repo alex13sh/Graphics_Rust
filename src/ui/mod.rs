@@ -1,6 +1,8 @@
 pub mod invertor;
 pub use invertor::Invertor;
-pub mod klapans;
+pub mod klapans_1;
+pub mod klapans_2;
+pub use klapans_2 as klapans;
 pub use klapans::Klapans;
 pub mod dozator;
 pub use dozator::Dozator;

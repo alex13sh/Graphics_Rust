@@ -134,7 +134,10 @@ impl Application for App {
 //             self.logic.update_new_values();
             return res;
         },
-        Message::OilStation(m) => self.oil_station.update(m),
+        Message::OilStation(m) => {
+            self.oil_station.update(m);
+            self.logic.update_new_values();
+        },
         Message::KlapansUI(m) => {
             self.klapans.update(m);
             self.logic.update_new_values();
@@ -415,7 +418,7 @@ mod half_complect {
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
             
-            let vibra_value = self.values.get("Вибродатчик дв. М1/value").unwrap().clone();
+            let vibra_value = self.values.get_value_arc_starts("Вибродатчик").unwrap().value();
             let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
                 
             if self.invertor.is_started == false && speed_value > 5.0 {

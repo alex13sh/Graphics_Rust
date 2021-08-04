@@ -44,13 +44,13 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIP(ip_addres.into()),
         values: Some(vec![
-            make_values(1, "Температура статора двигатель М1", (60, 85)),
-            make_values(2, "Температура масла на верхн. выходе дв. М1", (100, 120)), // <<-- ValueError
-            make_values(3, "Температура масла на нижн. выходе дв. М1", (100, 120)), // <<-- ValueError
-            make_values(4, "Температура масла на выходе маслостанции", (100, 120)), // <<-- ValueError
-            make_values(5, "Температура статора дв. М2", (60, 85)),
-            make_values(6, "Температура верх подшипника дв. М2", (60, 80)),
-            make_values(7, "Температура нижн подшипника дв. М2", (60, 80)),
+            make_values(1, "Температура статора дв. М2", (60, 85)),
+            make_values(2, "Температура верх подшипника дв. М2", (60, 80)),
+            make_values(3, "Температура нижн подшипника дв. М2", (60, 80)),
+            make_values(4, "Температура статора двигатель М1", (60, 85)),
+            make_values(5, "Температура масла на верхн. выходе дв. М1", (100, 120)), // <<-- ValueError
+            make_values(6, "Температура масла на нижн. выходе дв. М1", (100, 120)), // <<-- ValueError
+            make_values(7, "Температура масла на выходе маслостанции", (100, 120)), // <<-- ValueError
             
         ].into_iter().flatten().collect()),
     }
@@ -87,8 +87,8 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
             make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
             make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90)),
             
-            make_sensor_vibra(7, "Вибродатчик дв. М1", (10.0, 16.0)),
-            make_sensor_vibra(8, "Вибродатчик дв. М2", (10.0, 16.0)),
+            make_sensor_vibra(7, "Виброскорость дв. М1", (10.0, 16.0)),
+            make_sensor_vibra(8, "Виброскорость дв. М2", (10.0, 16.0)),
         ].into_iter().flatten().collect()),
     }
 }

@@ -358,14 +358,28 @@ mod half_complect {
             HalfComplect {
                 invertor: ui::Invertor::new(invertor),
                 
-                values_list: ui::make_value_lists_start(&values, map!{BTreeMap,
-                    "Температуры" => [
-                        "Температура статора",
-                        "Температура ротора Пирометр",
-                        "Температура масла на ", // выходе
-                        "Температура ", // подшипника
-                    ]
-                }),
+                values_list: ui::make_value_lists_start(&values,
+                match part {
+                HalfPart::Low => map!{BTreeMap,
+                        "Температуры" => [
+                            "Температура статора",
+                            "Температура ротора Пирометр",
+                            "Температура масла на верхн. выходе дв. М1",
+                            "Температура масла на нижн. выходе дв. М1",
+                            "Виброскорость",
+                        ]
+                    },
+                HalfPart::Top => map!{BTreeMap,
+                        "Температуры" => [
+                            "Температура статора",
+                            "Температура ротора Пирометр",
+                            "Температура верх подшипника дв. М2",
+                            "Температура нижн подшипника дв. М2",
+                            "Виброскорость",
+                        ]
+                    }
+                }
+                ),
                 values: values,
                 part: part,
             }
@@ -418,7 +432,7 @@ mod half_complect {
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
             
-            let vibra_value = self.values.get_value_arc_starts("Вибродатчик").unwrap().value();
+            let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap().value();
             let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
                 
             if self.invertor.is_started == false && speed_value > 5.0 {

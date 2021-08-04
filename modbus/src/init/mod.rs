@@ -136,11 +136,33 @@ pub fn make_i_digit(ip_address: String) -> Device {
                 },
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
-
+            (0..12).map(|i| {
+                make_read_bit(i, &format!("Клапан ШК{} {}", i/2+1,
+                    if i%2==0 {"открыт"} else {"закрыт"}))
+            }).flatten().collect(),
             // Клапана
 
         ].into_iter().flatten().collect()),    
     }
+}
+
+#[test]
+fn test_klapan_input() {
+    use devices::make_value;
+    use devices::owen_digit::{make_counter, make_read_bit};
+    let values: Vec<_> = (0..12).map(|i| {
+                make_read_bit(i+1, &format!("Клапан ШК{} {}", i/2+1,
+                    if i%2==0 {"открыт"} else {"закрыт"}))
+        }).flatten().collect();
+    dbg!(&values);
+//     assert!(false);
+    let names: Vec<_> = values.iter()
+        .skip(1).step_by(2)
+        .map(|v| v.name.clone()).collect();
+    assert_eq!(names[0], "Клапан ШК1 открыт/bit");
+    assert_eq!(names[1], "Клапан ШК1 закрыт/bit");
+    assert_eq!(names[10], "Клапан ШК6 открыт/bit");
+    assert_eq!(names[11], "Клапан ШК6 закрыт/bit");
 }
 
 pub fn make_o_digit(ip_address: String) -> Device {

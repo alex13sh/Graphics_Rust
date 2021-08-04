@@ -184,7 +184,7 @@ fn test_array_contsins() {
     assert_eq!([0,1, 3,4].contains(&1), true);
     assert_eq!([0,1, 3,4].contains(&2), false);
 }
-
+/*
 #[test]
 fn test_invertor_error() {
     let err_num = 2_u8;
@@ -193,4 +193,4 @@ fn test_invertor_error() {
     
     let err: InvertorError = unsafe { ::std::mem::transmute(4_u8) };
     assert_eq!("Замыкание на землю (GFF)", format!("{}", err));
-}
+}*/

@@ -44,14 +44,14 @@ impl Dozator {
     }
 
     pub fn subscription(&self) -> iced::Subscription<Message> {
-        if self.shim_hz_cur != self.shim_hz_new {
+//         if self.shim_hz_cur != self.shim_hz_new {
             iced::Subscription::from_recipe(
                 LinerAnimation::from_to(self.shim_hz_cur as f32, self.shim_hz_new as f32)
                     .steps(20).duration(5_000)
             ).map(Message::AnimationPos)
-        } else {
-            iced::Subscription::none()
-        }
+//         } else {
+//             iced::Subscription::none()
+//         }
     }
 
     pub fn update(&mut self, message: Message, devices: Vec<Arc<modbus::Device>>)  -> Command<Message> {
@@ -68,7 +68,8 @@ impl Dozator {
         Message::AnimationPos(super::animations::Progress::Value(value)) => {
             self.shim_hz_ui = value as i32;
             self.shim_hz_cur = self.shim_hz_ui;
-            dbg!(value);
+//             dbg!(value);
+            self.device.set_value(self.shim_hz_cur);
         },
         Message::AnimationPos(super::animations::Progress::Finished) => {
 //            self.anim.stop();

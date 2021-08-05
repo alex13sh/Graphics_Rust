@@ -68,6 +68,7 @@ where
         self.duration.hash(state);
 
 //         (self.from as i32).hash(state);
+        ((self.to - self.from) == 0.0).hash(state);
         (self.to as i32).hash(state);
     }
 
@@ -102,7 +103,7 @@ where
                 if self.from != self.to {
                     let step_ms = self.duration/self.steps;
                     let dlt_value = (self.to - self.from) / self.steps as f32;
-                    for i in 0..self.steps {
+                    for i in 0..=self.steps {
                         let i = i as f32;
                         let v = (self.from + dlt_value * i);
                         yield Progress::Value(v);

@@ -40,7 +40,8 @@ impl OilStation {
 //                         "PDU-RS/low limit",
                         "Температура масла на выходе маслостанции",
                         "Давление масла на выходе маслостанции",
-                        "5) Invertor/Выходной ток (A)"
+                        "5) Invertor/Выходной ток (A)",
+                        "5) Invertor/Выходная частота (H)",
                     ]
                 }).pop().unwrap(),
             values: values,

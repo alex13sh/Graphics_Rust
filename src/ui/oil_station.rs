@@ -36,10 +36,11 @@ impl OilStation {
             values_list: super::make_value_lists(&values, crate::map!{BTreeMap,
                     "МаслоСтанция" => [
                         "PDU-RS/value",
-                        "PDU-RS/hight limit",
-                        "PDU-RS/low limit",
+//                         "PDU-RS/hight limit",
+//                         "PDU-RS/low limit",
                         "Температура масла на выходе маслостанции",
                         "Давление масла на выходе маслостанции",
+                        "5) Invertor/Выходной ток (A)"
                     ]
                 }).pop().unwrap(),
             values: values,
@@ -52,6 +53,7 @@ impl OilStation {
 //         Message::StartStop(enb) => self.is_started = enb;
         Message::StartStopToggle => {
             self.is_started = !self.is_started;
+//             dbg!(self.is_started);
             self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(self.is_started);
         },
         }

@@ -52,7 +52,7 @@ pub fn filter_values(file_name: &str, step_sec: u16, name_hash: Vec<(&str, &str)
 //                 (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string()
 //                 )
 //             } else {
-                format!("{:.1}", v.value)
+                format!("{:.2}", v.value)
 //             }
             ).step_by(stp)
     }).collect();

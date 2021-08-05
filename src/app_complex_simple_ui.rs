@@ -61,6 +61,7 @@ pub enum MessageMudbusUpdate {
     ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 //     GraphicUpdate,
+    LogUpdate,
 }
 
 impl Application for App {
@@ -107,13 +108,13 @@ impl Application for App {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
-//             Subscription::batch(vec![
-//                 time::every(std::time::Duration::from_millis(500))
-//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
-//     //             time::every(std::time::Duration::from_millis(500))
-//     //             .map(|_| MessageMudbusUpdate::GraphicUpdate),
-//
-//             ]).map(Message::MessageUpdate),
+            Subscription::batch(vec![
+                time::every(std::time::Duration::from_millis(500))
+                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
+                time::every(std::time::Duration::from_millis(500))
+                .map(|_| MessageMudbusUpdate::LogUpdate),
+
+            ]).map(Message::MessageUpdate),
             self.dozator.subscription().map(Message::DozatorUI),
         ])
     }
@@ -217,8 +218,8 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
-                self.proccess_values();
-                self.proccess_speed();
+//                 self.proccess_values();
+//                 self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
     //             dbg!(&d);
@@ -227,18 +228,16 @@ impl App {
                     if !d.is_connect() {
     //                     println!("\tis not connect");
                     } else {
-                        self.proccess_values();
-                        self.proccess_speed();
+//                         self.proccess_values();
+//                         self.proccess_speed();
                     }
                 }
             },
-//             MessageMudbusUpdate::GraphicUpdate => {
-//                 self.graph.update_svg();
-
-//                 self.proccess_values();
-//                 self.proccess_speed();
-
-//             },
+//             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
+            MessageMudbusUpdate::LogUpdate => {
+                self.proccess_values();
+                self.proccess_speed();
+            },
         }
         Command::none()
     }
@@ -282,11 +281,11 @@ impl App {
             ("Скорость", "4bd5c4e0a9"),
             ("Ток", "5146ba6795"),
             ("Напряжение", "5369886757"),
-            ("Вибродатчик", "2) МВ110-24.8АС/7/value"),
-            ("Температура ротора", "2) МВ110-24.8АС/5/value"),
-            ("Температура статора", "1) МВ210-101/1/value"),
-            ("Температура масла на выходе дв. М1 Низ", "1) МВ210-101/2/value"),
-            ("Температура подшипника дв. М1 верх", "1) МВ210-101/6/value"),
+            ("Вибродатчик", "Виброскорость дв. М1/value"),
+            ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+            ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
+            ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
+            ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
             ];
             
             let values: Vec<modbus::ValueArc> = {

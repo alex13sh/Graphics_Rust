@@ -15,7 +15,7 @@ pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResul
     Ok(())
 }
 
-pub fn filter_values(file_name: &str, step_sec: u16, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
+pub fn filter_values(file_name: &str, step_sec: f32, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
     let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
     
     let values = crate::csv::read_values(&cur_path).ok_or("Error read csv")?;
@@ -27,6 +27,8 @@ pub fn filter_values(file_name: &str, step_sec: u16, name_hash: Vec<(&str, &str)
     let dt_dlt = values.last().unwrap().date_time - values.first().unwrap().date_time;
     let cnt = values.iter().filter(move |v| v.hash == "4bd5c4e0a9").count();
     dbg!(&dt_dlt, &cnt);
+    let step_sec = (step_sec * 100.0) as i32;
+    let dt_dlt = dt_dlt * 100;
     let stp = cnt as f32 / (dt_dlt /step_sec as i32).num_seconds() as f32;
     dbg!(&stp);
     let stp = stp.round() as usize;

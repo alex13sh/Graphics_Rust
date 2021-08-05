@@ -57,23 +57,32 @@ impl Device {
         Ok(())
     }
     
-    pub async fn update_async(&self) -> DeviceResult {
-        info!("pub async fn update_async");
+    pub async fn update_async(&self, vibro: bool) -> DeviceResult {
+//         info!("pub async fn update_async");
         if self.ctx.is_poisoned()  {
-            info!(" <- device is busy");
+//             info!(" <- device is busy");
             return Err(DeviceError::ContextBusy);
         } 
-        info!(" -> test busy 2");
+//         info!(" -> test busy 2");
         let ctx = self.context()?;
         if ctx.is_busy() {
-            info!(" <- device is busy");
+//             info!(" <- device is busy");
             return Err(DeviceError::ContextBusy);
         }
-        info!("Device: {} - {:?}", self.name, self.address);
-        let res = ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await;
-        info!("-> res");
+//         info!("Device: {} - {:?}", self.name, self.address);
+        let res = if !vibro {
+            ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await
+            } else {
+                let values = self.values.get_values_by_name_starts(&["Виброскорость дв. "]);
+//                 dbg!(&values);
+                let r = get_ranges_value(&self.values, 1, true);
+//                 dbg!(&r);
+                ctx.update_async(Some(&r)).await
+            };
+
+//         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
-            info!("update_async TimeOut");
+//             info!("update_async TimeOut");
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}

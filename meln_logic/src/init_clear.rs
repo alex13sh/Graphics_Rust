@@ -130,11 +130,31 @@ impl Complect {
                             return res;
                         }
                     }
-                    dc.update_async().await
+                    dc.update_async(false).await
                 };
                 let dc = d.clone();
                 device_futures.push((dc, upd));
             }
+        }
+        device_futures
+    }
+    pub fn update_async_vibro(&self) -> Vec<(Arc<modbus::Device>,
+    impl std::future::Future<Output = DeviceResult>)> {
+        let d = self.owen_analog_2.clone();
+        let mut device_futures = Vec::new();
+        if !d.is_connecting() {
+            let  dc = d.clone();
+            let upd = async move {
+                if !dc.is_connect() {
+                    let res = dc.connect().await;
+                    if res.is_err() {
+                        return res;
+                    }
+                }
+                dc.update_async(true).await
+            };
+            let dc = d.clone();
+            device_futures.push((dc, upd));
         }
         device_futures
     }

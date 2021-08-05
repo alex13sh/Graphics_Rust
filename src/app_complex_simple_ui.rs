@@ -58,7 +58,8 @@ pub enum Message {
 
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
-    ModbusUpdate, ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdate, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsync, ModbusUpdateAsync_Vibro,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 //     GraphicUpdate,
     LogUpdate,
@@ -111,7 +112,9 @@ impl Application for App {
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(500))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
-                time::every(std::time::Duration::from_millis(500))
+                time::every(std::time::Duration::from_millis(100))
+                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
+                time::every(std::time::Duration::from_millis(100))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
             ]).map(Message::MessageUpdate),
@@ -217,6 +220,13 @@ impl App {
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
             },
+            MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
+                let device_futures = self.logic.update_async_vibro();
+                return Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                    ));
+            },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();
 //                 self.proccess_speed();
@@ -264,14 +274,19 @@ impl App {
         use half_complect::SpeedChange::*;
         let is_started_1 = self.low.is_started() | self.top.is_started();
         let changed_low = self.low.proccess_speed();
-        let changed_top = self.top.proccess_speed();
-        let is_started_2 = self.low.is_started() | self.top.is_started();
-        let _change = changed_low.or(changed_top);
-        match (is_started_1, is_started_2) {
-        (false, true) => self.reset_values(),
-        (true, false) => self.log_save(),
-        _ => {}
+        match changed_low {
+        Some(Up) => self.reset_values(),
+        Some(Down) => self.log_save(),
+        _ => {},
         };
+//         let changed_top = self.top.proccess_speed();
+//         let is_started_2 = self.low.is_started() | self.top.is_started();
+//         let _change = changed_low.or(changed_top);
+//         match (is_started_1, is_started_2) {
+//         (false, true) => self.reset_values(),
+//         (true, false) => self.log_save(),
+//         _ => {}
+//         };
     }
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {

@@ -115,6 +115,23 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
                 log: Log::hash("Нижний предел уровня масла"),
                 .. make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
             },
+            make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
+            make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
+            make_value("Применить новые сетевые параметры", 0x15EB, ValueSize::UINT16, ValueDirect::Write),
+        ]),
+    }
+}
+
+pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
+    Device {
+        name: "МКОН".into(),
+        device_type: DeviceType::OwenAnalog,
+        address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
+
+        values: Some(vec![
+            make_value("Скорость обмена", 0x0209, ValueSize::UINT16, ValueDirect::Write),
+            make_value("Кол. стоп-битов", 0x020B, ValueSize::UINT16, ValueDirect::Write),
+//             make_value("IP Address", 0x001A, ValueSize::UINT16, ValueDirect::Read(None)),
         ]),
     }
 }

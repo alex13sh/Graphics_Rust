@@ -205,6 +205,7 @@ impl Application for App {
 // modbus update
 impl App {
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
+        use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
                 self.logic.update();
@@ -213,7 +214,7 @@ impl App {
                 self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
-                let device_futures = self.logic.update_async();
+                let device_futures = self.logic.update_async(UpdateReq::ReadOnly);
 
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
@@ -221,7 +222,8 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
-                let device_futures = self.logic.update_async_vibro();
+//                 self.proccess_values(true);
+                let device_futures = self.logic.update_async(UpdateReq::Vibro);
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))

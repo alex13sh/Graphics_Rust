@@ -2,7 +2,7 @@ pub mod init {
 use modbus::{Value, ModbusValues, ValueError};
 use modbus::init;
 use modbus::invertor::{Invertor, DvijDirect}; // Device
-use modbus::{Device, DeviceResult, DeviceError, DigitIO};
+use modbus::{Device, DeviceResult, DeviceError, UpdateReq, DigitIO};
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -28,8 +28,10 @@ pub struct Complect {
     pub digit_i: DigitIO,
     pub digit_o: DigitIO,
     pub owen_analog_1: Arc<Device>,
+
     pub owen_analog_2: Arc<Device>,
     pub analog_pdu_rs: Arc<Device>,
+    pub owen_mkon: Arc<Device>,
     
     values: ModbusValues,
 
@@ -48,7 +50,8 @@ impl Complect {
         let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).into());
         let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
         let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11)));
-        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12)));
+        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 16)));
+        let owen_mkon = Arc::new(Device::from(init::make_mkon("192.168.1.13", 1)));
 
         let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
         let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/", "Направление вращения двигателя ШД/"]);
@@ -62,7 +65,8 @@ impl Complect {
             owen_analog_1: analog_1,
             owen_analog_2: analog_2,
             analog_pdu_rs: pdu_rs,
-            
+            owen_mkon: owen_mkon,
+
             dozator: Dozator::new(values_dozator).unwrap(),
         }
     }
@@ -117,7 +121,7 @@ impl Complect {
         }
     }
     
-    pub fn update_async(&self) -> Vec<(Arc<modbus::Device>,
+    pub fn update_async(&self, req: UpdateReq) -> Vec<(Arc<modbus::Device>,
     impl std::future::Future<Output = DeviceResult>)> {
         let mut device_futures = Vec::new();
         for d in &self.get_devices() {
@@ -130,7 +134,7 @@ impl Complect {
                             return res;
                         }
                     }
-                    dc.update_async(false).await
+                    dc.update_async(req).await
                 };
                 let dc = d.clone();
                 device_futures.push((dc, upd));

@@ -93,6 +93,7 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+        use modbus::UpdateReq;
         match message {
         Message::ValueEdited(name, value) => 
             if let Some((_old, new)) = self.txt_values.get_mut(&name) {
@@ -110,7 +111,7 @@ impl Application for App {
         },
         Message::ModbusUpdateAsync => {
 //             use futures::future::join_all;
-            let device_futures = self.logic.update_async();
+            let device_futures = self.logic.update_async(UpdateReq::All);
                 
 //             let fut = join_all(device_features);
 //             return Command::perform(fut, move |_| Message::ModbusUpdateAsyncAnswer);

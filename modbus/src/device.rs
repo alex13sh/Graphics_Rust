@@ -25,6 +25,13 @@ pub struct Device {
 
 use log::{info, trace, warn};
 
+#[derive(Copy, Clone)]
+pub enum UpdateReq {
+    ReadOnly,
+    Vibro,
+    All,
+}
+
 impl Device {
     pub fn name(&self) -> &String {
         &self.name
@@ -57,7 +64,7 @@ impl Device {
         Ok(())
     }
     
-    pub async fn update_async(&self, vibro: bool) -> DeviceResult {
+    pub async fn update_async(&self, req: UpdateReq) -> DeviceResult {
 //         info!("pub async fn update_async");
         if self.ctx.is_poisoned()  {
 //             info!(" <- device is busy");
@@ -70,15 +77,15 @@ impl Device {
             return Err(DeviceError::ContextBusy);
         }
 //         info!("Device: {} - {:?}", self.name, self.address);
-        let res = if !vibro {
-            ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await
-            } else {
-                let values = self.values.get_values_by_name_starts(&["Виброскорость дв. "]);
-//                 dbg!(&values);
-                let r = get_ranges_value(&self.values, 1, true);
-//                 dbg!(&r);
-                ctx.update_async(Some(&r)).await
-            };
+        let res = match req {
+        UpdateReq::ReadOnly => ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await,
+        UpdateReq::Vibro => {
+            let values = self.values.get_values_by_name_starts(&["Виброскорость дв. "]);
+            let r = get_ranges_value(&values, 1, true);
+            ctx.update_async(Some(&r)).await
+        },
+        UpdateReq::All => ctx.update_async(Some(&get_ranges_value(&self.values, 1, false))).await,
+        };
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {

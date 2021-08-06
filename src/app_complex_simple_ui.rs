@@ -110,10 +110,10 @@ impl Application for App {
     fn subscription(&self) -> Subscription<Self::Message> {
         Subscription::batch(vec![
             Subscription::batch(vec![
-                time::every(std::time::Duration::from_millis(500))
-                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
                 time::every(std::time::Duration::from_millis(100))
-                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
+                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
+//                 time::every(std::time::Duration::from_millis(100))
+//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
                 time::every(std::time::Duration::from_millis(100))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 

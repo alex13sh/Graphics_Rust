@@ -142,31 +142,36 @@ impl Complect {
         }
         device_futures
     }
-    pub fn update_async_vibro(&self) -> Vec<(Arc<modbus::Device>,
-    impl std::future::Future<Output = DeviceResult>)> {
-        let d = self.owen_analog_2.clone();
-        let mut device_futures = Vec::new();
-        if !d.is_connecting() {
-            let  dc = d.clone();
-            let upd = async move {
-                if !dc.is_connect() {
-                    let res = dc.connect().await;
-                    if res.is_err() {
-                        return res;
-                    }
-                }
-                dc.update_async(true).await
-            };
-            let dc = d.clone();
-            device_futures.push((dc, upd));
-        }
-        device_futures
-    }
+//     pub fn update_async_vibro(&self) -> Vec<(Arc<modbus::Device>,
+//     impl std::future::Future<Output = DeviceResult>)> {
+//         let d = self.owen_analog_2.clone();
+//         let mut device_futures = Vec::new();
+//         if !d.is_connecting() {
+//             let  dc = d.clone();
+//             let upd = async move {
+//                 if !dc.is_connect() {
+//                     let res = dc.connect().await;
+//                     if res.is_err() {
+//                         return res;
+//                     }
+//                 }
+//                 dc.update_async(UpdateReq::Vibro).await
+//             };
+//             let dc = d.clone();
+//             device_futures.push((dc, upd));
+//         }
+//         device_futures
+//     }
     
     pub fn get_devices(&self) -> Vec<Arc<Device>> {
-        [&self.owen_analog_1, &self.owen_analog_2,
-        &self.digit_i.device(), &self.digit_o.device(), 
-        &self.invertor_1.device(), &self.invertor_2.device()]
+        [
+//         &self.owen_mkon,
+//         &self.analog_pdu_rs,
+        &self.owen_analog_1,
+        &self.owen_analog_2,
+        &self.digit_i.device(), &self.digit_o.device(),
+        &self.invertor_1.device(), &self.invertor_2.device()
+        ]
         .iter().map(|&d| d.clone()).collect()
     }
     

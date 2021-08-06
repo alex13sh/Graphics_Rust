@@ -111,12 +111,16 @@ impl ModbusContext {
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
                 let timeout = sleep(Duration::from_millis(100));
                 let res = tokio::select! {
-                buff = buff => Ok(buff.unwrap()),
+                buff = buff => Ok(buff),
                 _ = timeout => Err(DeviceError::TimeOut),
                 };
                 res?
             };
-            Self::update_impl(&self.values, r.clone(), buff);
+            if let Ok(buff) = buff {
+                Self::update_impl(&self.values, r.clone(), buff);
+            } else {
+                println!("-> Range ({:?})", r);
+            }
         }
         Ok(())
     }

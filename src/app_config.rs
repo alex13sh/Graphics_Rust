@@ -104,7 +104,12 @@ impl Application for App {
             self.txt_values = make_values(&self.values);
         }, Message::ModbusWrite => {
             let new_values = self.make_new_values();
-            dbg!(new_values);
+            dbg!(&new_values);
+            for (k,v) in new_values.iter() {
+//                 self.values
+                self.logic.set_value(v.name(), v.value());
+            }
+            self.logic.update_new_values();
             for (ref mut old, new) in self.txt_values.values_mut() {
                 *old = new.clone();
             }

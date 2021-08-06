@@ -92,6 +92,12 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
             
             make_sensor_vibra(7, "Виброскорость дв. М1", (10.0, 16.0)),
             make_sensor_vibra(8, "Виброскорость дв. М2", (10.0, 16.0)),
+
+            vec![
+                make_value("Адрес датчика", 0x50, ValueSize::UINT16, ValueDirect::Write),
+                make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
+                make_value("Записьизменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
+            ]
         ].into_iter().flatten().collect()),
     }
 }

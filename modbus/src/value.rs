@@ -77,7 +77,7 @@ impl Value {
     pub(super) fn clear_flag(&self) {
         (*self.value.lock().unwrap()).1 = false;
     }
-    pub(super) fn is_flag(&self) -> bool {
+    pub/*(super)*/ fn is_flag(&self) -> bool {
         (*self.value.lock().unwrap()).1
     }
     

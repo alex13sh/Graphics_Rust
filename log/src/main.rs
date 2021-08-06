@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 
 use log::*;
+use std::time::Duration;
 
 type MyResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -41,7 +42,7 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
         ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
     ];
-    convert::filter_values(file_name, 0.1, hashs)?;
+    convert::filter_values_3(file_name, Duration::from_millis(100), hashs)?;
     Ok(())
 }
 
@@ -55,7 +56,7 @@ fn filter_values_2(file_name: &str) -> crate::MyResult {
         ("Температура масла на выходе дв. М1 Низ", "OwenAnalog/6/value"),
         ("Температура подшипника дв. М1 верх", "OwenAnalog/5/value"),
     ];
-    convert::filter_values(file_name, 1.0, hashs)?;
+    convert::filter_values(file_name, Duration::from_millis(100), hashs)?;
     Ok(())
 }
 

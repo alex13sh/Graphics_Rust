@@ -2,6 +2,8 @@
 
 use std::fs::File;
 use std::io::prelude::*;
+use std::time::Duration;
+use std::collections::HashMap;
 
 pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResult {
     let path = crate::get_file_path(&(from_dir.to_owned() + file_name+".json"));
@@ -15,7 +17,59 @@ pub fn json2csv(file_name: &str, from_dir: &str, to_dir: &str) -> crate::MyResul
     Ok(())
 }
 
-pub fn filter_values(file_name: &str, step_sec: f32, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
+pub fn filter_values_3(file_name: &str, step_sec: Duration, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
+    let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
+
+    let values = crate::csv::read_values(&cur_path).ok_or("Error read csv")?;
+    let has_speed = values.iter().any(|v| v.hash == "4bd5c4e0a9" && v.value > 10.0);
+    let speed_str = if has_speed {"+"} else {"-"};
+    let new_path = crate::get_file_path("csv/").join(format!("{}{}_filter_{}.csv",speed_str, file_name,step_sec.as_secs_f32()));
+    dbg!(&new_path);
+
+    let dt_finish = values.last().unwrap().date_time;
+    let dt_start = values.first().unwrap().date_time;
+    let dt_dlt =  dt_finish - dt_start;
+    let cnt = values.iter().filter(move |v| v.hash == "4bd5c4e0a9").count();
+    dbg!(&dt_dlt, &cnt);
+    let dt_dlt: Duration = dt_dlt.to_std().unwrap();
+    let step_ms = step_sec.as_millis();
+    let cnt = dt_dlt.as_millis() / step_ms;
+    let cnt = cnt as u32;
+    dbg!(&cnt);
+
+    //Vec::with_capacity(name_hash.len())
+    let mut lst: Vec<Vec<String>> = std::iter::repeat(vec![String::from("");name_hash.len()]).take(cnt as usize+1).collect();
+    let fields: HashMap<_, _> = name_hash.iter().zip(0..).map(|((_,hash), i)| ( hash.to_owned(), i)).collect();
+    dbg!(&fields);
+//     let step_ms = step_sec.as_millis() as i64;
+    for v in values {
+        let i = (v.date_time.timestamp_millis() - dt_start.timestamp_millis())/(step_ms as i64);
+        if let Some(f) = fields.get(&v.hash.as_str()) {
+            dbg!(i, *f);
+            lst[i as usize][*f as usize] = format!("{:.2}", v.value).replace(".", ",");
+        }
+    }
+
+    let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
+    use std::fs::OpenOptions;
+    let mut wrt = ::csv::WriterBuilder::new()
+        .delimiter(b';')
+//         .from_writer(file);
+        .from_path(new_path)?;
+    wrt.write_record(&fields).unwrap();
+
+    dbg!("test");
+    for s in lst {
+        if !s[0].is_empty() {
+            wrt.write_record(&s)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn filter_values(file_name: &str, step_sec: Duration, name_hash: Vec<(&str, &str)>) -> crate::MyResult {
+    let step_sec = step_sec.as_secs_f32();
     let cur_path = crate::get_file_path("csv/").join(file_name.to_owned()+".csv");
     
     let values = crate::csv::read_values(&cur_path).ok_or("Error read csv")?;

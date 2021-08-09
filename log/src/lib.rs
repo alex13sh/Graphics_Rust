@@ -34,7 +34,7 @@ pub mod convert;
 // pub use json::*;
 // pub use csv::*;
 
-pub(crate) type MyResult = Result<(), Box<dyn std::error::Error>>;
+pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn get_file_path(file_name: &str) -> PathBuf {
     let mut path = if let Some(project_dirs) =

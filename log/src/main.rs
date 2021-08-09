@@ -42,7 +42,12 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
         ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
     ];
-    convert::filter_values_3(file_name, Duration::from_millis(100), hashs)?;
+    convert::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/csv_out/"))
+        .fields(hashs)
+        .read_values(file_name)?
+        .make_values_3(Duration::from_millis(100))
+        .write_csv()?;
+//     convert::filter_values_3(file_name, Duration::from_millis(100), hashs)?;
     Ok(())
 }
 
@@ -56,7 +61,11 @@ fn filter_values_2(file_name: &str) -> crate::MyResult {
         ("Температура масла на выходе дв. М1 Низ", "OwenAnalog/6/value"),
         ("Температура подшипника дв. М1 верх", "OwenAnalog/5/value"),
     ];
-    convert::filter_values(file_name, Duration::from_millis(100), hashs)?;
+    convert::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/csv_out/"))
+        .fields(hashs)
+        .read_values(file_name)?
+        .make_values_1(Duration::from_millis(100))?
+        .write_csv()?;
     Ok(())
 }
 

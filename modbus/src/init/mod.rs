@@ -72,7 +72,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
     let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
         make_values(pin, name, value_error.into(), 
             ValueSize::UInt16Map(|v| {
-                if v>500 {dbg!(v);}
+//                 if v>500 {dbg!(v);}
                 v as f32 / 100.0
             })
         );

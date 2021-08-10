@@ -228,6 +228,49 @@ impl OutputValues {
         }
         Ok(())
     }
+
+    pub fn write_excel(self) -> crate::MyResult {
+//         use umya_spreadsheet::*;
+        let conv = &self.converter;
+        let info = &self.info;
+        let new_path = conv.output_path
+            .join(format!("{}_filter_{}.xlsx", conv.file_name, info.step_sec));
+        let mut book = umya_spreadsheet::new_file();
+//         let sht = book.new_sheet("Лог")?;
+        let sht = book.get_sheet_by_name_mut("Sheet1")?;
+
+        for (f, col) in self.fields.iter().zip(1..) {
+            sht.get_cell_by_column_and_row_mut(col, 1).set_value(f);
+        }
+        for (s, row) in self.values.iter()
+//             .filter(|s| !s[0].is_empty())
+            .zip(2..) {
+
+            for (v, col) in s.iter().zip(1..) {
+                if v.is_empty() {
+                    let v = sht.get_cell_by_column_and_row(col, row-1).ok_or("Error Cell")?.get_value().clone();
+                    sht.get_cell_by_column_and_row_mut(col, row).set_value(v);
+                } else {
+                    sht.get_cell_by_column_and_row_mut(col, row).set_value(v);
+                }
+            }
+        }
+
+        let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
+        Ok(())
+    }
+
+}
+
+#[test]
+fn test_excel() -> crate::MyResult {
+
+    let path = std::path::Path::new("/home/user/.local/share/graphicmodbus/csv/+value_09_08_2021__11_58_46_634868986_filter_0.1.xlsx");
+    let mut book = umya_spreadsheet::reader::xlsx::read(path).unwrap();
+    dbg!(book);
+    assert!(false);
+
+    Ok(())
 }
 
 pub struct MyZip <T, U>

@@ -334,6 +334,16 @@ impl ModbusValues {
     }
 }
 
+impl IntoIterator for ModbusValues {
+    type Item = <HashMap<String, Arc<Value>> as IntoIterator>::Item;
+    type IntoIter = <HashMap<String, Arc<Value>> as IntoIterator>::IntoIter;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl ModbusValues {
     pub fn set_bit(&self, name: &str, bit: bool) -> Result<(), ()> {
         let v = self.get(name)

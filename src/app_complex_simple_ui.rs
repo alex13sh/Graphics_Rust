@@ -81,8 +81,8 @@ impl Application for App {
             has_exit: false,
             txt_status: "".into(),
             
-            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_2.clone()),
-            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_1.clone()),
+            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
+            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
                 .clone()),
@@ -108,8 +108,8 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.6}
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        let interval_update = if self.is_started() {100} else {1000};
-        let interval_log = if self.is_started() {100} else {10000};
+        let interval_update = if self.is_worked() {100} else {1000};
+        let interval_log = if self.is_worked() {100} else {10000};
         Subscription::batch(vec![
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
@@ -268,6 +268,10 @@ impl App {
     fn is_started(&self) -> bool {
         self.low.is_started() | self.top.is_started()
     }
+    fn is_worked(&self) -> bool {
+        self.low.is_started() | self.top.is_started()
+        | self.logic.get_bit("Двигатель маслостанции М4").unwrap()
+    }
 
     fn proccess_values(&mut self) {
         use std::convert::TryFrom;
@@ -385,7 +389,10 @@ mod half_complect {
                 .filter(|(k,_)| k.matches("/").count()<=1)
                 .map(|(k,v)| (k.clone(), v.clone()))
                 .collect();
-            let values = ModbusValues::from(values);
+            let mut values = ModbusValues::from(values);
+            let inv_values = invertor.device().values_map()
+                .get_values_by_name_contains(&["Выходной ток (A)","Выходная частота (H)",]);
+            values.extend(inv_values.into_iter());
 //             dbg!(values.get_values_by_name_ends(&["value", "bit"]).keys());
             
             HalfComplect {
@@ -400,6 +407,8 @@ mod half_complect {
                             "Температура масла на верхн. выходе дв. М1",
                             "Температура масла на нижн. выходе дв. М1",
                             "Виброскорость",
+                            "Выходной ток (A)",
+                            "Выходная частота (H)",
                         ]
                     },
                 HalfPart::Top => map!{BTreeMap,
@@ -409,6 +418,8 @@ mod half_complect {
                             "Температура верх подшипника дв. М2",
                             "Температура нижн подшипника дв. М2",
                             "Виброскорость",
+                            "Выходной ток (A)",
+                            "Выходная частота (H)",
                         ]
                     }
                 }
@@ -467,13 +478,15 @@ mod half_complect {
             
             let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap().value();
             let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
+            let tok_value = self.values.get_value_arc("Выходной ток (A)").unwrap().value(); // "Выходной ток (A)"
+            let tok_value = f32::try_from(tok_value.as_ref()).unwrap();
                 
-            if self.invertor.is_started == false && speed_value > 5.0 {
+            if self.invertor.is_started == false && (speed_value > 1.0 || tok_value > 1.0) {
                 self.invertor.is_started = true;
 // //                 self.reset_values();
                 return Some(SpeedChange::Up);
             } else if self.invertor.is_started == true
-                    && (speed_value < 2.0 && vibra_value<0.2) {
+                    && (speed_value < 2.0 && vibra_value<0.2 && tok_value < 2.0) {
                 self.invertor.is_started = false;
 // //                 self.log_save();
                 return Some(SpeedChange::Down);

@@ -59,7 +59,7 @@ pub enum Message {
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
     ModbusUpdate, ModbusUpdateAsyncAnswer,
-    ModbusUpdateAsync, ModbusUpdateAsync_Vibro,
+    ModbusUpdateAsync, ModbusUpdateAsync_Vibro, ModbusConnect,
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 //     GraphicUpdate,
     LogUpdate,
@@ -115,6 +115,8 @@ impl Application for App {
 //                 time::every(std::time::Duration::from_millis(100))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
                 time::every(std::time::Duration::from_millis(100))
+                time::every(std::time::Duration::from_millis(5000))
+                .map(|_| MessageMudbusUpdate::ModbusConnect),
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
             ]).map(Message::MessageUpdate),
@@ -224,6 +226,13 @@ impl App {
             MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
 //                 self.proccess_values(true);
                 let device_futures = self.logic.update_async(UpdateReq::Vibro);
+                return Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                    ));
+            },
+            MessageMudbusUpdate::ModbusConnect => {
+                let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))

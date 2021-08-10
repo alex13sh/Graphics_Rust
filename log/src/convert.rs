@@ -183,7 +183,7 @@ impl InputValues {
         dbg!(&cnt);
 
     //Vec::with_capacity(name_hash.len())
-        let mut lst: Vec<Vec<String>> = std::iter::repeat(vec![String::from("");name_hash.len()]).take(cnt as usize+1).collect();
+        let mut values_f32: Vec<Vec<f32>> = std::iter::repeat(vec![-13.37;name_hash.len()]).take(cnt as usize+1).collect();
         let fields: HashMap<_, _> = name_hash.iter().zip(0..).map(|((_,hash), i)| ( hash.to_owned(), i)).collect();
         dbg!(&fields);
     //     let step_ms = step_sec.as_millis() as i64;
@@ -191,11 +191,29 @@ impl InputValues {
             let i = (v.date_time.timestamp_millis() - dt_start.timestamp_millis())/(step_ms as i64);
             if let Some(f) = fields.get(&v.hash) {
     //             dbg!(i, *f);
-                lst[i as usize][*f as usize] = format!("{:.2}", v.value).replace(".", ",");
+                values_f32[i as usize][*f as usize] = v.value;
             }
         }
 
-        let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
+//         let mut values: Vec<Vec<String>> = std::iter::repeat(vec![String::from("");name_hash.len()+1]).take(cnt as usize+1).collect();
+        let step_sec_f = step_sec.as_secs_f32();
+        let values_str: Vec<_> = values_f32.into_iter().zip(0..)
+            .map(|(row, i)| {
+                let time = i as f32 * step_sec_f;
+                let mut rows = Vec::new();
+                rows.push(format!("{:.1}", time).replace(".", ","));
+                rows.extend(row.into_iter().map(|v|
+                    if v == -13.37 { String::new()}
+                    else { format!("{:.2}", v).replace(".", ",")}
+                ));
+                rows
+            }).collect();
+
+//         let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
+        let mut fields = Vec::new();
+        fields.push(String::from("time"));
+        fields.extend(name_hash.iter().map(|(name,_)| name.to_owned()));
+
         OutputValues {
             converter: self.converter,
             info: TableInfo {
@@ -203,7 +221,7 @@ impl InputValues {
                 step_sec: step_sec.as_secs_f32(),
             },
             fields: fields,
-            values: lst,
+            values: values_str,
         }
     }
 }

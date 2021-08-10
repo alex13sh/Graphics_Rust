@@ -81,8 +81,8 @@ impl Application for App {
             has_exit: false,
             txt_status: "".into(),
             
-            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
-            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
+            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_2.clone()),
+            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_1.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
                 .clone()),
@@ -108,15 +108,17 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.6}
 
     fn subscription(&self) -> Subscription<Self::Message> {
+        let interval_update = if self.is_started() {100} else {1000};
+        let interval_log = if self.is_started() {100} else {10000};
         Subscription::batch(vec![
             Subscription::batch(vec![
-                time::every(std::time::Duration::from_millis(100))
+                time::every(std::time::Duration::from_millis(interval_update))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
 //                 time::every(std::time::Duration::from_millis(100))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
-                time::every(std::time::Duration::from_millis(100))
                 time::every(std::time::Duration::from_millis(5000))
                 .map(|_| MessageMudbusUpdate::ModbusConnect),
+                time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
             ]).map(Message::MessageUpdate),
@@ -263,17 +265,23 @@ impl App {
         Command::none()
     }
     
+    fn is_started(&self) -> bool {
+        self.low.is_started() | self.top.is_started()
+    }
+
     fn proccess_values(&mut self) {
         use std::convert::TryFrom;
         let values = self.logic.get_values();
-        let mut log_values: Vec<_> = {
-            values.iter()
-            .map(|(_k, v)| v)
-            .filter(|v| v.is_log())
-            .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-            .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
-        };
-        self.log_values.append(&mut log_values);
+        if self.is_started() {
+            let mut log_values: Vec<_> = {
+                values.iter()
+                .map(|(_k, v)| v)
+                .filter(|v| v.is_log())
+                .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
+                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+            };
+            self.log_values.append(&mut log_values);
+        }
 
         let warn = values.iter().map(|(_,v)| v)
             .map(|v| v.is_error())
@@ -283,7 +291,7 @@ impl App {
     
     fn proccess_speed(&mut self) {
         use half_complect::SpeedChange::*;
-        let is_started_1 = self.low.is_started() | self.top.is_started();
+        let is_started_1 = self.is_started();
         let changed_low = self.low.proccess_speed();
         match changed_low {
         Some(Up) => self.reset_values(),
@@ -291,7 +299,7 @@ impl App {
         _ => {},
         };
 //         let changed_top = self.top.proccess_speed();
-//         let is_started_2 = self.low.is_started() | self.top.is_started();
+//         let is_started_2 = self.is_started();
 //         let _change = changed_low.or(changed_top);
 //         match (is_started_1, is_started_2) {
 //         (false, true) => self.reset_values(),

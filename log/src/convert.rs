@@ -280,7 +280,7 @@ impl OutputValues {
 
 }
 
-#[test]
+// #[test]
 fn test_excel() -> crate::MyResult {
 
     let path = std::path::Path::new("/home/user/.local/share/graphicmodbus/csv/+value_09_08_2021__11_58_46_634868986_filter_0.1.xlsx");
@@ -291,44 +291,120 @@ fn test_excel() -> crate::MyResult {
     Ok(())
 }
 
-pub struct MyZip <T, U>
-where T: Iterator<Item=U>
-{
-    vec: Vec<T>
-}
-// impl <T, U> MyZip<T, U>
-// where 
-//     T: IntoIterator<Item=U>
-impl <T, U> MyZip<T, U>
-where T: Iterator<Item=U>
-{
-    pub fn new(v: Vec<T>) -> Self 
+pub use inner::*;
+mod inner {
+
+    pub struct MyZip <T, U>
+    where T: Iterator<Item=U>
     {
-        MyZip {
-            vec:v.into_iter()
-            .fold(Vec::new(), |mut v, i| {
-                v.push(i);
-                v
-            })
+        vec: Vec<T>
+    }
+    // impl <T, U> MyZip<T, U>
+    // where
+    //     T: IntoIterator<Item=U>
+    impl <T, U> MyZip<T, U>
+    where T: Iterator<Item=U>
+    {
+        pub fn new(v: Vec<T>) -> Self
+        {
+            MyZip {
+                vec:v.into_iter()
+                .fold(Vec::new(), |mut v, i| {
+                    v.push(i);
+                    v
+                })
+            }
         }
     }
-}
 
-impl <T, U> Iterator for MyZip<T, U>
-where T: Iterator<Item=U>
-{
-    type Item = Vec<U>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.vec.iter_mut()
-            .map(|v| v.next())
-            .collect()
+    impl <T, U> Iterator for MyZip<T, U>
+    where T: Iterator<Item=U>
+    {
+        type Item = Vec<U>;
+        fn next(&mut self) -> Option<Self::Item> {
+            self.vec.iter_mut()
+                .map(|v| v.next())
+                .collect()
+        }
     }
-}
-fn myzip<T, U>(vec: Vec<T>) -> MyZip<T::IntoIter, U>
-where
-    T: IntoIterator<Item=U>
-{
-    MyZip::new(vec.into_iter()
-        .map(|v| v.into_iter())
-        .collect())
+    pub fn myzip<T, U>(vec: Vec<T>) -> MyZip<T::IntoIter, U>
+    where
+        T: IntoIterator<Item=U>
+    {
+        MyZip::new(vec.into_iter()
+            .map(|v| v.into_iter())
+            .collect())
+    }
+
+//     fn convert_cols_to_rows<T>(cols: Vec<Vec<T>>) -> Vec<Vec<T>> {
+//         let mut itr = Box<dyn Iterator>;
+//         for c in cols {
+//             itr = itr.interleave(c);
+//         }
+//         itr.chunks(cols.len()).collect()
+//     }
+
+    use std::iter::Peekable;
+    pub struct InsertByStep <T, I, ITP, P>
+    where I: Iterator<Item=T>,
+        ITP: Iterator<Item=(T,usize)>,
+        P: Iterator<Item=usize>
+    {
+        a: Peekable<ITP>, b: I,
+        pos: Peekable<P>,
+    }
+
+    impl <T, I, ITP, P> Iterator for InsertByStep <T, I, ITP, P>
+        where I: Iterator<Item=T>,
+        ITP: Iterator<Item=(T,usize)>,
+        P: Iterator<Item=usize>
+    {
+        type Item = T;
+        fn next(&mut self) -> Option<Self::Item> {
+            let pos_a = self.a.peek()?.1;
+            let pos_p = self.pos.peek()?;
+            if pos_a == *pos_p {
+                self.pos.next();
+                self.b.next()
+            } else {
+                self.a.next().map(|a| a.0)
+            }
+        }
+    }
+
+    pub fn insert_by_step<T, I, P>(a: I, b: I, pos: P) -> InsertByStep<T, I, impl Iterator<Item=(T,usize)>, P>
+    where I: Iterator<Item=T>,
+        P: Iterator<Item=usize>
+    {
+        InsertByStep {
+            a: a.zip(0..).peekable(), b: b,
+            pos: pos.peekable(),
+        }
+    }
+
+
+    #[test]
+    fn test_iner_step() {
+//         use itertools::Itertools;
+        let a = (0..10);
+        let b = (20..25);
+
+        let mut c = insert_by_step(a, b, (0..).step_by(2));
+
+        assert_eq!(c.next().unwrap(), 20);
+        assert_eq!(c.next().unwrap(), 0);
+        assert_eq!(c.next().unwrap(), 1);
+        assert_eq!(c.next().unwrap(), 21);
+        assert_eq!(c.next().unwrap(), 2);
+        assert_eq!(c.next().unwrap(), 3);
+        assert_eq!(c.next().unwrap(), 22);
+        assert_eq!(c.next().unwrap(), 4);
+        assert_eq!(c.next().unwrap(), 5);
+        assert_eq!(c.next().unwrap(), 23);
+        assert_eq!(c.next().unwrap(), 6);
+        assert_eq!(c.next().unwrap(), 7);
+        assert_eq!(c.next().unwrap(), 24);
+        assert_eq!(c.next().unwrap(), 8);
+        assert_eq!(c.next().unwrap(), 9);
+    }
 }

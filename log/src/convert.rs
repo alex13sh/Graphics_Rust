@@ -34,8 +34,7 @@ pub struct OutputValues {
     converter: Converter,
     info: TableInfo,
     fields: Vec<String>,
-    values_str: ValuesS,
-    values_f: ValuesF,
+    values: ValuesF,
 }
 
 struct TableInfo {
@@ -100,20 +99,12 @@ impl InputValues {
                 .filter(move |v| &v.hash == hash)
                 .zip(0..cnt)
                 .map(move |(v,i)|
-    //             if name == "dt" {
-    //                 format!("{1};{0}", i/stp,
-    //                 (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string()
-    //                 )
-    //             } else {
-                    format!("{:.2}", v.value)
-    //             }
+                    v.value
                 ).step_by(stp)
         }).collect();
 
         let lst : Vec<_> = MyZip::new(lst)
-    //     .take(10)
-    //     .map(|v| v.into_string())
-        .collect();
+            .collect();
     //     dbg!(&lst);
         let cnt = lst.len();
         let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
@@ -125,8 +116,7 @@ impl InputValues {
                 step_sec: step_sec,
             },
             fields: fields,
-            values_str: ValuesMat(lst),
-            values_f: ValuesMat(Vec::new()),
+            values: ValuesMat(lst),
         })
     }
 
@@ -145,15 +135,13 @@ impl InputValues {
                 .filter(move |v| &v.hash == hash)
                 .map(move |v| {
                     let dt = (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string();
-                    if name == "dt" { ( dt.clone(), dt) }
-                    else {(dt, format!("{:.1}", v.value) )}
+                    (dt, v.value)
                 }).collect();
             let val: Vec<_> = dt_value.values().cloned().collect();
             val
         }).collect();
 
         let lst : Vec<_> = myzip(lst)
-    //         .take(5)
             .collect();
         let cnt = lst.len();
         let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
@@ -165,8 +153,7 @@ impl InputValues {
                 step_sec: step_sec.as_secs_f32(),
             },
             fields: fields,
-            values_str: ValuesMat(lst),
-            values_f: ValuesMat(Vec::new()),
+            values: ValuesMat(lst),
         })
     }
 
@@ -211,12 +198,9 @@ impl InputValues {
 //                 ));
 //                 rows
 //             }).collect();
-        let values_str = values_f32.to_string();
+//         let values_str = values_f32.to_string();
 
-//         let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
-        let mut fields = Vec::new();
-        fields.push(String::from("time"));
-        fields.extend(name_hash.iter().map(|(name,_)| name.to_owned()));
+        let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
 
         OutputValues {
             converter: self.converter,
@@ -225,8 +209,8 @@ impl InputValues {
                 step_sec: step_sec.as_secs_f32(),
             },
             fields: fields,
-            values_str: values_str,
-            values_f: values_f32,
+//             values_str: values_str,
+            values: values_f32,
         }
     }
 }
@@ -244,7 +228,8 @@ impl OutputValues {
             .from_path(new_path)?;
         wrt.write_record(&self.fields).unwrap();
 
-        for s in self.values_str {
+        let values_str = self.values.to_string();
+        for s in values_str {
             if !s[0].is_empty() {
                 wrt.write_record(&s)?;
             }
@@ -252,7 +237,7 @@ impl OutputValues {
         Ok(())
     }
 
-    pub fn write_excel(self) -> crate::MyResult {
+    pub fn write_excel(mut self) -> crate::MyResult {
 //         use umya_spreadsheet::*;
         let conv = &self.converter;
         let info = &self.info;
@@ -262,10 +247,19 @@ impl OutputValues {
 //         let sht = book.new_sheet("Лог")?;
         let sht = book.get_sheet_by_name_mut("Sheet1")?;
 
+        self.fields.insert(0, "time".into());
+//         self.values = self.values.insert_column(0, (0..info.count).map(|v| v as f32 *info.step_sec));
+        let values_str = self.values.to_string()
+            .insert_column(0, (0..info.count).map(|v| {
+                let v = v as f32 *info.step_sec;
+                format!("{:.1}", v)
+            }));
+
         for (f, col) in self.fields.iter().zip(1..) {
             sht.get_cell_by_column_and_row_mut(col, 1).set_value(f);
         }
-        for (s, row) in self.values_str.into_iter()
+
+        for (s, row) in values_str.into_iter()
 //             .filter(|s| !s[0].is_empty())
             .zip(2..) {
 

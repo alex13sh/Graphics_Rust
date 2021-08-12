@@ -34,7 +34,8 @@ pub struct OutputValues {
     converter: Converter,
     info: TableInfo,
     fields: Vec<String>,
-    values: Vec<Vec<String>>,
+    values_str: ValuesS,
+    values_f: ValuesF,
 }
 
 struct TableInfo {
@@ -124,7 +125,8 @@ impl InputValues {
                 step_sec: step_sec,
             },
             fields: fields,
-            values: lst,
+            values_str: ValuesMat(lst),
+            values_f: ValuesMat(Vec::new()),
         })
     }
 
@@ -163,7 +165,8 @@ impl InputValues {
                 step_sec: step_sec.as_secs_f32(),
             },
             fields: fields,
-            values: lst,
+            values_str: ValuesMat(lst),
+            values_f: ValuesMat(Vec::new()),
         })
     }
 
@@ -183,7 +186,7 @@ impl InputValues {
         dbg!(&cnt);
 
     //Vec::with_capacity(name_hash.len())
-        let mut values_f32: Vec<Vec<f32>> = std::iter::repeat(vec![-13.37;name_hash.len()]).take(cnt as usize+1).collect();
+        let mut values_f32 = ValuesF::from_size(name_hash.len(), cnt as usize, -13.37);
         let fields: HashMap<_, _> = name_hash.iter().zip(0..).map(|((_,hash), i)| ( hash.to_owned(), i)).collect();
         dbg!(&fields);
     //     let step_ms = step_sec.as_millis() as i64;
@@ -191,23 +194,24 @@ impl InputValues {
             let i = (v.date_time.timestamp_millis() - dt_start.timestamp_millis())/(step_ms as i64);
             if let Some(f) = fields.get(&v.hash) {
     //             dbg!(i, *f);
-                values_f32[i as usize][*f as usize] = v.value;
+                values_f32.0[i as usize][*f as usize] = v.value;
             }
         }
 
 //         let mut values: Vec<Vec<String>> = std::iter::repeat(vec![String::from("");name_hash.len()+1]).take(cnt as usize+1).collect();
         let step_sec_f = step_sec.as_secs_f32();
-        let values_str: Vec<_> = values_f32.into_iter().zip(0..)
-            .map(|(row, i)| {
-                let time = i as f32 * step_sec_f;
-                let mut rows = Vec::new();
-                rows.push(format!("{:.1}", time).replace(".", ","));
-                rows.extend(row.into_iter().map(|v|
-                    if v == -13.37 { String::new()}
-                    else { format!("{:.2}", v).replace(".", ",")}
-                ));
-                rows
-            }).collect();
+//         let values_str: Vec<_> = values_f32.into_iter().zip(0..)
+//             .map(|(row, i)| {
+//                 let time = i as f32 * step_sec_f;
+//                 let mut rows = Vec::new();
+//                 rows.push(format!("{:.1}", time).replace(".", ","));
+//                 rows.extend(row.into_iter().map(|v|
+//                     if v == -13.37 { String::new()}
+//                     else { format!("{:.2}", v).replace(".", ",")}
+//                 ));
+//                 rows
+//             }).collect();
+        let values_str = values_f32.to_string();
 
 //         let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
         let mut fields = Vec::new();
@@ -221,7 +225,8 @@ impl InputValues {
                 step_sec: step_sec.as_secs_f32(),
             },
             fields: fields,
-            values: values_str,
+            values_str: values_str,
+            values_f: values_f32,
         }
     }
 }
@@ -239,7 +244,7 @@ impl OutputValues {
             .from_path(new_path)?;
         wrt.write_record(&self.fields).unwrap();
 
-        for s in self.values {
+        for s in self.values_str {
             if !s[0].is_empty() {
                 wrt.write_record(&s)?;
             }
@@ -260,7 +265,7 @@ impl OutputValues {
         for (f, col) in self.fields.iter().zip(1..) {
             sht.get_cell_by_column_and_row_mut(col, 1).set_value(f);
         }
-        for (s, row) in self.values.iter()
+        for (s, row) in self.values_str.into_iter()
 //             .filter(|s| !s[0].is_empty())
             .zip(2..) {
 
@@ -293,6 +298,61 @@ fn test_excel() -> crate::MyResult {
 
 pub use inner::*;
 mod inner {
+
+    pub type ValuesF = ValuesMat<f32>;
+    pub type ValuesS = ValuesMat<String>;
+
+    pub struct ValuesMat<T>(pub Vec<Vec<T>>);
+
+    impl <T> ValuesMat <T>
+    where T: std::clone::Clone
+    {
+        pub fn from_size(cols: usize, rows: usize, value: T) -> Self {
+            let v = std::iter::repeat(vec![value;cols]).take(rows+1).collect();
+            ValuesMat(v)
+        }
+        pub fn insert_column(self, col: usize, values: impl Iterator<Item=T>) -> Self {
+            if self.0.is_empty() {return ValuesMat(Vec::new());}
+            let rows = self.0[0].len();
+            let v = self.0.into_iter()
+                .zip(values)
+                .map(|(row, v)| {
+                    let mut row_new = Vec::with_capacity(rows+1);
+                    row_new.extend(row.into_iter());
+                    row_new.insert(col, v);
+                    row_new
+                }).collect();
+            ValuesMat(v)
+        }
+    }
+
+    impl ValuesMat<f32> {
+        pub fn to_string(&self) -> ValuesMat<String> {
+            let v = self.0.iter()
+//             .zip(0..)
+//             .map(|(row, i)| {
+            .map(|row| {
+                let mut rows = Vec::new();
+//                 let time = i as f32 * step_sec_f;
+//                 rows.push(format!("{:.1}", time).replace(".", ","));
+                rows.extend(row.into_iter().map(|&v|
+                    if v == -13.37 { String::new()}
+                    else { format!("{:.2}", v).replace(".", ",")}
+                ));
+                rows
+            }).collect();
+            ValuesMat(v)
+        }
+    }
+
+    impl <T> IntoIterator for ValuesMat<T> {
+        type Item = <Vec<Vec<T>> as IntoIterator>::Item;
+        type IntoIter = <Vec<Vec<T>> as IntoIterator>::IntoIter;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
 
     pub struct MyZip <T, U>
     where T: Iterator<Item=U>

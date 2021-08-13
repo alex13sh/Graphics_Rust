@@ -4,7 +4,6 @@ use iced::{
 };
 
 use std::collections::BTreeMap;
-use super::invertor::ui_button_start;
 use super::style;
 
 pub struct OilStation {
@@ -16,7 +15,6 @@ pub struct OilStation {
 
 #[derive(Default)]
 struct UI {
-//     pb_start_stop: ui_button_start::State,
     pb_start_stop: button::State,
 
 }
@@ -25,7 +23,6 @@ struct UI {
 pub enum Message {
 //     StartStop(bool),
     StartStopToggle,
-//     ButtonStart(ui_button_start::Message),
 }
 
 impl OilStation {
@@ -63,16 +60,6 @@ impl OilStation {
     pub fn view(&mut self) -> Element<Message> {
 
         let is_started = self.is_started;
-//         let start = self.ui.pb_start_stop.view(
-//             self.is_started,
-// //                     Message::ToggleStart(!self.is_started)
-//         ).map(move |message| {
-//             if let ui_button_start::Message::ToggleStart(start) = message {
-//                 Message::StartStop(start)
-//             } else {
-//                 Message::ButtonStart(message)
-//             }
-//         });
         let start = Button::new(&mut self.ui.pb_start_stop,
                 if !is_started { Text::new("Start") }
                 else {Text::new("Stop")})

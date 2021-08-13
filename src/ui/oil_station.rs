@@ -61,8 +61,8 @@ impl OilStation {
 
         let is_started = self.is_started;
         let start = Button::new(&mut self.ui.pb_start_stop,
-                if !is_started { Text::new("Start") }
-                else {Text::new("Stop")})
+                if !is_started { Text::new("Запустить маслостанцию") }
+                else {Text::new("Остановить маслостанцию")})
             .style(style::Button::Check{
                     checked: is_started
             }).on_press(Message::StartStopToggle);
@@ -71,7 +71,7 @@ impl OilStation {
 //             .fold(Column::new().spacing(20), |lst, v| lst.push(v.view()));
         let list_value = Column::new().spacing(20)
             .push(self.values_list.view());
-        let mut column = Column::new().spacing(10)
+        let column = Column::new().spacing(10)
             .push(list_value)
             .push(start)
             .width(Length::Fill);

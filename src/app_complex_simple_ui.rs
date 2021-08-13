@@ -27,6 +27,7 @@ pub struct App {
     top: HalfComplect,
     low: HalfComplect,
     oil_station: ui::OilStation,
+    info_pane: ui::InfoPane,
     
     log: log::Logger,
     log_values: Vec<log::LogValue>,
@@ -51,6 +52,7 @@ pub enum Message {
     OilStation(ui::oil_station::Message),
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
+    InfoPane(ui::info_pane::Message),
     
     MessageUpdate(MessageMudbusUpdate),
     
@@ -88,12 +90,13 @@ impl Application for App {
                 .clone()),
             dozator: ui::Dozator::new(logic.dozator.clone()),
             oil_station: ui::OilStation::new(logic.get_values().clone()),
+            info_pane: ui::InfoPane::new(),
         
             logic: logic,
             log: log::Logger::open_csv(),
             log_values: Vec::new(),
         },
-        Command::none())
+        Command::perform(async{MessageMudbusUpdate::ModbusConnect}, Message::MessageUpdate))
     }
     
     fn title(&self) -> String {
@@ -150,6 +153,7 @@ impl Application for App {
             self.klapans.update(m);
             self.logic.update_new_values();
         }
+        Message::InfoPane(_m) => {}
         Message::MessageUpdate(m) => return self.modbus_update(m),
         }
         Command::none()
@@ -167,10 +171,16 @@ impl Application for App {
             .push(low);
         let oil_station = self.oil_station.view()
             .map(Message::OilStation);
-        let oil_station = Container::new(oil_station);
+//         let oil_station = Container::new(oil_station);
+        let info_pane = self.info_pane.view()
+            .map(Message::InfoPane);
+        let right_column = Column::new().spacing(20)
+            .push(oil_station)
+            .push(info_pane);
+            
         let half_2_oil = Row::new().spacing(20)
             .push(half_2.width(Length::FillPortion(10)))
-            .push(oil_station.width(Length::FillPortion(10)));
+            .push(right_column.width(Length::FillPortion(10)));
 
         let dozator = self.dozator.view().map(Message::DozatorUI);
         let klapans = self.klapans.view().map(Message::KlapansUI);
@@ -234,6 +244,7 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
+                println!("MessageMudbusUpdate::ModbusConnect ");
                 let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(

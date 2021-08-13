@@ -12,6 +12,8 @@ pub use values_list::{ValuesList, make_value_lists, make_value_lists_start};
 
 pub mod oil_station;
 pub use oil_station::OilStation;
+pub mod info_pane;
+pub use info_pane::InfoPane;
 
 pub mod style;
 

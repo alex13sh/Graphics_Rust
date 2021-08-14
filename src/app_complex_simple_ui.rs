@@ -349,9 +349,8 @@ impl App {
             let vec_map: Vec<(&str, &str)> = values.iter()
                 .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
             
-            log::Logger::new_table_fields(&self.log_values, 1, vec_map);
-
-            self.log_values = Vec::new();
+            let values = std::mem::take(&mut self.log_values);
+            log::Logger::new_table_fields(values, 1, vec_map);
         }
     }
 

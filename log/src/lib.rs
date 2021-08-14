@@ -25,6 +25,7 @@ pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
         .to_string()
 }
 
+pub mod structs;
 pub mod json;
 pub mod csv;
 
@@ -142,7 +143,7 @@ impl Logger {
             let s = csv::SessionTime {
                 start: start,
                 finish: finish,
-                file_name: Some(format!("value_{}.csv", date_time_to_string_name(&start))),
+                file_name: Some(format!("value_{}.csv", date_time_to_string_name_short(&start))),
                 values: Some(values.clone()),
             };
             csv::write_values(&get_file_path("csv").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
@@ -158,58 +159,17 @@ impl Logger {
         }
     }
     
-    pub fn new_table_fields(values: &Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) {
-        if name_hash.len() < 1 || values.len()<2 {return;}
-        
-        let start = values.first().unwrap().date_time;
-        
-        let dt_dlt = values.last().unwrap().date_time - values.first().unwrap().date_time;
-        let first_hash = name_hash.first().unwrap().1.to_owned();
-        
-        let cnt = values.iter().filter(|v| v.hash == first_hash).count();
-//         dbg!(&dt_dlt, &cnt);
-        let stp = cnt as f32 / (dt_dlt /step_sec as i32).num_seconds() as f32;
-//         dbg!(&stp);
-        let stp = stp as usize;
-        if stp == 0 {return;}
-        
-        let fields: Vec<_> = name_hash.iter().map(|(name,_)| name.to_owned()).collect();
-//         dbg!(&fields);
-        
-//         let name_hash = &mut name_hash;
-//         name_hash.insert(0, (&"dt", &first_hash));
-        
-        let lst: Vec<_> = name_hash.into_iter().map(|(name, hash)| {
-        values.iter()
-            .filter(move |v| &v.hash == hash)
-            .zip(0..cnt)
-            .map(|(v,i)| //if name == &"dt" {
-//                 format!("{1};{0}", i/stp, 
-//                 (v.date_time+crate::Duration::hours(3)).format("%H:%M:%S").to_string()
-//                 )
-//             } else {
-                format!("{:.1}", v.value)
-            ).step_by(stp)
-        }).collect();
-        
-        let lst : Vec<_> = convert::MyZip::new(lst)
-            .collect();
-//     dbg!(lst);
-
-        use std::fs::OpenOptions;
-        let mut wrt = ::csv::WriterBuilder::new()
-//             .has_headers(true)
-            .delimiter(b';')
-            .from_path(
-//                 &get_file_path("csv")
-                PathBuf::from(r"/home/user/Рабочий стол/Graphic/Таблицы/")
-                .join(format!("Table {}.csv", date_time_to_string_name_short(&start)))
-                ).unwrap();
-        wrt.write_record(&fields).unwrap();
-//         dbg!();
-        for s in lst {
-            wrt.write_record(&s).unwrap();
-        }
+    pub fn new_table_fields(values: Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) {
+        if values.is_empty() {return;}
+        use std::time::Duration;
+        let start = values[0].date_time;
+        structs::Converter::output_file(crate::get_file_path("tables/excel/"), 
+            &format!("Table {}.csv", date_time_to_string_name_short(&start)))
+            .from_log_values(values)
+            .fields(name_hash)
+            .make_values_3(Duration::from_millis(100))
+            .write_excel()
+            .unwrap();
         
     }
 }

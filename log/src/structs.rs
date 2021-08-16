@@ -191,12 +191,12 @@ impl OutputValues {
         }
     }
 
-    pub fn insert_time_f32(mut self) -> Self {
+    pub fn insert_time_f32(&mut self) {
         self.fields.insert(0, "time".into());
         let info = &self.info;
-        self.values = self.values.insert_column(0, 
-            (0..self.info.count).map(|v| v as f32 * info.step_sec));
-        self
+        self.values.insert_column(0, 
+            (0..).map(|v| v as f32 * info.step_sec));
+        //self
     }
     
     pub fn write_csv(self) -> crate::MyResult {
@@ -222,45 +222,44 @@ impl OutputValues {
 
     pub fn write_excel(mut self) -> crate::MyResult {
 //         use umya_spreadsheet::*;
+        use excel::*;
+        
+        self.values.fill_empty();
+        self.insert_time_f32();
+        
         let conv = &self.converter;
         let conv = conv.as_ref().ok_or("Converter is empty")?;
         let info = &self.info;
+        
         let new_path = conv.output_path
             .join(format!("{}_filter_{}.xlsx", conv.file_name, info.step_sec));
         let mut book = umya_spreadsheet::new_file();
 //         let sht = book.new_sheet("Лог")?;
         let sht = book.get_sheet_by_name_mut("Sheet1")?;
 
-        let mut fields = self.fields.clone();
-        fields.insert(0, "time".into());
+        /*let mut fields = self.fields.clone();
+        fields.insert(0, "time".into()); */
+        
 //         self.values = self.values.insert_column(0, (0..info.count).map(|v| v as f32 *info.step_sec));
-        let values_str = self.values.to_string()
-            .insert_column(0, (0..info.count).map(|v| {
+        let mut values_str = self.values.to_string();
+            values_str.insert_column(0, (0..info.count).map(|v| {
                 let v = v as f32 *info.step_sec;
                 format!("{:.1}", v)
             }));
 
-        for (f, col) in fields.iter().zip(1..) {
-            sht.get_cell_by_column_and_row_mut(col, 1).set_value(f);
+        for (f, col) in self.fields.iter().zip(1..) {
+            sht.set_cell_value(col, 1, f);
         }
 
         for (s, row) in values_str.into_iter()
 //             .filter(|s| !s[0].is_empty())
             .zip(2..) {
 
-            for (v, col) in s.iter().zip(1..) {
-                if v.is_empty() {
-                    let v = sht.get_cell_by_column_and_row(col, row-1).ok_or("Error Cell")?.get_value().clone();
-                    sht.get_cell_by_column_and_row_mut(col, row).set_value(v);
-                } else {
-                    sht.get_cell_by_column_and_row_mut(col, row).set_value(v);
-                }
-            }
+            sht.set_row_values(row, &s);
         }
         
         let sht = book.new_sheet("Инфо")?;
-        self.values.fill_empty();
-        self = self.insert_time_f32();
+        
         let state = self.get_state();
 
         let mut fields = Vec::new();
@@ -270,18 +269,46 @@ impl OutputValues {
         fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
         fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
         for (f, row) in fields.into_iter().zip(1..) {
-            sht.get_cell_by_column_and_row_mut(1, row).set_value(f.0);
-            sht.get_cell_by_column_and_row_mut(2, row).set_value(f.1);
+            sht.set_cell_value(1, row, f.0);
+            sht.set_cell_value(2, row, f.1);
         }
         for (f, row) in state.temps_min_max.into_iter().zip(8..) {
-            sht.get_cell_by_column_and_row_mut(1, row).set_value(f.0);
-            sht.get_cell_by_column_and_row_mut(2, row).set_value(format!("{:.2}", f.1.0));
-            sht.get_cell_by_column_and_row_mut(3, row).set_value(format!("{:.2}", f.1.1));
+            sht.set_cell_value(1, row, f.0);
+            sht.set_cell_value(2, row, format!("{:.2}", f.1.0));
+            sht.set_cell_value(3, row, format!("{:.2}", f.1.1));
         }
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(())
     }
 
+}
+
+mod excel {
+    use umya_spreadsheet::structs::Worksheet;
+    pub trait MyCell {
+        fn set_cell_value<S: Into<String>>(&mut self, col: usize, row: usize, value: S);
+        fn set_row_values(&mut self, row: usize, values: &[String]);
+    }
+    impl MyCell for Worksheet {
+        fn set_cell_value<S: Into<String>>(&mut self, col: usize, row: usize, value: S) {
+            self.get_cell_by_column_and_row_mut(col, row).set_value(value);
+        }
+        fn set_row_values(&mut self, row: usize, values: &[String]) {
+            for (v, col) in values.into_iter().zip(1..) {
+                self.get_cell_by_column_and_row_mut(col, row).set_value(v.clone());
+            }
+        }
+    }
+    
+    pub trait Graphic {
+        fn draw_line_serials(&mut self, columns: &[usize], rows: usize);
+    }
+    
+    impl Graphic for Worksheet {
+        fn draw_line_serials(&mut self, columns: &[usize], rows: usize) {
+        
+        }
+    }
 }
 
 pub use inner::*;
@@ -299,18 +326,23 @@ mod inner {
             let v = std::iter::repeat(vec![value;cols]).take(rows+1).collect();
             ValuesMat(v)
         }
-        pub fn insert_column(self, col: usize, values: impl Iterator<Item=T>) -> Self {
-            if self.0.is_empty() {return ValuesMat(Vec::new());}
+        pub fn insert_column(&mut self, col: usize, values: impl Iterator<Item=T>) -> &mut Self {
+            if self.0.is_empty() {return self;}
             let rows = self.0[0].len();
-            let v = self.0.into_iter()
-                .zip(values)
-                .map(|(row, v)| {
-                    let mut row_new = Vec::with_capacity(rows+1);
-                    row_new.extend(row.into_iter());
-                    row_new.insert(col, v);
-                    row_new
-                }).collect();
-            ValuesMat(v)
+//             let v = self.0.iter()
+//                 .zip(values)
+//                 .map(|(row, v)| {
+//                     let mut row_new = Vec::with_capacity(rows+1);
+//                     row_new.extend(row.into_iter());
+//                     row_new.insert(col, v);
+//                     row_new
+//                 }).collect();
+            for (row, v) in self.0.iter_mut().zip(values) {
+                row.insert(col, v);
+            }
+//             ValuesMat(v)
+//             self.0 = v;
+            self
         }
     }
 

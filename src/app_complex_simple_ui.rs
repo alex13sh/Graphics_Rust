@@ -337,17 +337,17 @@ impl App {
             ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
             ];
             
-            let values: Vec<modbus::ValueArc> = {
-            let values = self.logic.get_values().get_values_by_name_ends(&["value", "bit"]);
-            let values: HashMap<_,_> = values.iter()
-                .filter(|(k,_)| k.matches("/").count()<=1)
-                .map(|(k,v)| (k.clone(), v.clone()))
-                .collect();
-            let values = ModbusValues::from(values);
-                values.into()
-            };
-            let vec_map: Vec<(&str, &str)> = values.iter()
-                .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
+//             let values: Vec<modbus::ValueArc> = {
+//             let values = self.logic.get_values().get_values_by_name_ends(&["value", "bit"]);
+//             let values: HashMap<_,_> = values.iter()
+//                 .filter(|(k,_)| k.matches("/").count()<=1)
+//                 .map(|(k,v)| (k.clone(), v.clone()))
+//                 .collect();
+//             let values = ModbusValues::from(values);
+//                 values.into()
+//             };
+//             let vec_map: Vec<(&str, &str)> = values.iter()
+//                 .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
             
             let values = std::mem::take(&mut self.log_values);
             log::Logger::new_table_fields(values, 1, vec_map);

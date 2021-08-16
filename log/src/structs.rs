@@ -113,7 +113,7 @@ impl InputValues {
         dbg!(&cnt);
 
     //Vec::with_capacity(name_hash.len())
-        let mut values_f32 = ValuesF::from_size(name_hash.len(), cnt as usize, -13.37);
+        let mut values_f32 = ValuesF::from_size(name_hash.len(), (cnt+2) as usize, -13.37);
         let fields: HashMap<_, _> = name_hash.iter().zip(0..).map(|((_,hash), i)| ( hash.to_owned(), i)).collect();
         dbg!(&fields);
     //     let step_ms = step_sec.as_millis() as i64;
@@ -240,10 +240,10 @@ impl OutputValues {
         let sht = book.get_sheet_by_name_mut("Sheet1")?;
 
         let mut values_str = self.values.to_string();
-            values_str.insert_column(0, (0..info.count).map(|v| {
-                let v = v as f32 *info.step_sec;
-                format!("{:.1}", v)
-            }));
+//             values_str.insert_column(0, (0..info.count).map(|v| {
+//                 let v = v as f32 *info.step_sec;
+//                 format!("{:.1}", v)
+//             }));
 
         for (f, col) in self.fields.iter().zip(1..) {
             sht.set_cell_value(col, 1, f);
@@ -258,7 +258,7 @@ impl OutputValues {
         let sht = book.new_sheet("Инфо")?;
         
         let state = self.get_state();
-        sht.write_state((1,0), state);
+        sht.write_state((0,0), state);
         
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(())

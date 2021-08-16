@@ -37,6 +37,7 @@ pub struct TableState {
     pub hz_max: u32, // ValueHZ
     pub vibro_max: f32,
     pub hz_vibro: u32, // Зона вибрации
+    pub tok_max: u32,
     pub temps_min_max: Vec<(String, (f32, f32))>,
 }
 
@@ -175,6 +176,11 @@ impl OutputValues {
         let mut temps_min_max = Vec::new();
         let row_first = &self.values.0.first().unwrap();
         let row_last = &self.values.0.last().unwrap();
+        
+        let column_tok = self.fields.iter().position(|s| s=="Ток").unwrap();
+        let tok_max = self.values.0.iter()
+            .map(|row| row[column_tok] as u32)
+            .max().unwrap();
 
         for col in col_temp_1..self.fields.len() {
             temps_min_max.push((
@@ -189,6 +195,7 @@ impl OutputValues {
             hz_max: hz_max,
             hz_vibro: hz_vibro, // Вибро Зона
             vibro_max: vibro_max,
+            tok_max: tok_max,
             temps_min_max: temps_min_max,
         }
     }
@@ -295,6 +302,7 @@ mod excel {
             fields.push(("Обороты двигателя (об/мин)", state.hz_max.to_string()));
             fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
             fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
+            fields.push(("Максимальный ток", state.tok_max.to_string()));
             for (f, row) in fields.into_iter().zip((pos.1+1)..) {
                 self.set_cell_value(1+pos.0, row, f.0);
                 self.set_cell_value(2+pos.0, row, f.1);

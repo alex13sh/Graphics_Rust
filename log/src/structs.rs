@@ -30,6 +30,7 @@ struct TableInfo {
     count: u32, // Кол-во значений
 }
 
+#[derive(Debug, Clone)]
 pub struct TableState {
     pub time_work: f32, // время работы // count * step_sec = time
     pub time_acel: f32, // Время разгона
@@ -174,6 +175,7 @@ impl OutputValues {
         let mut temps_min_max = Vec::new();
         let row_first = &self.values.0.first().unwrap();
         let row_last = &self.values.0.last().unwrap();
+
         for col in col_temp_1..self.fields.len() {
             temps_min_max.push((
                 self.fields[col].clone(),
@@ -237,10 +239,6 @@ impl OutputValues {
 //         let sht = book.new_sheet("Лог")?;
         let sht = book.get_sheet_by_name_mut("Sheet1")?;
 
-        /*let mut fields = self.fields.clone();
-        fields.insert(0, "time".into()); */
-        
-//         self.values = self.values.insert_column(0, (0..info.count).map(|v| v as f32 *info.step_sec));
         let mut values_str = self.values.to_string();
             values_str.insert_column(0, (0..info.count).map(|v| {
                 let v = v as f32 *info.step_sec;
@@ -252,7 +250,6 @@ impl OutputValues {
         }
 
         for (s, row) in values_str.into_iter()
-//             .filter(|s| !s[0].is_empty())
             .zip(2..) {
 
             sht.set_row_values(row, &s);
@@ -261,22 +258,8 @@ impl OutputValues {
         let sht = book.new_sheet("Инфо")?;
         
         let state = self.get_state();
-
-        let mut fields = Vec::new();
-        fields.push(("Время работы (сек)", state.time_work.to_string()));
-        fields.push(("Время разгона (сек)", state.time_acel.to_string()));
-        fields.push(("Обороты двигателя (об/мин)", state.hz_max.to_string()));
-        fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
-        fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
-        for (f, row) in fields.into_iter().zip(1..) {
-            sht.set_cell_value(1, row, f.0);
-            sht.set_cell_value(2, row, f.1);
-        }
-        for (f, row) in state.temps_min_max.into_iter().zip(8..) {
-            sht.set_cell_value(1, row, f.0);
-            sht.set_cell_value(2, row, format!("{:.2}", f.1.0));
-            sht.set_cell_value(3, row, format!("{:.2}", f.1.1));
-        }
+        sht.write_state((1,0), state);
+        
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(())
     }
@@ -296,6 +279,30 @@ mod excel {
         fn set_row_values(&mut self, row: usize, values: &[String]) {
             for (v, col) in values.into_iter().zip(1..) {
                 self.get_cell_by_column_and_row_mut(col, row).set_value(v.clone());
+            }
+        }
+    }
+    
+    pub trait WriteInfo {
+        fn write_state(&mut self, pos: (usize, usize), state: super::TableState);
+    }
+    
+    impl WriteInfo for Worksheet {
+        fn write_state(&mut self, pos: (usize, usize), state: super::TableState) {
+            let mut fields = Vec::new();
+            fields.push(("Время работы (сек)", state.time_work.to_string()));
+            fields.push(("Время разгона (сек)", state.time_acel.to_string()));
+            fields.push(("Обороты двигателя (об/мин)", state.hz_max.to_string()));
+            fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
+            fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
+            for (f, row) in fields.into_iter().zip((pos.1+1)..) {
+                self.set_cell_value(1+pos.0, row, f.0);
+                self.set_cell_value(2+pos.0, row, f.1);
+            }
+            for (f, row) in state.temps_min_max.into_iter().zip((pos.1+8)..) {
+                self.set_cell_value(pos.0+1, row, f.0);
+                self.set_cell_value(pos.0+2, row, format!("{:.2}", f.1.0));
+                self.set_cell_value(pos.0+3, row, format!("{:.2}", f.1.1));
             }
         }
     }

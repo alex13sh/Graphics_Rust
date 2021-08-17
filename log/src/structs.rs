@@ -262,6 +262,8 @@ impl OutputValues {
             sht.set_row_values(row, &s);
         }
         
+        sht.draw_line_serials(&[2, 3, 5], info.count as usize);
+        
         let sht = book.new_sheet("Инфо")?;
         
         let state = self.get_state();
@@ -274,7 +276,7 @@ impl OutputValues {
 }
 
 mod excel {
-    use umya_spreadsheet::structs::Worksheet;
+    use umya_spreadsheet::structs::*;
     pub trait MyCell {
         fn set_cell_value<S: Into<String>>(&mut self, col: usize, row: usize, value: S);
         fn set_row_values(&mut self, row: usize, values: &[String]);
@@ -321,8 +323,52 @@ mod excel {
     
     impl Graphic for Worksheet {
         fn draw_line_serials(&mut self, columns: &[usize], rows: usize) {
-        
+            use drawing::{charts, spreadsheet::*, };
+            let mut celanch = TwoCellAnchor::default();
+//             let mut shape = Shape::default();
+//             let mut anchor = Anchor::default();
+//             anchor.set_left_column(10);
+//             anchor.set_top_row(5);
+//             shape.set_anchor(anchor);
+//             celanch.set_shape(shape);
+            celanch.get_from_marker_mut()
+                .set_col(10).set_row(5);
+            celanch.get_to_marker_mut()
+                .set_col_off(10)
+                .set_row_off(10)
+                .set_col(10)
+                .set_row(10);
+            
+            let mut graph_frame = GraphicFrame::default(); 
+            let graph = graph_frame.get_graphic_mut().get_graphic_data_mut();
+            let chart = graph.get_chart_space_mut()
+                .get_chart_mut().get_plot_area_mut();
+            
+            let mut linechart = charts::LineChart::default();
+            let mut areacharts = Vec::new();
+            for col in columns {
+                let mut adr = Address::default();
+                adr.set_sheet_name(self.get_title());
+                adr.set_address(format!("${0}${1}:${0}${2}", solumnt_to_string(*col),2,rows));
+//                 dbg!(&adr);
+                let mut values = charts::Values::default();
+                values.get_number_reference_mut().get_formula_mut()
+                    .set_address(adr);
+                let mut areachart = charts::AreaChartSeries::default();
+                areachart.set_values(values);
+                areacharts.push(areachart)
+            }
+            
+            linechart.set_area_chart_series(areacharts);
+            chart.set_line_chart(linechart);
+            celanch.set_graphic_frame(graph_frame);
+            dbg!(&celanch);
+            self.get_worksheet_drawing_mut().add_two_cell_anchor_collection(celanch);
         }
+    }
+    fn solumnt_to_string(column: usize) -> String {
+        assert!(column <= 26);
+        ((('A' as u8)+(column-1) as u8) as char).to_string()
     }
 }
 

@@ -241,7 +241,7 @@ impl OutputValues {
         let info = &self.info;
         
         let new_path = conv.output_path
-            .join(format!("{}_filter_{}.xlsx", conv.file_name, info.step_sec));
+            .join(format!("{}({}).xlsx", conv.file_name, info.step_sec));
         let mut book = umya_spreadsheet::new_file();
 //         let sht = book.new_sheet("Лог")?;
         let sht = book.get_sheet_by_name_mut("Sheet1")?;

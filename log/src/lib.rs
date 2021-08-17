@@ -21,7 +21,7 @@ pub fn date_time_to_string_name(dt: &DateTime) -> String {
 }
 
 pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
-    (*dt+Duration::hours(3)).format("%d_%m_%Y__%H_%M_%S")
+    (*dt+Duration::hours(3)).format("%d_%m_%Y %H_%M_%S")
         .to_string()
 }
 
@@ -164,7 +164,7 @@ impl Logger {
         use std::time::Duration;
         let start = values[0].date_time;
         structs::Converter::output_file(crate::get_file_path("tables/excel/"), 
-            &format!("Table {}.csv", date_time_to_string_name_short(&start)))
+            &format!("{}", date_time_to_string_name_short(&start)))
             .from_log_values(values)
             .fields(name_hash)
             .make_values_3(Duration::from_millis(100))

@@ -351,6 +351,11 @@ impl App {
             
             let values = std::mem::take(&mut self.log_values);
             log::Logger::new_table_fields(values, 1, vec_map);
+            
+            let dt = log::date_time_to_string_name_short();
+            let path = log::get_file_path("tables/").with_file_name(dt).with_extension(".log");
+            let mut f = fs::create(path);
+            write!(f, "Invertor: {:?}", &self.logic.invertor_1);
         }
     }
 

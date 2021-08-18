@@ -245,11 +245,23 @@ impl App {
             },
             MessageMudbusUpdate::ModbusConnect => {
                 println!("MessageMudbusUpdate::ModbusConnect ");
-                let device_futures = self.logic.reconnect_devices();
-                return Command::batch(device_futures.into_iter()
+//                 self.save_invertor();
+                let mut device_futures = self.logic.reconnect_devices();
+                let c1 = Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
+                let mut device_futures = Vec::new();
+                                let d = self.logic.invertor_1.device().clone();
+                let dc = d.clone();
+                let f = async move {dc.update_async(UpdateReq::All).await};
+                let dc = d.clone();
+                device_futures.push((dc.clone(),  f ));
+                let c2 = Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                    ));
+                return Command::batch(vec![c1,c2]);
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();
@@ -352,10 +364,25 @@ impl App {
             let values = std::mem::take(&mut self.log_values);
             log::Logger::new_table_fields(values, 1, vec_map);
             
-            let dt = log::date_time_to_string_name_short();
-            let path = log::get_file_path("tables/").with_file_name(dt).with_extension(".log");
-            let mut f = fs::create(path);
-            write!(f, "Invertor: {:?}", &self.logic.invertor_1);
+            self.save_invertor();
+        }
+    }
+
+    fn save_invertor(&self) {
+        let dt = log::date_time_now();
+        dbg!(&dt);
+        let dt = log::date_time_to_string_name_short(&dt);
+        let path = log::get_file_path("tables/log/").join(dt).with_extension(".rs");
+        dbg!(&path);
+        let mut f = std::fs::File::create(path);
+        if let Ok(f) = f {
+            use std::io::prelude::*;
+            let mut buf = std::io::BufWriter::new(f);
+            let map = self.logic.invertor_1.device().values_map().clone();
+//                 write!(buf, "Invertor: {:?}", map);
+//             buf.write_all(format!("Invertor: {:#?}", map).as_bytes());
+            buf.write_all(map.print_values().as_bytes());
+            buf.flush();
         }
     }
 

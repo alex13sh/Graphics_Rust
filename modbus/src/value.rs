@@ -332,6 +332,12 @@ impl ModbusValues {
             }).map(|(k,v)|(k.clone(), v.clone())).collect()
         )
     }
+
+    pub fn print_values(&self) -> String {
+        use std::collections::BTreeMap;
+        let b: BTreeMap<_,_> = self.0.iter().map(|(k, v)| (k.clone(), (v.address(), v.value()))).collect();
+        format!("Invertor Values: {:#?}", b)
+    }
 }
 
 impl IntoIterator for ModbusValues {

@@ -208,6 +208,14 @@ impl OutputValues {
         //self
     }
     
+    pub fn insert_speed(&mut self) {
+        let column_hz = self.fields.iter().position(|s| s=="Скорость").unwrap();
+        let speed : Vec<_> = self.values.0
+            .iter().map(|row| row[column_hz]/1000.0).collect();
+        self.values.insert_column(column_hz+1, speed.into_iter());
+        self.fields.insert(column_hz+1, "Speed".into());
+    }
+    
     pub fn write_csv(self) -> crate::MyResult {
         let conv = &self.converter.ok_or("Converter is empty")?;
         let info = &self.info;
@@ -235,6 +243,13 @@ impl OutputValues {
         
         self.values.fill_empty();
         self.insert_time_f32();
+        self.insert_speed();
+        
+        let col_davl = self.fields.iter().position(|s| s=="Давление масла на выходе маслостанции").unwrap();
+        for v in self.values.0.iter_mut()
+            .map(|row| &mut row[col_davl]) {
+            *v = *v / 135.0;
+        }
         
         let conv = &self.converter;
         let conv = conv.as_ref().ok_or("Converter is empty")?;
@@ -262,12 +277,12 @@ impl OutputValues {
             sht.set_row_values(row, &s);
         }
         
-        sht.draw_line_serials(&[2, 3, 5], info.count as usize);
+//         sht.draw_line_serials(&[2, 3, 5], info.count as usize);
         
-        let sht = book.new_sheet("Инфо")?;
+//         let sht = book.new_sheet("Инфо")?;
         
         let state = self.get_state();
-        sht.write_state((0,0), state);
+        sht.write_state((14,2), state);
         
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(())

@@ -215,6 +215,18 @@ impl OutputValues {
         self.values.insert_column(column_hz+1, speed.into_iter());
         self.fields.insert(column_hz+1, "Speed".into());
     }
+    pub fn shift_vibro(&mut self) {
+        let column_vibro = self.fields.iter().position(|s| s=="Вибродатчик").unwrap();
+        let shift = 0.5 / self.info.step_sec;
+        let shift = shift as usize;
+        let count = self.info.count as usize;
+        for i in shift..count {
+            let col_i = self.values.0[i][column_vibro];
+            let row_s = &mut self.values.0[i-shift];
+            let col_s = &mut row_s[column_vibro];
+            *col_s = col_i;
+        }
+    }
     
     pub fn write_csv(self) -> crate::MyResult {
         let conv = &self.converter.ok_or("Converter is empty")?;
@@ -241,6 +253,7 @@ impl OutputValues {
 //         use umya_spreadsheet::*;
         use excel::*;
         
+        self.shift_vibro();
         self.values.fill_empty();
         self.insert_time_f32();
         self.insert_speed();

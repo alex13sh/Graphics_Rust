@@ -153,7 +153,7 @@ impl Application for App {
             self.klapans.update(m);
             self.logic.update_new_values();
         }
-        Message::InfoPane(_m) => {}
+        Message::InfoPane(m) => self.info_pane.update(m),
         Message::MessageUpdate(m) => return self.modbus_update(m),
         }
         Command::none()

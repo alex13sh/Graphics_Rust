@@ -41,6 +41,7 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
         ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
         ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Давление масла на выходе маслостанции", "Давление масла на выходе маслостанции/value"),
     ];
     structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/"))
         .read_file_opt(file_name, csv::read_values).ok_or("Ошибка чтения файла")?

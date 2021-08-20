@@ -200,7 +200,7 @@ impl OutputValues {
         }
     }
 
-    pub fn insert_time_f32(&mut self) {
+    fn insert_time_f32(&mut self) {
         self.fields.insert(0, "time".into());
         let info = &self.info;
         self.values.insert_column(0, 
@@ -208,14 +208,14 @@ impl OutputValues {
         //self
     }
     
-    pub fn insert_speed(&mut self) {
+    fn insert_speed(&mut self) {
         let column_hz = self.fields.iter().position(|s| s=="Скорость").unwrap();
         let speed : Vec<_> = self.values.0
             .iter().map(|row| row[column_hz]/1000.0).collect();
         self.values.insert_column(column_hz+1, speed.into_iter());
         self.fields.insert(column_hz+1, "Speed".into());
     }
-    pub fn shift_vibro(&mut self) {
+    fn shift_vibro(&mut self) {
         let column_vibro = self.fields.iter().position(|s| s=="Вибродатчик").unwrap();
         let shift = 0.5 / self.info.step_sec;
         let shift = shift as usize;
@@ -225,6 +225,13 @@ impl OutputValues {
             let row_s = &mut self.values.0[i-shift];
             let col_s = &mut row_s[column_vibro];
             *col_s = col_i;
+        }
+    }
+    fn convert_davl(&mut self) {
+        let col_davl = self.fields.iter().position(|s| s=="Давление масла на выходе маслостанции").unwrap();
+        for v in self.values.0.iter_mut()
+            .map(|row| &mut row[col_davl]) {
+            *v = *v / 135.0;
         }
     }
     
@@ -258,11 +265,7 @@ impl OutputValues {
         self.insert_time_f32();
         self.insert_speed();
         
-        let col_davl = self.fields.iter().position(|s| s=="Давление масла на выходе маслостанции").unwrap();
-        for v in self.values.0.iter_mut()
-            .map(|row| &mut row[col_davl]) {
-            *v = *v / 135.0;
-        }
+        // self.convert_davl();
         
         let conv = &self.converter;
         let conv = conv.as_ref().ok_or("Converter is empty")?;

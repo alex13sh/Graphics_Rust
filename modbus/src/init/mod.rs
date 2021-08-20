@@ -59,14 +59,19 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
 pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
     use devices::owen_analog::make_sensor_rtu as make_values;
     
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, ValueDirect::read().err_max(value_error.into()), ValueSize::UInt16Map(|v|v as f32 /10.0));
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, ValueDirect::read().err_max(value_error.into()), ValueSize::UInt16Map(|v|v as f32 /100.0));
 
-    let make_sensor_davl = |pin, name: &str, err_min: (f32, f32), err_max: (f32, f32)|
+    let make_sensor_err_min_max = |pin, name: &str, err_min: (f32, f32), err_max: (f32, f32)|
         make_values(pin, name, ValueDirect::read().err_min(err_min.into()).err_max(err_max.into()),
             //ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
 //             ValueSize::UINT16
             ValueSize::UInt16Map(|v| v as f32 / 100.0)
 //             ValueSize::UInt16Map(|v| v as f32)
+        );
+    let make_sensor_davl = |pin, name: &str, err_max: (f32, f32)|
+        make_values(pin, name, ValueDirect::read().err_max(err_max.into()),
+            ValueSize::UInt16Map(|v|10_f32.powf(v as f32/100.0 -5.5))
+//             ValueSize::UInt16Map(|v| v as f32 / 100.0)
         );
     
     let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
@@ -83,9 +88,9 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: Some(vec![
-            make_sensor_davl(1, "Давление масла на выходе маслостанции", (3.0, 0.2), (8.0, 10.0)),
-            make_sensor_davl(3, "Давление воздуха компрессора", (3.0, 2.0), (7.0, 9.0)), // <<-- ??
-            make_sensor_davl(4, "Разрежение воздуха в системе", (0.0, 0.0), (40.0, 50.0)),
+            make_sensor_err_min_max(1, "Давление масла на выходе маслостанции", (3.0, 2.0), (8.0, 10.0)),
+            make_sensor_err_min_max(3, "Давление воздуха компрессора", (3.0, 2.0), (7.0, 9.0)), // <<-- ??
+            make_sensor_davl(4, "Разрежение воздуха в системе", (40.0, 50.0)),
             
             make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
             make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90)),

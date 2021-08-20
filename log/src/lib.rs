@@ -159,17 +159,22 @@ impl Logger {
         }
     }
     
-    pub fn new_table_fields(values: Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) {
-        if values.is_empty() {return;}
+    pub fn new_table_fields(values: Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) -> Option<(structs::TableState, PathBuf)> {
+        if values.is_empty() {return None;}
         use std::time::Duration;
         let start = values[0].date_time;
-        structs::Converter::output_file(crate::get_file_path("tables/excel/"), 
+        let values = structs::Converter::output_file(crate::get_file_path("tables/excel/"),
             &format!("{}", date_time_to_string_name_short(&start)))
             .from_log_values(values)
             .fields(name_hash)
             .make_values_3(Duration::from_millis(100))
-            .write_excel()
-            .unwrap();
-        
+                .fill_empty()
+                .insert_time_f32();
+        let mut res = (
+            values.get_state(),
+            values.converter.as_ref().unwrap().get_output_file_path().with_extension("xlsx")
+        );
+        res.1 = values.write_excel().ok()?;
+        Some(res)
     }
 }

@@ -80,6 +80,9 @@ impl Converter {
             file_name: file_name.to_owned(),
         }
     }
+    pub fn get_output_file_path(&self) -> PathBuf {
+        self.output_path.join(self.file_name.clone())
+    }
 }
 
 impl InputValues {
@@ -200,12 +203,16 @@ impl OutputValues {
         }
     }
 
-    fn insert_time_f32(&mut self) {
+    pub fn fill_empty(mut self) -> Self {
+        self.values.fill_empty();
+        self
+    }
+    pub fn insert_time_f32(mut self) -> Self {
         self.fields.insert(0, "time".into());
         let info = &self.info;
         self.values.insert_column(0, 
             (0..).map(|v| v as f32 * info.step_sec));
-        //self
+        self
     }
     
     fn insert_speed(&mut self) {
@@ -256,13 +263,13 @@ impl OutputValues {
         Ok(())
     }
 
-    pub fn write_excel(mut self) -> crate::MyResult {
+    pub fn write_excel(mut self) -> crate::MyResult<PathBuf> {
 //         use umya_spreadsheet::*;
         use excel::*;
         
         self.shift_vibro();
-        self.values.fill_empty();
-        self.insert_time_f32();
+//         self.values.fill_empty();
+//         self.insert_time_f32();
         self.insert_speed();
         
         // self.convert_davl();
@@ -301,7 +308,7 @@ impl OutputValues {
         sht.write_state((14,2), state);
         
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
-        Ok(())
+        Ok(new_path)
     }
 
 }

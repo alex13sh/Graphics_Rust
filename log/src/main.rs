@@ -47,6 +47,8 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         .read_file_opt(file_name, csv::read_values).ok_or("Ошибка чтения файла")?
         .fields(hashs)
         .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .insert_time_f32()
         .write_excel()?;
     Ok(())
 }

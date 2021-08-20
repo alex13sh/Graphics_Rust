@@ -369,9 +369,13 @@ impl App {
 //                 .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
             
             let values = std::mem::take(&mut self.log_values);
-            log::Logger::new_table_fields(values, 1, vec_map);
+            let res = log::Logger::new_table_fields(values, 1, vec_map);
             
             self.save_invertor();
+            if let Some((stat, path)) = res {
+                self.info_pane.set_info(stat);
+                self.info_pane.set_file_path(path);
+            }
         }
     }
 

@@ -9,7 +9,7 @@ pub struct Value {
     pub log: Option<Log>,
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct ValueError {
     pub yellow: f32,
     pub red: f32
@@ -26,9 +26,12 @@ impl From<(i32, i32)> for ValueError {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ValueDirect {
-    Read(Option<ValueError>), // (interval)
+    Read {
+        max: Option<ValueError>,
+        min: Option<ValueError>,
+    }, // (interval)
     Write
 }
 
@@ -36,6 +39,54 @@ impl Default for ValueDirect {
     fn default() -> Self {
         ValueDirect::Write
     }
+}
+
+impl ValueDirect {
+    pub fn read() -> Self {
+        ValueDirect::Read {
+            min: None,
+            max: None,
+        }
+    }
+    pub fn err_min(self, min: ValueError) -> Self {
+        if let ValueDirect::Read {max, ..} = self {
+            ValueDirect::Read {
+                max: max,
+                min: Some(min),
+            }
+        } else {
+            self
+        }
+    }
+    pub fn err_max(self, max: ValueError) -> Self {
+        if let ValueDirect::Read {min, ..} = self {
+            ValueDirect::Read {
+                max: Some(max),
+                min: min,
+            }
+        } else {
+            self
+        }
+    }
+    pub fn err_min_max(self, min: ValueError, max: ValueError) -> Self {
+        if let ValueDirect::Read {..} = self {
+            ValueDirect::Read {
+                max: Some(max),
+                min: Some(min),
+            }
+        } else {
+            self
+        }
+    }
+}
+
+#[test]
+fn test_read_error_init() {
+    let dir = ValueDirect::read().err_max((8,10).into());
+    assert_eq!(dir, ValueDirect::Read {
+        min: None,
+        max: Some( ValueError {yellow: 8.0, red: 10.0})
+    });
 }
 
 #[derive(Debug, Clone)]

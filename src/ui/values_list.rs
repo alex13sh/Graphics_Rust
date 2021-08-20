@@ -52,7 +52,7 @@ impl ValuesList {
     }
     fn view_value<'a, Message: 'a>(value: &ValueArc, style: &Style) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
-        let err = value.get_error();
+        let err = value.get_error_min_max();
         let name = value.name().unwrap();
         let value = f32::try_from(value.value().as_ref());
         let color;
@@ -60,11 +60,15 @@ impl ValuesList {
         match value {
         Ok(value) => {
             color = match err {
-                Some(err) if err.red <= value =>
+            (None, Some(max)) if max.red <= value =>
                     [1.0, 0.0, 0.0],
-                Some(err) if err.yellow <= value =>
+            (None, Some(max)) if max.yellow <= value =>
                     [1.0, 1.0, 0.0],
-                Some(_) | None => [0.0, 0.8, 0.0],
+            (Some(min), Some(max)) if min.red >= value || max.red <= value =>
+                    [1.0, 0.0, 0.0],
+            (Some(min), Some(max)) if min.yellow >= value || max.yellow <= value =>
+                    [1.0, 1.0, 0.0],
+            _ => [0.0, 0.8, 0.0],
             };
             txt_value = format!("Value: {:.2}", value);
         },

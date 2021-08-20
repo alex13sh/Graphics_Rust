@@ -59,18 +59,18 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
 pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
     use devices::owen_analog::make_sensor_rtu as make_values;
     
-    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, value_error.into(), ValueSize::UInt16Map(|v|v as f32 /10.0));
+    let make_sensor = |pin, name: &str, value_error: (i32, i32)|  make_values(pin, name, ValueDirect::read().err_max(value_error.into()), ValueSize::UInt16Map(|v|v as f32 /10.0));
 
-    let make_sensor_davl = |pin, name: &str, value_error: (f32, f32)|
-        make_values(pin, name, value_error.into(), 
+    let make_sensor_davl = |pin, name: &str, err_min: (f32, f32), err_max: (f32, f32)|
+        make_values(pin, name, ValueDirect::read().err_min(err_min.into()).err_max(err_max.into()),
             //ValueSize::UInt16Map(|v|10_f32.powf(v as f32 *10.0-5.5))
-            ValueSize::UINT16
-//             ValueSize::UInt16Map(|v| v as f32 * 1.0/ 100.0)
-//             ValueSize::UInt16Map(|v| v as f32 * 1.0)
+//             ValueSize::UINT16
+            ValueSize::UInt16Map(|v| v as f32 / 100.0)
+//             ValueSize::UInt16Map(|v| v as f32)
         );
     
     let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
-        make_values(pin, name, value_error.into(), 
+        make_values(pin, name, ValueDirect::read().err_max(value_error.into()),
             ValueSize::UInt16Map(|v| {
 //                 if v>500 {dbg!(v);}
                 v as f32 / 100.0
@@ -83,9 +83,9 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: Some(vec![
-            make_sensor_davl(1, "Давление масла на выходе маслостанции", (0.1, 0.5)),
-            make_sensor_davl(3, "Давление воздуха компрессора", (0.1, 0.5)),
-            make_sensor(4, "Разрежение воздуха в системе", (100, 106)),
+            make_sensor_davl(1, "Давление масла на выходе маслостанции", (3.0, 0.2), (8.0, 10.0)),
+            make_sensor_davl(3, "Давление воздуха компрессора", (3.0, 2.0), (7.0, 9.0)), // <<-- ??
+            make_sensor_davl(4, "Разрежение воздуха в системе", (0.0, 0.0), (40.0, 50.0)),
             
             make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
             make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90)),
@@ -111,15 +111,15 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
         values: Some(vec![
             Value {
                 log: Log::hash("Значение уровня масла"),
-                .. make_value("value", 0x898, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+                .. make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---
             },
             Value {
                 log: Log::hash("Верхний предел уровня масла"),
-                .. make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+                .. make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---
             },
             Value {
                 log: Log::hash("Нижний предел уровня масла"),
-                .. make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::Read(Some((100, 120).into()))) // <<---
+                .. make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---
             },
             make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
             make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
@@ -137,7 +137,7 @@ pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
         values: Some(vec![
             make_value("Скорость обмена", 0x0209, ValueSize::UINT16, ValueDirect::Write),
             make_value("Кол. стоп-битов", 0x020B, ValueSize::UINT16, ValueDirect::Write),
-//             make_value("IP Address", 0x001A, ValueSize::UINT16, ValueDirect::Read(None)),
+//             make_value("IP Address", 0x001A, ValueSize::UINT16, ValueDirect::read()),
         ]),
     }
 }
@@ -156,7 +156,7 @@ pub fn make_i_digit(ip_address: String) -> Device {
                 Value {
                     name: format!("{}/{}", prefix,"Битовая маска состояния выходов"), // DO1 - DO8
                     address: 468,
-                    direct: ValueDirect::Read(None),
+                    direct: ValueDirect::read(),
                     size: ValueSize::UINT8,
                     log: Log::hash("Битовая маска состояния выходов"),
                 },
@@ -205,7 +205,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
                 Value {
                     name: format!("{}/{}", prefix,"Битовая маска состояния выходов"), // DO1 - DO8
                     address: 468,
-                    direct: ValueDirect::Read(None),
+                    direct: ValueDirect::read(),
                     size: ValueSize::UINT8,
                     log: Log::hash("Битовая маска состояния выходов"),
                 },
@@ -253,7 +253,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             let add_simple_value_read = |hash: &str, p: u16, adr: u16, name: &str| Value {
                 name: name.into(),
                 address: p*256+adr,
-                direct: ValueDirect::Read(None),
+                direct: ValueDirect::read(),
                 size: ValueSize::UInt16Map(|v| v as f32/10_f32),
                 log: Log::hash(hash),
             };
@@ -395,17 +395,17 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             
             let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
-                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32),
+                direct: ValueDirect::read(), size: ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32),
                 log: Log::hash(hash),
             };
             let add_simple_value_read_100 = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
-                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/100_f32),
+                direct: ValueDirect::read(), size: ValueSize::UInt16Map(|v| v as f32/100_f32),
                 log: Log::hash(hash),
             };
             let add_simple_value_read_10 = |hash: &str, adr: u16, name: &str| Value {
                 name: name.into(), address: adr, 
-                direct: ValueDirect::Read(None), size: ValueSize::UInt16Map(|v| v as f32/10_f32),
+                direct: ValueDirect::read(), size: ValueSize::UInt16Map(|v| v as f32/10_f32),
                 log: Log::hash(hash),
             };
             // Part 21 ReadOnly
@@ -413,14 +413,14 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 Value {
                     name: "Код ошибки".into(), // Pr.06-17 - 06.22
                     address: 0x2100,
-                    direct: ValueDirect::Read(None), // interval
+                    direct: ValueDirect::read(), // interval
                     size: ValueSize::UINT16, // UINT32
                     log: None,
                 },
                 Value {
                     name: "2119H".into(),
                     address: 0x2119,
-                    direct: ValueDirect::Read(None),
+                    direct: ValueDirect::read(),
                     size: ValueSize::BitMap (vec![
                         add_simple_value_bit(0, "Команда FWD"),
                         add_simple_value_bit(1, "Состояние привода"),

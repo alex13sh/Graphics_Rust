@@ -12,7 +12,7 @@ pub mod owen_analog {
         vec![
             Value {
                 log: Log::hash(&format!("{}/value", name)),
-                .. make_value(prefix,"value", 4000+pin*3, ValueSize::FLOAT, ValueDirect::Read(Some(err.into())))
+                .. make_value(prefix,"value", 4000+pin*3, ValueSize::FLOAT, ValueDirect::read().err_max(err.into()))
             },
             make_value(prefix, "type", 4100+pin*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
             make_value(prefix, "point", 4103+pin*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
@@ -22,13 +22,13 @@ pub mod owen_analog {
         ]
     }
 
-    pub fn make_sensor_rtu(pin: u8, name: &str, err: ValueError, val_size: ValueSize) -> Vec<Value> {
+    pub fn make_sensor_rtu(pin: u8, name: &str, dir: ValueDirect, val_size: ValueSize) -> Vec<Value> {
         let pin = pin as u16 - 1;
         let prefix = name;
         vec![
             Value {
                 log: Log::hash(&format!("{}/value", name)),
-                .. make_value(prefix,"value", 0x100+pin*1, val_size, ValueDirect::Read(Some(err.into())))
+                .. make_value(prefix,"value", 0x100+pin*1, val_size, dir)
             },
             make_value(prefix, "type", 0x00+pin*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
             make_value(prefix, "point", 0x20+pin*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
@@ -57,7 +57,7 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Read(None)),
+            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::read()),
         ]
     }
     
@@ -80,7 +80,7 @@ pub mod owen_digit {
         let prefix = name;
         let bitn = pin as u8;
         vec![
-            make_value(prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::Read(Some(value_error.into()))),
+            make_value(prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::read().err_max(value_error.into())),
             make_value(prefix, "interval", 128 +pin, ValueSize::UINT16, ValueDirect::Write),
             make_value(prefix, "type_input", 64 +pin, ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
             make_value(prefix, "reset_counter", 232 +pin*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"

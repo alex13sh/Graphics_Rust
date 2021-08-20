@@ -33,25 +33,33 @@ impl Value {
         self.address
     }
     pub fn is_read_only(&self) -> bool {
-        if let ValueDirect::Read(_) = self.direct {
+        if let ValueDirect::Read{..} = self.direct {
             true
         } else {
             false 
         }
     }
-    pub fn get_error(&self) -> Option<super::ValueError> {
+    pub fn get_error_max(&self) -> Option<super::ValueError> {
         match self.direct {
-        ValueDirect::Read(err) => err,
+        ValueDirect::Read{max, ..} => max,
         ValueDirect::Write => None,
+        }
+    }
+    pub fn get_error_min_max(&self) -> (Option<super::ValueError>, Option<super::ValueError>) {
+        match self.direct {
+        ValueDirect::Read{min, max} => (min, max),
+        ValueDirect::Write => (None, None),
         }
     }
     pub fn is_error(&self) -> bool {
         use std::convert::TryFrom;
         let v = f32::try_from(self);
         if let Ok(v) = v {
-            if let Some(err) = self.get_error() {
-                err.yellow > v
-            } else {false}
+            match self.get_error_min_max() {
+            (None, Some(max)) => max.red < v,
+            (Some(min), Some(max)) => max.red < v || min.red > v,
+            _ => false,
+            }
         } else {true}
     }
 

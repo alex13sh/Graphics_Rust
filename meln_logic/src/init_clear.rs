@@ -50,7 +50,7 @@ impl Complect {
         let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).into());
         let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
         let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11)));
-        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 16)));
+        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12)));
         let owen_mkon = Arc::new(Device::from(init::make_mkon("192.168.1.13", 1)));
 
         let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
@@ -191,16 +191,22 @@ impl Complect {
     }
     
     pub fn update_new_values(&self) -> DeviceResult {
+        let mut res = Ok(());
         for d in self.get_devices() {
-            d.update_new_values()?;
+            if let Err(e) = d.update_new_values() {
+                res = Err(e);
+            }
         }
-        Ok(())
+        res
     }
     pub fn update_new_values_static(devices: &Vec<Arc<Device>>) -> DeviceResult {
+        let mut res = Ok(());
         for d in devices {
-            d.update_new_values()?;
+            if let Err(e) = d.update_new_values() {
+                res = Err(e);
+            }
         }
-        Ok(())
+        res
     }
 }
 

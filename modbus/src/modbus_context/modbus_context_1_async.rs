@@ -55,7 +55,7 @@ impl ModbusContext {
         DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
-            dbg!(&socket_addr);
+            dbg!(&socket_addr, num);
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),

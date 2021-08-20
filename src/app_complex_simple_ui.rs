@@ -160,6 +160,11 @@ impl Application for App {
     }
     fn view(&mut self) -> Element<Self::Message> {
 //         Text::new("Complex View").into()
+        let ba_1 = self.logic.owen_analog_1.is_connect();
+        let ba_2 = self.logic.owen_analog_2.is_connect();
+        let bd_1 = self.logic.digit_i.device().is_connect();
+        let bd_2 = self.logic.digit_o.device().is_connect();
+
         let low = self.low.view()
             .map(Message::LowHalfComplectUI);
         let top = self.top.view()
@@ -169,8 +174,10 @@ impl Application for App {
             .spacing(20)
             .push(top)
             .push(low);
-        let oil_station = self.oil_station.view()
-            .map(Message::OilStation);
+        let oil_station = if bd_2  {
+            self.oil_station.view()
+            .map(Message::OilStation)
+        } else {Text::new("Отключен модуль с клапанами").into()};
 //         let oil_station = Container::new(oil_station);
         let info_pane = self.info_pane.view()
             .map(Message::InfoPane);
@@ -183,7 +190,7 @@ impl Application for App {
             .push(right_column.width(Length::FillPortion(10)));
 
         let dozator = self.dozator.view().map(Message::DozatorUI);
-        let klapans = self.klapans.view().map(Message::KlapansUI);
+        let klapans = if bd_2 {self.klapans.view().map(Message::KlapansUI)} else {Text::new("Отключен модуль с клапанами").into()};
         let col = Column::new()
             .spacing(10)
             .push(dozator)

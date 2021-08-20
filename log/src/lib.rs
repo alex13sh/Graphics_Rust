@@ -178,3 +178,28 @@ impl Logger {
         Some(res)
     }
 }
+
+pub fn open_log_state(file_name: &str) -> Option<(structs::TableState, PathBuf)> {
+    use std::time::Duration;
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Напряжение", "5369886757"),
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+        ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
+        ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
+        ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Давление масла на выходе маслостанции", "Давление масла на выходе маслостанции/value"),
+    ];
+    let values = structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/"))
+        .read_file_opt(file_name, csv::read_values)?
+        .fields(hashs)
+        .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .insert_time_f32();
+    Some((
+        values.get_state(),
+        crate::get_file_path("tables/excel/").join(file_name).with_extension("xlsx")
+    ))
+}

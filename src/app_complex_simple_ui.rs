@@ -86,8 +86,10 @@ impl Application for App {
             low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
             top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
+                + logic.digit_i.device().values_map()
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
-                .clone()),
+//                 .clone()
+                ),
             dozator: ui::Dozator::new(logic.dozator.clone()),
             oil_station: ui::OilStation::new(logic.get_values().clone()),
             info_pane: ui::InfoPane::new(),

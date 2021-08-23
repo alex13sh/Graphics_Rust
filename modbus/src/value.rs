@@ -358,6 +358,29 @@ impl IntoIterator for ModbusValues {
     }
 }
 
+impl std::ops::Add<ModbusValues> for ModbusValues {
+    type Output = ModbusValues;
+    fn add(self, other: Self) -> Self {
+        ModbusValues (
+            self.0.into_iter()
+                .chain(other.0.into_iter())
+                .collect()
+        )
+    }
+}
+
+impl <'a> std::ops::Add<&'a ModbusValues> for &'a ModbusValues {
+    type Output = ModbusValues;
+    fn add(self, other: Self) -> Self::Output {
+        ModbusValues (
+            self.0.iter()
+                .chain(other.0.iter())
+                .map(|(name, v)| (name.clone(), v.clone()))
+                .collect()
+        )
+    }
+}
+
 impl ModbusValues {
     pub fn set_bit(&self, name: &str, bit: bool) -> Result<(), ()> {
         let v = self.get(name)

@@ -27,6 +27,7 @@ impl Klapans {
             "Клапан напуска",           // ШК4
             "Клапан верхнего контейнера", // ШК5
             "Клапан насаса М5",         // ШК6
+            "Двигатель насоса вакуума",
         ];
         Klapans {
             klapans: names.into_iter()
@@ -39,7 +40,12 @@ impl Klapans {
         match message {
         Message::ToggleKlapan(name, enb) => {
             self.klapans.get_mut(&name).unwrap().0 = enb;
-            self.values.set_bit(&name, enb).unwrap();
+            if name == "Двигатель насоса вакуума" {
+                self.values.set_bit("Двигатель насоса вакуума 1", enb).unwrap();
+                self.values.set_bit("Двигатель насоса вакуума 2", enb).unwrap();
+            } else {
+                self.values.set_bit(&name, enb).unwrap();
+            }
         }}
     }
 

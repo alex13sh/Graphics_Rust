@@ -70,8 +70,8 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         );
     let make_sensor_davl = |pin, name: &str, err_max: (f32, f32)|
         make_values(pin, name, ValueDirect::read().err_max(err_max.into()),
-            ValueSize::UInt16Map(|v|10_f32.powf(v as f32/100.0 -5.5))
-//             ValueSize::UInt16Map(|v| v as f32 / 100.0)
+            ValueSize::UInt16Map(|v|10_f32.powf(v as f32/1000.0 -5.5))
+//             ValueSize::UInt16Map(|v| v as f32 / 1000.0)
         );
     
     let make_sensor_vibra = |pin, name: &str, value_error: (f32, f32)|
@@ -89,7 +89,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         
         values: Some(vec![
             make_sensor_err_min_max(1, "Давление масла на выходе маслостанции", (3.0, 2.0), (8.0, 10.0)),
-            make_sensor_err_min_max(3, "Давление воздуха компрессора", (3.0, 2.0), (7.0, 9.0)), // <<-- ??
+            make_sensor_err_min_max(3, "Давление воздуха компрессора", (5.0, 4.0), (9.0, 10.0)), // <<-- ??
             make_sensor_davl(4, "Разрежение воздуха в системе", (40.0, 50.0)),
             
             make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
@@ -149,7 +149,7 @@ pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
 
 pub fn make_i_digit(ip_address: String) -> Device {
     use devices::make_value;
-    use devices::owen_digit::{make_counter, make_read_bit};
+    use devices::owen_digit::*;
     
     let prefix = format!("{}", "3) МК210-302");
     Device {
@@ -172,6 +172,9 @@ pub fn make_i_digit(ip_address: String) -> Device {
                     if i%2==0 {"открыт"} else {"закрыт"}))
             }).flatten().collect(),
             // Клапана
+
+            make_klapan(1, "Двигатель насоса вакуума 1"),
+            make_klapan(2, "Двигатель насоса вакуума 2"),
 
         ].into_iter().flatten().collect()),    
     }
@@ -227,8 +230,8 @@ pub fn make_o_digit(ip_address: String) -> Device {
             make_klapan(13, "Клапан помольной камеры" ), // "Насос"
             make_klapan(12, "Клапан напуска" ),
             make_klapan(11, "Клапан верхнего контейнера"), //"Клапан подачи материала в камеру" ),
-            make_klapan(14, "Клапан выгрузки материала из камеры" ),
-            make_klapan(15, "Клапан насаса М5"),//"Клапан дозатора" ),
+//             make_klapan(14, "Клапан выгрузки материала из камеры" ),
+            make_klapan(14, "Клапан насаса М5"),//"Клапан дозатора" ),
         ].into_iter().flatten().collect()),
     }
 }

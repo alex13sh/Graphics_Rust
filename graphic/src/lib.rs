@@ -154,19 +154,36 @@ impl Graphic {
             .height(Length::Units(850))
         .into()
     }
+    
+    pub fn save_svg(&self) {
+        if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
+            use std::io::Write;
+            let svg_name = format!("plot_{}", log::date_time_to_string_name(&self.dt_start.into()));
+            let mut f = std::fs::File::create(format!("./plot/{}.svg", svg_name)).unwrap();
+            f.write(svg_text.as_bytes());
+            f.flush();
+            
+            use std::process::Command;
+            let _ = Command::new("inkscape")
+                .arg("-z").arg("-d 320")
+                .arg(format!("./plot/{}.svg", svg_name))
+                .arg("-e").arg(format!("./plot/{}.png", svg_name))
+                .spawn().unwrap();
+        }
+    }
+}
 
-    #[cfg(feature = "plotters")]
+#[cfg(feature = "plotters")]
+impl Graphic {
     pub fn update_svg(&mut self) {
         if let Some(svg_text) = self.make_svg(self.view_port.start, self.view_port.end, false) {
             self.plotters_svg = Some( svg::Handle::from_memory(svg_text));
         }
         self.lines_cache.clear();
     }
-    
-    #[cfg(feature = "plotters")]
     fn make_svg(&self, start: DateTime, end: DateTime, is_log: bool) -> Option<String> {
         use plotters::prelude::*;
-        let dlt_time_f32 = |dt: DateTime| 
+        let dlt_time_f32 = |dt: DateTime|
             (dt - self.dt_start).to_std()
                 .and_then(|std| Ok(std.as_secs_f32()))
                 .unwrap_or(0_f32);
@@ -176,7 +193,7 @@ impl Graphic {
             (((seconds_range.end - seconds_range.start) as u32*10).max(800),
             1500)
         } else {(1200, 600)};
-        
+
         let mut svg_text = String::new();
         {
             let back = SVGBackend::with_string(&mut svg_text, size);
@@ -184,24 +201,23 @@ impl Graphic {
         }
         Some(svg_text)
     }
-    
-    #[cfg(feature = "plotters")]
+
     fn update_plotters<B, BE>(&self, back: B,
-        seconds_range: core::ops::Range<f32>, is_log: bool) 
-        where 
+        seconds_range: core::ops::Range<f32>, is_log: bool)
+        where
             BE: std::error::Error + Send + Sync,
             B: plotters::prelude::DrawingBackend<ErrorType=BE>,
         {
-        
+
         use coarse_prof::profile;
         profile!("update_svg");
-        
+
         use plotters::prelude::*;
         use std::collections::HashMap;
         use std::ops::{Deref, DerefMut};
-        
+
 //         let dt_range = self.view_port.start..self.view_port.end;
-        let dlt_time_f32 = |dt: DateTime| 
+        let dlt_time_f32 = |dt: DateTime|
             if let Ok(std) = (dt - self.dt_start).to_std() {
                 std.as_secs_f32()
             } else {
@@ -209,8 +225,8 @@ impl Graphic {
             };
 //         let seconds_range = dlt_time_f32(start)..dlt_time_f32(end);
 //         dbg!(&seconds_range);
-        
-                
+
+
         let root_area = back.into_drawing_area();
         root_area.fill(&WHITE).unwrap();
         let (a_speed, (a_temp, a_amp)) = if is_log {
@@ -223,7 +239,7 @@ impl Graphic {
             let (a2, a3) = a2.split_vertically(size.1/2);
             (a1, (a2, a3))
         };
-        
+
         let cc_build = |on, graphic_name, range_1| {
             ChartBuilder::on(on)
             .x_label_area_size(25)
@@ -235,13 +251,13 @@ impl Graphic {
                 graphic_name, // date name
                 ("sans-serif", 20).into_font(),
             ).build_ranged(
-                seconds_range.clone(), 
+                seconds_range.clone(),
                 range_1
             ).unwrap()
             };
-        
+
 //         let mut cc_map = HashMap::new();
-        
+
         let mut cc_temp = {
             let mut cc = cc_build(&a_temp, "Температуры",
             self.view_port.min_value..self.view_port.max_value)
@@ -250,7 +266,7 @@ impl Graphic {
             cc.configure_mesh().x_labels(5).y_labels(20).draw().unwrap();
 //         cc_map.insert(String::from("Температуры"), cc_temp.deref());
             cc};
-        
+
         let mut cc_speed = {
             let mut cc = cc_build(&a_speed, "Скорость",
             0_f32..25_000_f32)
@@ -267,7 +283,7 @@ impl Graphic {
                 .y_label_formatter(&|x| format!("{:2.}", x))
                 .draw().unwrap();
                 cc};
-                
+
         let mut cc_amper = {
             let mut cc = cc_build(&a_amp, "Ток",
             0_f32..120_f32);
@@ -317,7 +333,7 @@ impl Graphic {
             .label(&s.name)
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));
         }
-        
+
         if is_log {
             let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut(), &mut cc_amper];
             for cc in lst {
@@ -328,11 +344,10 @@ impl Graphic {
                 .draw().unwrap();
             }
         }
-        
+
     }
-    
-    
-    #[cfg(all(feature = "plotters", not(feature = "iced_backend")))]
+
+    #[cfg(not(feature = "iced_backend"))]
     pub fn view<'a>(&mut self) -> Element<'a, Message> {
         use coarse_prof::profile;
         profile!("Graphic view");
@@ -351,30 +366,13 @@ impl Graphic {
 // //             .center_y()
 //             .into()
     }
-    
-    pub fn save_svg(&self) {
-        if let Some(svg_text) = self.make_svg(self.dt_start, self.view_port.end, true) {
-            use std::io::Write;
-            let svg_name = format!("plot_{}", log::date_time_to_string_name(&self.dt_start.into()));
-            let mut f = std::fs::File::create(format!("./plot/{}.svg", svg_name)).unwrap();
-            f.write(svg_text.as_bytes());
-            f.flush();
-            
-            use std::process::Command;
-            let _ = Command::new("inkscape")
-                .arg("-z").arg("-d 320")
-                .arg(format!("./plot/{}.svg", svg_name))
-                .arg("-e").arg(format!("./plot/{}.png", svg_name))
-                .spawn().unwrap();
-        }
-    }
 }
 
-impl Drop for Graphic {
-    fn drop(&mut self) {
-        coarse_prof::write(&mut std::io::stdout()).unwrap();
-    }
-}
+// impl Drop for Graphic {
+//     fn drop(&mut self) {
+//         coarse_prof::write(&mut std::io::stdout()).unwrap();
+//     }
+// }
 
 #[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
 impl canvas::Program<Message> for Graphic {

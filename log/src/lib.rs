@@ -146,7 +146,7 @@ impl Logger {
                 file_name: Some(format!("value_{}.csv", date_time_to_string_name_short(&start))),
                 values: Some(values.clone()),
             };
-            csv::write_values(&get_file_path("csv").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
+            csv::write_values(&get_file_path("tables/csv/").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
             sessions.push(s);
             csv::write_session(&get_file_path("csv/session.csv"), sessions.clone());
         },

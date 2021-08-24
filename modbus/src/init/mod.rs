@@ -70,7 +70,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         );
     let make_sensor_davl = |pin, name: &str, err_max: (f32, f32)|
         make_values(pin, name, ValueDirect::read().err_max(err_max.into()),
-            ValueSize::UInt16Map(|v|10_f32.powf(v as f32/1000.0 -5.5))
+            ValueSize::UInt16Map(|v|10_f32.powf(v as f32/1000.0 -5.52))
 //             ValueSize::UInt16Map(|v| v as f32 / 1000.0)
         );
     

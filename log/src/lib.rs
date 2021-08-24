@@ -169,6 +169,7 @@ impl Logger {
             .fields(name_hash)
             .make_values_3(Duration::from_millis(100))
                 .fill_empty()
+                .shift_vibro()
                 .insert_time_f32();
         let mut res = (
             values.get_state(),

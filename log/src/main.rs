@@ -49,6 +49,7 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         .fields(hashs)
         .make_values_3(Duration::from_millis(100))
             .fill_empty()
+            .shift_vibro()
             .insert_time_f32()
         .write_excel()?;
     Ok(())

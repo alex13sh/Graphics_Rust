@@ -222,7 +222,7 @@ impl OutputValues {
         self.values.insert_column(column_hz+1, speed.into_iter());
         self.fields.insert(column_hz+1, "Speed".into());
     }
-    fn shift_vibro(&mut self) {
+    pub fn shift_vibro(mut self) -> Self {
         let column_vibro = self.fields.iter().position(|s| s=="Вибродатчик").unwrap();
         let shift = 0.5 / self.info.step_sec;
         let shift = shift as usize;
@@ -233,6 +233,7 @@ impl OutputValues {
             let col_s = &mut row_s[column_vibro];
             *col_s = col_i;
         }
+        self
     }
     fn convert_davl(&mut self) {
         let col_davl = self.fields.iter().position(|s| s=="Давление масла на выходе маслостанции").unwrap();
@@ -267,7 +268,7 @@ impl OutputValues {
 //         use umya_spreadsheet::*;
         use excel::*;
         
-        self.shift_vibro();
+//         self.shift_vibro();
 //         self.values.fill_empty();
 //         self.insert_time_f32();
         self.insert_speed();

@@ -58,7 +58,8 @@ impl Graphic {
                 graphic_name: graphic_name.into(),
                 graphic_second: second,
                 color: iced_native::Color::BLACK,
-                points: Vec::new()
+                points: Vec::new(),
+                min_max_value: None,
             });
         };
     }
@@ -75,7 +76,7 @@ impl Graphic {
     
     pub fn update(&mut self, message: Message) {
         match message {
-        Message::AppendValues(/*dt,*/ values) => {
+        Message::AppendValues(/*dt,*/ _values) => {
 //             self.append_values(values);
         },
         _ => {}
@@ -110,6 +111,33 @@ impl Graphic {
         #[cfg(not( feature = "plotters"))] self.lines_cache.clear();
         self.view_port.set_end(dt);
 //         dbg!(&self.view_port.start);
+    }
+
+    pub fn set_log_values(&mut self, values: &Vec<log::LogValue>) {
+        if values.len()<2 {return;}
+        use std::collections::HashMap;
+
+        let dt_start = values.first().unwrap().date_time;
+        let dt_end = values.last().unwrap().date_time;
+
+        let mut ser_map: HashMap<_,_> = self.series.iter_mut().map(|s| (s.name.clone(), s)).collect();
+
+        for v in values {
+            if let Some(ser) = ser_map.get_mut(&v.hash) {
+                ser.points.push(DatePoint{dt: v.date_time.into(), value: v.value})
+            }
+        }
+
+        for s in &mut self.series {
+            s.calc_min_max_value();
+        }
+
+        self.view_port = ViewPort {
+            end: dt_end.into(),
+            start: dt_start.into(),
+            min_value: 0_f32,
+            max_value: 100_f32,
+        }
     }
     
     pub fn reset_values(&mut self) {
@@ -151,7 +179,7 @@ impl Graphic {
         
         let mut svg_text = String::new();
         {
-            let mut back = SVGBackend::with_string(&mut svg_text, size);
+            let back = SVGBackend::with_string(&mut svg_text, size);
             self.update_plotters(back, seconds_range, is_log);
         }
         Some(svg_text)
@@ -292,7 +320,7 @@ impl Graphic {
         
         if is_log {
             let lst = vec![cc_temp.deref_mut(), cc_speed.deref_mut(), &mut cc_amper];
-            for mut cc in lst {
+            for cc in lst {
                 profile!("for mut cc in lst");
                 cc.configure_series_labels()
                 .background_style(&WHITE.mix(0.8))
@@ -450,6 +478,18 @@ struct LineSeries {
     graphic_second: bool,
     color: iced_native::Color,
     points: Vec<DatePoint>,
+    min_max_value: Option<(f32, f32)>,
+}
+
+impl LineSeries {
+    fn calc_min_max_value(&mut self) -> Option<(f32, f32)> {
+        let min = self.points.iter()
+            .min_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
+        let max = self.points.iter()
+            .max_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
+        self.min_max_value = Some((min, max));
+        self.min_max_value
+    }
 }
 
 #[derive(Debug, Clone)]

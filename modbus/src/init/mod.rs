@@ -289,6 +289,23 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_invertor_value( "Нижнее ограничение выходной частота",  1, 11), // 0.00 - 600.00
                 
                 // 1.12 - 1.21 -- Временные параметры
+                add_simple_invertor_value( "Время разгона 1",  1, 12),
+                add_simple_invertor_value( "Время замедления 1",  1, 13),
+                add_simple_invertor_value( "Время разгона 2",  1, 14),
+                add_simple_invertor_value( "Время замедления 2",  1, 15),
+                add_simple_invertor_value( "Время разгона 3",  1, 16),
+                add_simple_invertor_value( "Время замедления 3",  1, 17),
+                add_simple_invertor_value( "Время разгона 4",  1, 18),
+                add_simple_invertor_value( "Время замедления 4",  1, 19),
+
+                add_simple_invertor_value( "Порог переключения между 1/4 времени разгона/замедления",  1, 23),
+
+                add_simple_invertor_value( "Длительность начального участка S-кривой разгона",  1, 24),
+                add_simple_invertor_value( "Длительность конечного участка S-кривой разгона",  1, 25),
+                add_simple_invertor_value( "Длительность начального участка S-кривой замедления",  1, 26),
+                add_simple_invertor_value( "Длительность конечного участка S-кривой замедления",  1, 27),
+
+
                 
                 // 1.28 - 1.33 -- Частота пропуска (1, 2, 3)
                 
@@ -324,19 +341,28 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             reg.append(&mut vec![
                 add_simple_value_read("ac4e9ff84c", 5, 31, "Наработка двигателя (мин)"),
                 add_simple_value_read("b735f11d88", 5, 32, "Наработка двигателя (дни)"),
+
+                add_simple_invertor_value( "Инерция двигателя с постоянными магнитами",  5, 38),
+            ]);
+
+            // Part 6
+            reg.append(&mut vec![
+
+                add_simple_invertor_value( "Токоограничение при разгоне",  6, 03),
+                add_simple_invertor_value( "Снижение несущей частоты ШИМ",  6, 55),
             ]);
             
             // Part 9 
             reg.append(&mut vec![
                 add_simple_invertor_value("Заданная частота по коммуникационному интерфейсу", 9, 10), // 600.00
                 
-                add_simple_invertor_value("Индетификация коммуникационной платы", 9, 60),
-                add_simple_invertor_value("IP конфигурация комм. платы", 9, 75),
+//                 add_simple_invertor_value("Индетификация коммуникационной платы", 9, 60),
+//                 add_simple_invertor_value("IP конфигурация комм. платы", 9, 75),
                 
-                add_simple_invertor_value("IP адрес 1 комм. платы", 9, 76),
-                add_simple_invertor_value("IP адрес 2 комм. платы", 9, 77),
-                add_simple_invertor_value("IP адрес 3 комм. платы", 9, 78),
-                add_simple_invertor_value("IP адрес 4 комм. платы", 9, 79),
+//                 add_simple_invertor_value("IP адрес 1 комм. платы", 9, 76),
+//                 add_simple_invertor_value("IP адрес 2 комм. платы", 9, 77),
+//                 add_simple_invertor_value("IP адрес 3 комм. платы", 9, 78),
+//                 add_simple_invertor_value("IP адрес 4 комм. платы", 9, 79),
             ]);
             
             let add_simple_value_bit = |num:u8, name: &str| ValueBit {name: name.into(), bit_num: num, bit_size: 1};

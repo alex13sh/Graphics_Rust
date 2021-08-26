@@ -7,13 +7,19 @@ pub(super) fn make_value(prefix: &str, name: &str, address: u16, size: ValueSize
 pub mod owen_analog {
     use super::*;
     pub fn make_sensor(pin: u8, name: &str, err: ValueError, val_size: ValueSize) -> Vec<Value> {
+        make_sensor_fn(pin, name, move |v| {
+            v.size(val_size)
+            .direct(ValueDirect::read().err_max(err))
+        })
+    }
+    pub fn make_sensor_fn(pin: u8, name: &str, value_build: impl FnOnce(Value) -> Value) -> Vec<Value> {
         let pin = pin as u16 - 1;
         let prefix = name;
         vec![
-            Value {
-                log: Log::hash(&format!("{}/value", name)),
-                .. make_value(prefix,"value", 4000+pin*3, ValueSize::FLOAT, ValueDirect::read().err_max(err.into()))
-            },
+            value_build(
+                make_value(prefix,"value", 4000+pin*3, ValueSize::FLOAT, ValueDirect::read())
+            ).with_log(Log::hash(&format!("{}/value", name))),
+
             make_value(prefix, "type", 4100+pin*16, ValueSize::UINT32, ValueDirect::Write), // "Тип датчика"
             make_value(prefix, "point", 4103+pin*16, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
             make_value(prefix, "Верхняя граница", 4108+pin*16, ValueSize::FLOAT, ValueDirect::Write),
@@ -22,14 +28,14 @@ pub mod owen_analog {
         ]
     }
 
-    pub fn make_sensor_rtu(pin: u8, name: &str, dir: ValueDirect, val_size: ValueSize) -> Vec<Value> {
+    pub fn make_sensor_rtu_fn(pin: u8, name: &str, value_build: impl FnOnce(Value) -> Value) -> Vec<Value> {
         let pin = pin as u16 - 1;
         let prefix = name;
         vec![
-            Value {
-                log: Log::hash(&format!("{}/value", name)),
-                .. make_value(prefix,"value", 0x100+pin*1, val_size, dir)
-            },
+            value_build(
+                make_value(prefix,"value", 0x100+pin*1, ValueSize::UINT16, ValueDirect::read())
+            ).with_log(Log::hash(&format!("{}/value", name))),
+
             make_value(prefix, "type", 0x00+pin*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
             make_value(prefix, "point", 0x20+pin*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
             make_value(prefix, "Верхняя граница", 0x68+pin*2, ValueSize::FLOAT, ValueDirect::Write),

@@ -3,10 +3,51 @@
 #[derive(Debug, Clone)]
 pub struct Value {
     pub name: String,
+    pub suffix_name: Option<String>,
     pub address: u16,
     pub direct: ValueDirect,
     pub size: ValueSize,
     pub log: Option<Log>,
+}
+
+impl Value {
+    pub fn new(address: u16, name: &str) -> Self {
+        Value {
+            name: name.into(),
+            suffix_name: None,
+            address: address,
+            direct: ValueDirect::Write,
+            size: ValueSize::UINT16,
+            log: None,
+        }
+    }
+    pub fn make_value(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
+        Value {
+            name: name.into(),
+            suffix_name: None,
+            address: address,
+            direct: direct,
+            size: size,
+            log: None,
+        }
+    }
+
+    pub fn with_log(mut self, log: Log) -> Self {
+        self.log = Some(log);
+        self
+    }
+    pub fn with_suffix(mut self, suffix_name: &str) -> Self {
+        self.suffix_name = Some(suffix_name.into());
+        self
+    }
+    pub fn direct(mut self, direct: ValueDirect) -> Self {
+        self.direct = direct;
+        self
+    }
+    pub fn size(mut self, size: ValueSize) -> Self {
+        self.size = size;
+        self
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
@@ -126,10 +167,10 @@ pub struct Log {
 }
 
 impl Log {
-    pub fn hash(hash: &str) -> Option<Log> {
-        Some(Log {
+    pub fn hash(hash: &str) -> Self {
+        Log {
             hash: hash.into(),
             full_name: "".into(),
-        })
+        }
     }
 }

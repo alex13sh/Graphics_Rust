@@ -54,6 +54,7 @@ impl ValuesList {
         pub use std::convert::TryFrom;
         let err = value.get_error_min_max();
         let name = value.name().unwrap();
+        let suffix_name = if let Some(txt) = value.suffix_name() {format!("({})", txt)} else {String::from("")};
         let value = f32::try_from(value.value().as_ref());
         let color;
         let txt_value;
@@ -70,7 +71,7 @@ impl ValuesList {
                     [1.0, 1.0, 0.0],
             _ => [0.0, 0.8, 0.0],
             };
-            txt_value = format!("Value: {:.2}", value);
+            txt_value = format!("Value: {:.2} {}", value, suffix_name);
         },
         Err(e) => {
             color = [1.0, 0.0, 0.0];

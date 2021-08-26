@@ -441,9 +441,9 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                         add_simple_value_bit(10, "Управление приводом через интерфейс"),
                         add_simple_value_bit(12, "Копирование параметров из пульта разрешено"),
                     ])),
-                add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)"),
-                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)"), // fix me
-                add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)"),
+                add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
+                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)").with_suffix("Оборот/мин"), // fix me
+                add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
                 add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),

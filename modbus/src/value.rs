@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug)]
 pub struct Value {
     name: String,
+    suffix_name: Option<String>,
     address: u16,
     value: Arc<Mutex<(u32, bool)>>,
     // value: [u16, 2]
@@ -19,6 +20,7 @@ impl Value {
     pub fn new(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
         Value {
             name: String::from(name),
+            suffix_name: None,
             address: address,
             direct: direct,
             size: size,
@@ -31,6 +33,9 @@ impl Value {
     }
     pub fn address(&self) -> u16 {
         self.address
+    }
+    pub fn suffix_name(&self) -> Option<&String> {
+        Some(self.suffix_name.as_ref()?)
     }
     pub fn is_read_only(&self) -> bool {
         if let ValueDirect::Read{..} = self.direct {
@@ -104,6 +109,7 @@ impl Value {
     pub fn new_value(&self, value: u32) -> Self {
         Self {
             name: self.name.clone(),
+            suffix_name: None,
             address: self.address,
             value: Arc::new(Mutex::new((value,false))),
             direct: self.direct,
@@ -143,6 +149,7 @@ impl Value {
         if let ValueSize::BitMap(ref bits) = self.size {
             bits.iter().map(|bit| Self {
                 name: bit.name.clone(),
+                suffix_name: None,
                 address: self.address.clone(),
                 value: self.value.clone(),
                 size: ValueSize::Bit(bit.bit_num),
@@ -171,6 +178,7 @@ impl From<ValueInit> for Value {
     fn from(v: ValueInit) -> Self {
         Value {
             name: v.name,
+            suffix_name: v.suffix_name,
             address: v.address,
             direct: v.direct,
             size: v.size,
@@ -345,6 +353,9 @@ impl ModbusValues {
         use std::collections::BTreeMap;
         let b: BTreeMap<_,_> = self.0.iter().map(|(k, v)| (k.clone(), (v.address(), v.value()))).collect();
         format!("Invertor Values: {:#?}", b)
+    }
+    pub fn iter_values(&self) -> impl Iterator<Item=(u8, u8, u32, String)> + '_ {
+        self.0.iter().map(|(k, v)| ((v.address()/256) as u8, (v.address()%256) as u8, v.value(), k.clone()))
     }
 }
 

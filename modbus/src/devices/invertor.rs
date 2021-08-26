@@ -73,7 +73,7 @@ impl Invertor {
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
         let vm = self.device.values_map();
-        vm.get("Выходная частота (H)").unwrap().clone()
+        vm.get("Скорость двигателя").unwrap().clone()
     }
     
     fn get_address_function(&self, num_func: u8) -> Option<u16> {

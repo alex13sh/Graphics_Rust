@@ -447,7 +447,7 @@ mod half_complect {
                 .collect();
             let mut values = ModbusValues::from(values);
             let inv_values = invertor.device().values_map()
-                .get_values_by_name_contains(&["Выходной ток (A)","Выходная частота (H)",]);
+                .get_values_by_name_contains(&["Выходной ток (A)","Скорость двигателя",]);
             values.extend(inv_values.into_iter());
 //             dbg!(values.get_values_by_name_ends(&["value", "bit"]).keys());
             
@@ -464,7 +464,7 @@ mod half_complect {
                             "Температура масла на нижн. выходе дв. М1",
                             "Виброскорость",
                             "Выходной ток (A)",
-                            "Выходная частота (H)",
+                            "Скорость двигателя",
                         ]
                     },
                 HalfPart::Top => map!{BTreeMap,
@@ -475,7 +475,7 @@ mod half_complect {
                             "Температура нижн подшипника дв. М2",
                             "Виброскорость",
                             "Выходной ток (A)",
-                            "Выходная частота (H)",
+                            "Скорость двигателя",
                         ]
                     }
                 }

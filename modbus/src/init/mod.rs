@@ -235,7 +235,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
             make_klapan(12, "Клапан напуска" ),
             make_klapan(11, "Клапан верхнего контейнера"), //"Клапан подачи материала в камеру" ),
 //             make_klapan(14, "Клапан выгрузки материала из камеры" ),
-            make_klapan(14, "Клапан насаса М5"),//"Клапан дозатора" ),
+            make_klapan(14, "Клапан насоса М5"),//"Клапан дозатора" ),
         ].into_iter().flatten().collect()),
     }
 }
@@ -442,7 +442,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                         add_simple_value_bit(12, "Копирование параметров из пульта разрешено"),
                     ])),
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
-                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Выходная частота (H)").with_suffix("Оборот/мин"), // fix me
+                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("Оборот/мин"), // fix me
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
                 add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),

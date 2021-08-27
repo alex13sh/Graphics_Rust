@@ -264,20 +264,26 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 .size(ValueSize::UInt16Map(|v| v as f32/10_f32))
                 .with_log(Log::hash(hash));
 
+
+
             let mut reg = vec![
+                add_simple_invertor_value("Номинальный ток преобразователя частоты",  0, 1),
+
                 add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
                 
                 add_simple_invertor_value("Режим управления",  0, 10), // 0 - 2
                 add_simple_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
                 add_simple_invertor_value("Режим работы привода",   0, 16), // 0 - 1
                 add_simple_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
+
                 add_simple_invertor_value("Управление направлением вращения двигателя",  0, 23), // 0 - 2
                 add_simple_invertor_value("Сбособ остановки",   0, 22), // 0 - 1
                 
                 add_simple_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
                 add_simple_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
                 add_simple_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
-                
+
+
                 add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
                 add_simple_invertor_value("Номинальная частота двигателя",      1, 1), // 0.0 - 600.0
                 add_simple_invertor_value("Номинальное напряжение двигателя",   1, 2), // 0 - 255.0
@@ -340,14 +346,45 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_value_read("ac4e9ff84c", 5, 31, "Наработка двигателя (мин)"),
                 add_simple_value_read("b735f11d88", 5, 32, "Наработка двигателя (дни)"),
 
+                add_simple_invertor_value( "Выбор между асинхронным двигателем и двигателем с постоянными магнитами",  5, 33),
+                add_simple_invertor_value( "Ном. ток двигателя с постоянными магнитами",  5, 34),
+                add_simple_invertor_value( "Ном. мощность двигателя с постоянными магнитами",  5, 35),
+
                 add_simple_invertor_value( "Инерция двигателя с постоянными магнитами",  5, 38),
+
+                add_simple_invertor_value( "Угол между магнитным полюсом и нулевой меткой датчика ОС",  5, 42),
+                add_simple_invertor_value( "Параметр Ke двигателя с постоянными магнитами",  5, 43),
+
             ]);
 
             // Part 6
             reg.append(&mut vec![
 
+                add_simple_invertor_value( "Уровень ограничения перенапряжения",  6, 01),
+
                 add_simple_invertor_value( "Токоограничение при разгоне",  6, 03),
+                add_simple_invertor_value( "Токоограничение в установившемся режиме",  6, 04),
+                add_simple_invertor_value( "Выбор времени разгона/торможения при токоограничении в установившемся режиме",  6, 05),
+
+                add_simple_invertor_value( "Уровень ограничения тока",  6, 12),
+
+                add_simple_invertor_value( "Уровень перегрева радиатора (OH)",  6, 15),
+                add_simple_invertor_value( "Порог ограничения для функций токоограничения",  6, 16),
+
+                add_simple_invertor_value( "Выходной ток при аварии",  6, 35),
+
                 add_simple_invertor_value( "Снижение несущей частоты ШИМ",  6, 55),
+
+            // 07.32
+                add_simple_invertor_value( "Коэффициент компенсации неустойчивости вращения",  7, 32),
+            // 10.00-01
+                add_simple_invertor_value( "Выбор типа датчика обратной связи по скорости",  10, 00),
+                add_simple_invertor_value( "Число импульсов на оборот",  10, 01),
+            // 10.25
+                add_simple_invertor_value( "Частота контроля скорости в режиме FOC",  10, 25),
+            // 11.13-14 -- Обратная связь
+                add_simple_invertor_value( "PDFF усиление",  11, 13),
+                add_simple_invertor_value( "НЧ-фильтр для ASR выхода",  11, 14),
             ]);
             
             // Part 9 
@@ -442,7 +479,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                         add_simple_value_bit(12, "Копирование параметров из пульта разрешено"),
                     ])),
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
-                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("Оборот/мин"), // fix me
+                add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("об./мин"), // fix me
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
                 add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),

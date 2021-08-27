@@ -263,7 +263,7 @@ impl App {
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
                 let mut device_futures = Vec::new();
-                                let d = self.logic.invertor_1.device().clone();
+                let d = self.logic.invertor_1.device().clone();
                 let dc = d.clone();
                 let f = async move {dc.update_async(UpdateReq::All).await};
                 let dc = d.clone();
@@ -297,14 +297,20 @@ impl App {
                 Some(half_complect::SpeedChange::Up) => {
                     self.oil_station.oil_station(true);
                     self.logic.update_new_values();
+
+                    self.dvij_is_started = true;
+                    self.reset_values();
                 },
                 Some(half_complect::SpeedChange::Down) => {
                     self.oil_station.oil_station(false);
                     self.klapans.davl_dis();
                     self.logic.update_new_values();
+
+                    self.dvij_is_started = false;
+                    self.log_save();
                 },_ => {},
                 }
-                self.proccess_speed();
+//                 self.proccess_speed();
             },
         }
         Command::none()

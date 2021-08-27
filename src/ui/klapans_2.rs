@@ -72,7 +72,7 @@ impl Klapans {
 
                 self.davl_dis();
             },
-            ("Клапана", _) => {
+            ("Клапаны", _) => {
                 pb.1 = !pb.1;
                 let enb = pb.1;
                 self.set_klapan("Клапан нижнего контейнера", enb);

@@ -291,7 +291,13 @@ impl App {
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
             MessageMudbusUpdate::LogUpdate => {
                 self.proccess_values();
-                self.proccess_speed();
+                match self.proccess_speed() {
+                Some(half_complect::SpeedChange::Down) => {
+                    self.oil_station.oil_station_dis();
+                    self.klapans.davl_dis();
+                    self.logic.update_new_values();
+                },_ => {},
+                }
             },
         }
         Command::none()
@@ -325,7 +331,7 @@ impl App {
         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
     
-    fn proccess_speed(&mut self) {
+    fn proccess_speed(&mut self) -> Option<half_complect::SpeedChange> {
         use half_complect::SpeedChange::*;
         let is_started_1 = self.is_started();
         let changed_low = self.low.proccess_speed();
@@ -342,6 +348,7 @@ impl App {
 //         (true, false) => self.log_save(),
 //         _ => {}
 //         };
+        return changed_low;
     }
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {

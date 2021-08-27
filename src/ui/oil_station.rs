@@ -82,3 +82,9 @@ impl OilStation {
         column.into()
     }
 }
+
+impl OilStation {
+    pub fn oil_station_dis(&self) {
+        self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(false);
+    }
+}

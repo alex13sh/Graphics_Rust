@@ -400,17 +400,16 @@ impl App {
         let dt = log::date_time_now();
         dbg!(&dt);
         let dt = log::date_time_to_string_name_short(&dt);
-        let path = log::get_file_path("tables/log/").join(dt).with_extension(".rs");
+        let path = log::get_file_path("tables/log/").join(dt).with_extension(".csv");
         dbg!(&path);
-        let mut f = std::fs::File::create(path);
-        if let Ok(f) = f {
-            use std::io::prelude::*;
-            let mut buf = std::io::BufWriter::new(f);
-            let map = self.logic.invertor_1.device().values_map().clone();
-//                 write!(buf, "Invertor: {:?}", map);
-//             buf.write_all(format!("Invertor: {:#?}", map).as_bytes());
-            buf.write_all(map.print_values().as_bytes());
-            buf.flush();
+        let parametrs: Vec<_> = self.logic.invertor_1.device().values_map()
+            .iter_values().map(|(adr, v, n)| log::InvertorParametr {
+                address: format!("({}, {})", adr/256, adr%256),
+                value: v,
+                name: n,
+            }).collect();
+        if let Err(e) = log::csv::write_invertor_parametrs(&path, parametrs) {
+            dbg!(e);
         }
     }
 

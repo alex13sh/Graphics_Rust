@@ -364,8 +364,11 @@ impl ModbusValues {
         let b: BTreeMap<_,_> = self.0.iter().map(|(k, v)| (k.clone(), (v.address(), v.value()))).collect();
         format!("Invertor Values: {:#?}", b)
     }
-    pub fn iter_values(&self) -> impl Iterator<Item=(u8, u8, u32, String)> + '_ {
-        self.0.iter().map(|(k, v)| ((v.address()/256) as u8, (v.address()%256) as u8, v.value(), k.clone()))
+    pub fn iter_values(&self) -> impl Iterator<Item=(u16, u32, String)> + '_ {
+        self.0.iter().map(|(k, v)| (
+                v.address(), //((v.address()/256) as u8, (v.address()%256) as u8),
+                v.value(), k.clone()
+            ))
     }
 }
 

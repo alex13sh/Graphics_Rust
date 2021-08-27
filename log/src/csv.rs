@@ -44,6 +44,20 @@ pub fn test_read_csv_1(file_path: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
  
+pub fn write_invertor_parametrs(file_name: &PathBuf, values: Vec<crate::InvertorParametr>) -> crate::MyResult {
+    let file = File::create(file_name)?;
+    let mut wrt = csv::WriterBuilder::new()
+        .has_headers(true)
+        .delimiter(b';')
+        .from_writer(file);
+
+    for value in values {
+        wrt.serialize(value)?;
+    }
+
+    Ok(())
+}
+
 pub fn write_values(file_name: &PathBuf, values: Vec<crate::LogValue>) -> crate::MyResult {
     let file = File::create(file_name)?;
     let mut wrt = csv::WriterBuilder::new()

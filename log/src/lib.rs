@@ -52,6 +52,13 @@ pub fn get_file_path(file_name: &str) -> PathBuf {
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InvertorParametr {
+    pub address: String, //(u8, u8),
+    pub value: u32,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogValue {
     #[serde(deserialize_with = "date_time_from_str")]
     #[serde(serialize_with = "date_time_to_str")]

@@ -33,6 +33,8 @@ impl Klapans {
         ];
         let button_names = [
             "Уменьшить давление",
+            "Увеличить давление",
+
         ];
         Klapans {
             klapans: klapan_names.into_iter()
@@ -57,7 +59,7 @@ impl Klapans {
                 self.davl_down();
             }, ("Уменьшить давление", true) => {
                 pb.1 = false;
-                pb.0 = "Увеличить давление".into();
+//                 pb.0 = "Увеличить давление".into();
                 self.davl_dis();
 
             }, ("Увеличить давление", false) => {
@@ -66,7 +68,7 @@ impl Klapans {
                 self.davl_up();
             }, ("Увеличить давление", true) => {
                 pb.1 = false;
-                pb.0 = "Уменьшить давление".into();
+//                 pb.0 = "Уменьшить давление".into();
 
                 self.davl_dis();
             }
@@ -84,20 +86,20 @@ impl Klapans {
 
     pub fn view(&mut self) -> Element<Message> {
         let controls_klapan = self.klapans.iter_mut()
-            .fold(Row::new().spacing(20),
+            .fold(Row::new().spacing(5),
                 |row, (ref name, ref check, pb)|
                 row.push(Button::new(pb, Text::new(name))
                 .style(style::Button::Check{checked: *check})
                 .on_press(Message::ToggleKlapan(name.clone(), !check)))
             );
         let controls_buttons = self.buttons.iter_mut()
-            .fold(Row::new().spacing(20),
+            .fold(Row::new().spacing(5),
                 |row, (ref name, ref check, pb)|
                 row.push(Button::new(pb, Text::new(name))
                 .style(style::Button::Check{checked: *check})
                 .on_press(Message::PressButton(name.clone())))
             );
-        Row::new().spacing(25)
+        Row::new().spacing(10)
             .push(controls_buttons)
             .push(controls_klapan)
             .into()
@@ -105,22 +107,42 @@ impl Klapans {
 }
 
 impl Klapans {
+    fn set_klapan(&mut self, name: &str, enb: bool) {
+        if let Some(v) = self.klapans.iter_mut().find(|s| s.0==name) {
+            v.1 = enb;
+        }
+        if let Err(e) = self.values.set_bit(name, enb) {
+            dbg!(e);
+        }
+    }
 
-    fn davl_down(&self) {
+    fn set_button(&mut self, name: &str, enb: bool) {
+        if let Some(v) = self.buttons.iter_mut().find(|s| s.0==name) {
+            v.1 = enb;
+        }
+    }
+
+    fn davl_down(&mut self) {
         self.values.set_bit("Двигатель насоса вакуума 1", true).unwrap();
         self.values.set_bit("Двигатель насоса вакуума 2", true).unwrap();
-        self.values.set_bit("Клапан насоса М5", true).unwrap();
+
+        self.set_klapan("Клапан насоса М5", true);
+
+//         self.set_button("Уменьшить давление", true);
     }
-    pub fn davl_dis(&self) {
+    pub fn davl_dis(&mut self) {
         self.values.set_bit("Клапан насоса М5", false).unwrap();
         self.values.set_bit("Двигатель насоса вакуума 1", false).unwrap();
         self.values.set_bit("Двигатель насоса вакуума 2", false).unwrap();
 
-        self.values.set_bit("Клапан напуска", false).unwrap();
+        self.set_klapan("Клапан напуска", false);
+        self.set_button("Уменьшить давление", false);
+        self.set_button("Увеличить давление", false);
     }
-    fn davl_up(&self) {
+    fn davl_up(&mut self) {
         self.davl_dis();
-        self.values.set_bit("Клапан напуска", true).unwrap();
+
+        self.set_klapan("Клапан напуска", true);
     }
 
     pub fn oil_station(&self, enb: bool) {

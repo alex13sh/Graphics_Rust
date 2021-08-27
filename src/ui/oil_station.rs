@@ -38,7 +38,7 @@ impl OilStation {
                         "Температура масла на выходе маслостанции",
                         "Давление масла на выходе маслостанции",
                         "5) Invertor/Выходной ток (A)",
-                        "5) Invertor/Выходная частота (H)",
+                        "5) Invertor/Скорость двигателя",
                         "2) МВ110-24.8АС/Виброскорость дв. М1",
                         "2) МВ110-24.8АС/Давление воздуха компрессора",
                         "2) МВ110-24.8АС/Разрежение воздуха в системе",
@@ -84,7 +84,8 @@ impl OilStation {
 }
 
 impl OilStation {
-    pub fn oil_station_dis(&self) {
-        self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(false);
+    pub fn oil_station(&mut self, enb: bool) {
+        self.is_started = enb;
+        self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(enb);
     }
 }

@@ -34,7 +34,7 @@ impl Klapans {
         let button_names = [
             "Уменьшить давление",
             "Увеличить давление",
-
+            "Клапаны",
         ];
         Klapans {
             klapans: klapan_names.into_iter()
@@ -71,7 +71,15 @@ impl Klapans {
 //                 pb.0 = "Уменьшить давление".into();
 
                 self.davl_dis();
-            }
+            },
+            ("Клапана", _) => {
+                pb.1 = !pb.1;
+                let enb = pb.1;
+                self.set_klapan("Клапан нижнего контейнера", enb);
+                self.set_klapan("Клапан верхнего контейнера", enb);
+                self.set_klapan("Клапан подачи материала", enb);
+                self.set_klapan("Клапан помольной камеры", enb);
+            },
             _ => {}}
 //             match name {
 //             "Двигатель насоса вакуума" => {
@@ -99,7 +107,7 @@ impl Klapans {
                 .style(style::Button::Check{checked: *check})
                 .on_press(Message::PressButton(name.clone())))
             );
-        Row::new().spacing(10)
+        Column::new().spacing(10)
             .push(controls_buttons)
             .push(controls_klapan)
             .into()

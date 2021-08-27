@@ -225,6 +225,13 @@ impl ValueFloatError {
 //         }
         res
     }
+    fn new_u16(value: u32) -> Option<Self> {
+        if value == 32768 {
+            Some(Self::SensorDisconnect)
+        } else {
+            None
+        }
+    }
 }
 
 pub type ValueFloatResult = Result<f32, ValueFloatError>;
@@ -248,7 +255,10 @@ impl TryFrom<&Value> for f32 {
         | ValueSize::INT16
         | ValueSize::UINT8
         | ValueSize::INT8 => Ok(val.value() as f32),
-        ValueSize::UInt16Map(f) => Ok(f(val.value())),
+        ValueSize::UInt16Map(f) =>
+            if let Some(err) = ValueFloatError::new_u16(val.value()) {
+                Err(err)
+            } else {Ok(f(val.value()))},
         ValueSize::Bit(_pin) => Ok(if val.get_bit() {1.0} else {0.0}),
         _ => Err(ValueFloatError::ValueFalse),
         };

@@ -22,6 +22,7 @@ pub struct App {
     logic: meln_logic::init::Complect,
     txt_status: String,
     
+    dvij_is_started: bool,
     klapans: ui::Klapans,
     dozator: ui::Dozator,
     top: HalfComplect,
@@ -82,7 +83,8 @@ impl Application for App {
             ui: Default::default(),
             has_exit: false,
             txt_status: "".into(),
-            
+
+            dvij_is_started: false,
             low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
             top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
@@ -192,7 +194,7 @@ impl Application for App {
             .push(right_column.width(Length::FillPortion(10)));
 
         let dozator = self.dozator.view().map(Message::DozatorUI);
-        let klapans = if bd_2 {self.klapans.view().map(Message::KlapansUI)} else {Text::new("Отключен модуль с клапанами").into()};
+        let klapans = if bd_2 && !self.dvij_is_started {self.klapans.view().map(Message::KlapansUI)} else {Text::new("Отключен модуль с клапанами").into()};
         let col = Column::new()
             .spacing(10)
             .push(dozator)
@@ -336,9 +338,14 @@ impl App {
         let is_started_1 = self.is_started();
         let changed_low = self.low.proccess_speed();
         match changed_low {
-        Some(Up) => self.reset_values(),
-        Some(Down) => self.log_save(),
-        _ => {},
+        Some(Up) => {
+            self.dvij_is_started = true;
+            self.reset_values();
+        }
+        Some(Down) => {
+            self.dvij_is_started = false;
+            self.log_save();
+        },_ => {},
         };
 //         let changed_top = self.top.proccess_speed();
 //         let is_started_2 = self.is_started();

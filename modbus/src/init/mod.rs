@@ -104,14 +104,14 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: Some(vec![
-            make_sensor_err_min_max(1, "Давление масла на выходе маслостанции", "атм", (3.0, 2.0), (8.0, 10.0)),
-            make_sensor_err_min_max(3, "Давление воздуха компрессора", "атм", (5.0, 4.0), (9.0, 10.0)), // <<-- ??
+            make_sensor_err_min_max(1, "Давление масла на выходе маслостанции", "атм", (1.45, 1.37), (8.0, 10.0)), // <<-- ??
+            make_sensor_err_min_max(3, "Давление воздуха компрессора", "атм", (6.0, 5.0), (8.0, 9.0)),
             make_sensor_davl(4, "Разрежение воздуха в системе", (40.0, 50.0)),
             
             make_sensor(5, "Температура ротора Пирометр дв. М1", (60, 90)),
             make_sensor(6, "Температура ротора Пирометр дв. М2", (60, 90)),
             
-            make_sensor_vibra(7, "Виброскорость дв. М1", (10.0, 16.0)),
+            make_sensor_vibra(7, "Виброскорость дв. М1", (5.0, 6.0)),
             make_sensor_vibra(8, "Виброскорость дв. М2", (10.0, 16.0)),
 
             vec![
@@ -267,12 +267,15 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
 
 
             let mut reg = vec![
+                add_simple_invertor_value("Идентификационный код преобразователя частоты",  0, 0),
                 add_simple_invertor_value("Номинальный ток преобразователя частоты",  0, 1),
-
                 add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
                 
                 add_simple_invertor_value("Режим управления",  0, 10), // 0 - 2
                 add_simple_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
+                add_simple_invertor_value("Режим позиционирования",  0, 12), // 0 - 1
+                add_simple_invertor_value("Метод управления моментом",  0, 13), // 0 - 2
+
                 add_simple_invertor_value("Режим работы привода",   0, 16), // 0 - 1
                 add_simple_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
 
@@ -282,6 +285,10 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
                 add_simple_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
                 add_simple_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
+                add_simple_invertor_value("Источник команд управления (HAND)",    0, 31), // 0 - 8 // 8 - Плата
+
+                add_simple_invertor_value("Время усреднения показаний (Ток)",    0, 48),
+
 
 
                 add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
@@ -349,14 +356,18 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_invertor_value( "Выбор между асинхронным двигателем и двигателем с постоянными магнитами",  5, 33),
                 add_simple_invertor_value( "Ном. ток двигателя с постоянными магнитами",  5, 34),
                 add_simple_invertor_value( "Ном. мощность двигателя с постоянными магнитами",  5, 35),
-
+                // ... // Вставить!
                 add_simple_invertor_value( "Инерция двигателя с постоянными магнитами",  5, 38),
 
                 add_simple_invertor_value( "Угол между магнитным полюсом и нулевой меткой датчика ОС",  5, 42),
                 add_simple_invertor_value( "Параметр Ke двигателя с постоянными магнитами",  5, 43),
 
+
             ]);
 
+            // Проверка после резольвера:
+            // 00.11
+            // 06.03, 06.04
             // Part 6
             reg.append(&mut vec![
 
@@ -371,18 +382,28 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_invertor_value( "Уровень перегрева радиатора (OH)",  6, 15),
                 add_simple_invertor_value( "Порог ограничения для функций токоограничения",  6, 16),
 
+                add_simple_invertor_value( "Заданная частота при аварии",  6, 31),
+                add_simple_invertor_value( "Выходная частота при аварии",  6, 32),
+                add_simple_invertor_value( "Выходное напряжение при аварии",  6, 33),
+                add_simple_invertor_value( "Напряжение на шине DC при аварии",  6, 34),
                 add_simple_invertor_value( "Выходной ток при аварии",  6, 35),
 
                 add_simple_invertor_value( "Снижение несущей частоты ШИМ",  6, 55),
 
             // 07.32
+                add_simple_invertor_value( "Функция автоматической регулировки выходного напряжения",  7, 23),
                 add_simple_invertor_value( "Коэффициент компенсации неустойчивости вращения",  7, 32),
             // 10.00-01
                 add_simple_invertor_value( "Выбор типа датчика обратной связи по скорости",  10, 00),
                 add_simple_invertor_value( "Число импульсов на оборот",  10, 01),
+                // 10.02
             // 10.25
                 add_simple_invertor_value( "Частота контроля скорости в режиме FOC",  10, 25),
-            // 11.13-14 -- Обратная связь
+
+                add_simple_invertor_value( "Коэффициент усиление Интегральный",  10, 35),
+                add_simple_invertor_value( "Коэффициент усиление Пропорциональный",  10, 36),
+
+            // 11.12-14 -- Обратная связь
                 add_simple_invertor_value( "PDFF усиление",  11, 13),
                 add_simple_invertor_value( "НЧ-фильтр для ASR выхода",  11, 14),
             ]);
@@ -481,6 +502,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
                 add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("об./мин"), // fix me
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
+                add_simple_value_read_100("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
                 add_simple_value_read_100("5369886757", 0x2106, "Выходное напряжение (E)"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),

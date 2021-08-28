@@ -29,6 +29,10 @@ path = "./src/app_test_klapan.rs"
 name = "app_config"
 path = "./src/app_config.rs"
 
+[[bin]]
+name = "app_config_invertor"
+path = "./src/app_config_invertor.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

@@ -79,10 +79,12 @@ impl Dozator {
         Command::none()
     }
     pub fn view(&mut self) -> Element<Message> {
+        // 1000 = 3 градусов / сек
+        // 10_000 = 1 оборот / сек
         let slider = {
             let slider = Slider::new(
                 &mut self.ui.shim_hz,
-                -4000..=4000,
+                -500..=60_000,
                 self.shim_hz_ui,
                 Message::ShimHzChanged
             )

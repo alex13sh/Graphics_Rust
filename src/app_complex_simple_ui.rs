@@ -297,20 +297,14 @@ impl App {
                 Some(half_complect::SpeedChange::Up) => {
                     self.oil_station.oil_station(true);
                     self.logic.update_new_values();
-
-                    self.dvij_is_started = true;
-                    self.reset_values();
                 },
                 Some(half_complect::SpeedChange::Down) => {
                     self.oil_station.oil_station(false);
                     self.klapans.davl_dis();
                     self.logic.update_new_values();
-
-                    self.dvij_is_started = false;
-                    self.log_save();
                 },_ => {},
                 }
-//                 self.proccess_speed();
+                self.proccess_speed();
             },
         }
         Command::none()
@@ -344,8 +338,8 @@ impl App {
         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
     
-    fn get_proc_speed(&mut self) -> Option<half_complect::SpeedChange> {
-        let changed_low = self.low.proccess_speed();
+    fn get_proc_speed(&self) -> Option<half_complect::SpeedChange> {
+        let changed_low = self.low.get_proc_speed();
         changed_low
     }
     fn proccess_speed(&mut self)  {
@@ -554,27 +548,33 @@ mod half_complect {
 //         
 //         }
         
-        pub fn proccess_speed(&mut self) -> Option<SpeedChange> {
+        pub fn get_proc_speed(&self) -> Option<half_complect::SpeedChange> {
             use std::convert::TryFrom;
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-            
+
             let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap().value();
             let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
             let tok_value = self.values.get_value_arc("Выходной ток (A)").unwrap().value(); // "Выходной ток (A)"
             let tok_value = f32::try_from(tok_value.as_ref()).unwrap();
-                
+
             if self.invertor.is_started == false && (speed_value > 1.0 || tok_value > 1.0) {
-                self.invertor.is_started = true;
-// //                 self.reset_values();
                 return Some(SpeedChange::Up);
             } else if self.invertor.is_started == true
                     && (speed_value < 2.0 && vibra_value<0.2 && tok_value < 2.0) {
-                self.invertor.is_started = false;
-// //                 self.log_save();
                 return Some(SpeedChange::Down);
             };
             return None;
+        }
+
+        pub fn proccess_speed(&mut self) -> Option<SpeedChange> {
+            let change = self.get_proc_speed();
+            match change {
+            Some(SpeedChange::Up) => self.invertor.is_started = true,
+            Some(SpeedChange::Down) => self.invertor.is_started = false,
+            _ => {}
+            }
+            change
         }
     }
 }

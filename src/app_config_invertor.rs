@@ -83,8 +83,8 @@ impl Application for App {
         let txt_values = make_values(&values);
 
         let logs_path = func_files::get_list_log(&log::get_file_path("tables/csv/log")).ok();
-        let prev_values = logs_path.as_ref().map(|paths| paths.last()).flatten()
-            .map(|path| func_files::read_file(&path)).flatten();
+        let prev_values = logs_path.as_ref().and_then(|paths| paths.last())
+            .and_then(|path| func_files::read_file(&path));
         
         (
         Self {

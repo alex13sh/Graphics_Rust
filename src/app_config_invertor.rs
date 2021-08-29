@@ -71,7 +71,7 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let invertor = init::make_invertor("192.168.1.5".into(), 5);
+        let invertor = modbus::init::make_invertor("192.168.1.5".into(), 5);
         let invertor_1 = Invertor::new(invertor.into());
 
         let values = invertor_1.device().values()
@@ -168,8 +168,8 @@ impl Application for App {
 
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
-                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::MessageUpdate(MessageUpdate::ModbusUpdateAsync)))
-                .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::MessageUpdate(MessageUpdate::ModbusWrite)))
+                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
+                .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)
@@ -189,17 +189,17 @@ impl App {
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 let d = self.invertor_1.device();
-                let f = d.update_async(UpdateReq::All);
+                let f = async move {d.update_async(UpdateReq::All).await};
 
                 return Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             }
             MessageMudbusUpdate::ModbusConnect => {
                 println!("MessageMudbusUpdate::ModbusConnect ");
                 let d = self.invertor_1.device();
-                let mut f = d.connect();
+                let f = async move {d.connect().await};
                 return Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
                 self.txt_values = make_values(&self.values);

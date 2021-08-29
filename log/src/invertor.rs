@@ -8,6 +8,19 @@ pub struct InvertorParametr {
     pub name: String,
 } 
 
+impl InvertorParametr {
+    pub fn address(&self) -> u16 {
+        self.address.0 as u16 * 256 
+        + self.address.1 as u16
+    }
+    pub fn parametr(address: u16) -> (u8, u8) {
+        (
+            (address / 256) as u8,
+            (address % 256) as u8
+        )
+    }
+}
+
 use serde::{de, de::Error, Deserializer, Serializer};
 pub(crate) fn adr_from_str<'de, D>(deserializer: D) -> Result<(u8, u8), D::Error>
 where

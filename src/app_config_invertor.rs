@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 type Values = BTreeMap<u16, Arc<Value>>;
 type ValuesOldNew = BTreeMap<u16, (u32, u32)>; // (old, new)
+type ValuesOld = BTreeMap<u16, u32>;
 
 pub struct App {
     ui: UI,
@@ -24,6 +25,9 @@ pub struct App {
     invertor_1: Invertor,
     values: Values,
     txt_values: ValuesOldNew,
+    prev_values: Option<ValuesOld>,
+    
+    logs_path: Option<Vec<std::path::PathBuf>>
 }
 
 #[derive(Default)]
@@ -78,6 +82,10 @@ impl Application for App {
             .into_iter().map(|v| (v.address(), v)).collect();
         let txt_values = make_values(&values);
 
+        let logs_path = func_files::get_list_log(&log::get_file_path("tables/csv/log")).ok();
+        let prev_values = logs_path.as_ref().map(|paths| paths.last()).flatten()
+            .map(|path| func_files::read_file(&path)).flatten();
+        
         (
         Self {
             ui: UI {
@@ -90,6 +98,9 @@ impl Application for App {
             invertor_1: invertor_1,
             values: values,
             txt_values: txt_values,
+            prev_values: prev_values,
+            
+            logs_path: logs_path,
         },
         Command::none()
         )
@@ -214,6 +225,27 @@ impl App {
             },
         }
         Command::none()
+    }
+}
+
+mod func_files {
+    use super::ValuesOld;
+    use std::path::PathBuf;
+    
+    pub fn read_file(file_name: &PathBuf) -> Option<ValuesOld> {
+        let values = log::csv::read_invertor_parametrs(file_name)?
+            .into_iter().map(|p| (p.address(), p.value))
+            .collect();
+        Some(values)
+    }
+    pub fn get_list_log(dir: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
+        let v = if dir.is_dir() {
+            std::fs::read_dir(dir)?.into_iter()
+                .filter_map(|e| Some(e.ok()?.path()))
+                .filter(|p| p.is_file())
+                .collect()
+        } else {Vec::new()};
+        Ok(v)
     }
 }
 

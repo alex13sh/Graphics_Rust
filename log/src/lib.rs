@@ -28,6 +28,8 @@ pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
 pub mod structs;
 pub mod json;
 pub mod csv;
+pub mod invertor;
+pub use invertor::InvertorParametr;
 
 #[cfg(feature = "convert")]
 pub mod convert;
@@ -50,13 +52,6 @@ pub fn get_file_path(file_name: &str) -> PathBuf {
 }
 
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct InvertorParametr {
-    pub address: String, //(u8, u8),
-    pub value: u32,
-    pub name: String,
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LogValue {

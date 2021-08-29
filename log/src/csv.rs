@@ -58,6 +58,19 @@ pub fn write_invertor_parametrs(file_name: &PathBuf, values: Vec<crate::Invertor
     Ok(())
 }
 
+pub fn read_invertor_parametrs(file_name: &PathBuf) -> Option<Vec<crate::InvertorParametr>> {
+    let file = File::open(file_name).ok()?;
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .delimiter(b';')
+        .from_reader(file);
+    
+    Some(rdr.deserialize()
+        .filter_map(|res| res.ok())
+        .collect()
+    )
+}
+
 pub fn write_values(file_name: &PathBuf, values: Vec<crate::LogValue>) -> crate::MyResult {
     let file = File::create(file_name)?;
     let mut wrt = csv::WriterBuilder::new()

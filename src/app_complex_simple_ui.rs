@@ -412,7 +412,7 @@ impl App {
         dbg!(&path);
         let parametrs: Vec<_> = self.logic.invertor_1.device().values_map()
             .iter_values().map(|(adr, v, n)| log::InvertorParametr {
-                address: format!("({}, {})", adr/256, adr%256),
+                address: ((adr/256) as u8, (adr%256) as u8),
                 value: v,
                 name: n,
             }).collect();

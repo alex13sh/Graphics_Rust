@@ -19,6 +19,10 @@ impl InvertorParametr {
             (address % 256) as u8
         )
     }
+    pub fn parametr_str(address: u16) -> String {
+        let p = Self::parametr(address);
+        format!("({}, {})", p.0, p.1)
+    }
 }
 
 use serde::{de, de::Error, Deserializer, Serializer};

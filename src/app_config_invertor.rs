@@ -140,6 +140,7 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
         let Self {
             txt_values,
+            values,
             ui: UI {
                 scroll: ui_scroll,
                 txt_values: ui_txt_values,
@@ -151,14 +152,16 @@ impl Application for App {
         let values = ui_txt_values.iter_mut()
             .fold(Column::new()
                 .spacing(10).align_items(Align::Center), 
-                |lst, (name, input_state)| {
-                let name = name.clone();
-                let txt_value = &txt_values[&name];
+                |lst, (adr, input_state)| {
+                let adr = adr.clone();
+                let txt_value = &txt_values[&adr];
+                let p_name = values[&adr].name();
 //                 if let Some(ref txt_value) = txt_values.get(name) {
                     lst.push(Row::new().spacing(20)
-                        .push(Text::new(name.to_string()).width(Length::FillPortion(70)))
+                        .push(Text::new(format!("{} - {}", log::InvertorParametr::parametr_str(adr), p_name))
+                            .width(Length::FillPortion(70)))
                         .push(TextInput::new(input_state, "Value", &txt_value.1.to_string(),
-                            move |value| Message::ValueEdited(name.clone(), value))
+                            move |value| Message::ValueEdited(adr, value))
                             .width(Length::FillPortion(30))
                             .padding(10)
                             .style(style::ValueInput {

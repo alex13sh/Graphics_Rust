@@ -136,6 +136,7 @@ pub enum ValueSize {
     UINT8,
     INT16,
     UINT16,
+    UInt16Dot(u8), // Точка смещения
     UInt16Map(fn(u32) -> f32),
     INT32,
     UINT32,

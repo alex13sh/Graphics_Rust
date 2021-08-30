@@ -158,23 +158,27 @@ impl Application for App {
             ..
         } = self;
         
+        use std::convert::TryFrom;
+        let value_to_f32 = |adr, value| {
+            f32::try_from(&values[&adr].new_value(value)).unwrap_or(value as f32)
+        };
         let values = ui_values_old_new.iter_mut()
             .fold(Column::new()
                 .spacing(10).align_items(Align::Center), 
                 |lst, (adr, input_state)| {
                 let adr = adr.clone();
-                let txt_value = &values_old_new[&adr];
+                let value_old_new = &values_old_new[&adr];
                 let p_name = values[&adr].name();
 //                 if let Some(ref txt_value) = values_old_new.get(name) {
                     lst.push(Row::new().spacing(20)
                         .push(Text::new(format!("{} - {}", log::InvertorParametr::parametr_str(adr), p_name))
                             .width(Length::FillPortion(70)))
-                        .push(TextInput::new(input_state, "Value", &txt_value.1.to_string(),
+                        .push(TextInput::new(input_state, "Value", &value_to_f32(adr, value_old_new.1).to_string(),
                             move |value| Message::ValueEdited(adr, value))
                             .width(Length::FillPortion(30))
                             .padding(10)
                             .style(style::ValueInput {
-                                changed: txt_value.0 != txt_value.1
+                                changed: value_old_new.0 != value_old_new.1
                             })
                         )
                     )

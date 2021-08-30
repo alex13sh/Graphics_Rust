@@ -255,9 +255,14 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             ]
         },
         values: {
-            let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
+            let add_invertor_value = |name: &str, p: u16, adr: u16|
                 Value::new(p*256+adr, name)
-                .size(ValueSize::UInt16Map(|v| v as f32/10_f32));
+                .size(ValueSize::UINT16);
+            let add_float_invertor_value = |name: &str, p: u16, adr: u16, dot|
+                Value::new(p*256+adr, name)
+                .size(ValueSize::UInt16Dot(dot));
+            let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
+                add_float_invertor_value(name, p, adr, 1);
             let add_simple_value_read = |hash: &str, p: u16, adr: u16, name: &str|
                 Value::new(p*256+adr, name)
                 .direct(ValueDirect::read())
@@ -267,60 +272,60 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
 
 
             let mut reg = vec![
-                add_simple_invertor_value("Идентификационный код преобразователя частоты",  0, 0),
-                add_simple_invertor_value("Номинальный ток преобразователя частоты",  0, 1),
-                add_simple_invertor_value("Сброс параметров",  0, 2), // 0 - 10
+                add_invertor_value("Идентификационный код преобразователя частоты",  0, 0),
+                add_float_invertor_value("Номинальный ток преобразователя частоты",  0,1, 2),
+                add_invertor_value("Сброс параметров",  0, 2), // 0 - 10
                 
-                add_simple_invertor_value("Режим управления",  0, 10), // 0 - 2
-                add_simple_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
-                add_simple_invertor_value("Режим позиционирования",  0, 12), // 0 - 1
-                add_simple_invertor_value("Метод управления моментом",  0, 13), // 0 - 2
+                add_invertor_value("Режим управления",  0, 10), // 0 - 2
+                add_invertor_value("Метод управления скоростью",  0, 11), // 0 - 3
+                add_invertor_value("Режим позиционирования",  0, 12), // 0 - 1
+                add_invertor_value("Метод управления моментом",  0, 13), // 0 - 2
 
-                add_simple_invertor_value("Режим работы привода",   0, 16), // 0 - 1
-                add_simple_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
+                add_invertor_value("Режим работы привода",   0, 16), // 0 - 1
+                add_invertor_value("Несущая частота ШИМ",    0, 17), // Таблица преобразований
 
-                add_simple_invertor_value("Управление направлением вращения двигателя",  0, 23), // 0 - 2
-                add_simple_invertor_value("Сбособ остановки",   0, 22), // 0 - 1
+                add_invertor_value("Управление направлением вращения двигателя",  0, 23), // 0 - 2
+                add_invertor_value("Сбособ остановки",   0, 22), // 0 - 1
                 
-                add_simple_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
-                add_simple_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
-                add_simple_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
-                add_simple_invertor_value("Источник команд управления (HAND)",    0, 31), // 0 - 8 // 8 - Плата
+                add_invertor_value("Источник задания частоты",           0, 20), // 0 - 8 // 8 - Плата
+                add_invertor_value("Источник команд управления",         0, 21), // 0 - 5 // 5 - Плата
+                add_invertor_value("Источник задания частоты (HAND)",    0, 30), // 0 - 8 // 8 - Плата
+                add_invertor_value("Источник команд управления (HAND)",    0, 31), // 0 - 8 // 8 - Плата
 
-                add_simple_invertor_value("Время усреднения показаний (Ток)",    0, 48),
+                add_float_invertor_value("Время усреднения показаний (Ток)",    0,48, 3),
 
 
 
-                add_simple_invertor_value("Максимальная выходная частота",      1, 0), // 50.0 - 600.0
-                add_simple_invertor_value("Номинальная частота двигателя",      1, 1), // 0.0 - 600.0
-                add_simple_invertor_value("Номинальное напряжение двигателя",   1, 2), // 0 - 255.0
+                add_float_invertor_value("Максимальная выходная частота",      1,0, 2), // 50.0 - 600.0
+                add_float_invertor_value("Номинальная частота двигателя",      1,1, 2), // 0.0 - 600.0
+                add_float_invertor_value("Номинальное напряжение двигателя",   1,2, 1), // 0 - 255.0
                 
-                add_simple_invertor_value("Стартовая частота",  1, 9), // 0.00 - 600.00
-                add_simple_invertor_value("Верхнее ограничение выходной частота",  1, 10), // 0.00 - 600.00
-                add_simple_invertor_value( "Нижнее ограничение выходной частота",  1, 11), // 0.00 - 600.00
+                add_float_invertor_value("Стартовая частота",  1,9, 2), // 0.00 - 600.00
+                add_float_invertor_value("Верхнее ограничение выходной частота",  1,10, 2), // 0.00 - 600.00
+                add_float_invertor_value( "Нижнее ограничение выходной частота",  1,11, 2), // 0.00 - 600.00
                 
                 // 1.12 - 1.21 -- Временные параметры
-                add_simple_invertor_value( "Время разгона 1",  1, 12),
-                add_simple_invertor_value( "Время замедления 1",  1, 13),
-                add_simple_invertor_value( "Время разгона 2",  1, 14),
-                add_simple_invertor_value( "Время замедления 2",  1, 15),
-                add_simple_invertor_value( "Время разгона 3",  1, 16),
-                add_simple_invertor_value( "Время замедления 3",  1, 17),
-                add_simple_invertor_value( "Время разгона 4",  1, 18),
-                add_simple_invertor_value( "Время замедления 4",  1, 19),
+                add_float_invertor_value( "Время разгона 1",    1,12, 2),
+                add_float_invertor_value( "Время замедления 1", 1,13, 2),
+                add_float_invertor_value( "Время разгона 2",    1,14, 2),
+                add_float_invertor_value( "Время замедления 2", 1,15, 2),
+                add_float_invertor_value( "Время разгона 3",    1,16, 2),
+                add_float_invertor_value( "Время замедления 3", 1,17, 2),
+                add_float_invertor_value( "Время разгона 4",    1,18, 2),
+                add_float_invertor_value( "Время замедления 4", 1,19, 2),
 
-                add_simple_invertor_value( "Порог переключения между 1/4 времени разгона/замедления",  1, 23),
+                add_float_invertor_value( "Порог переключения между 1/4 времени разгона/замедления",  1,23, 2),
 
-                add_simple_invertor_value( "Длительность начального участка S-кривой разгона",  1, 24),
-                add_simple_invertor_value( "Длительность конечного участка S-кривой разгона",  1, 25),
-                add_simple_invertor_value( "Длительность начального участка S-кривой замедления",  1, 26),
-                add_simple_invertor_value( "Длительность конечного участка S-кривой замедления",  1, 27),
+                add_float_invertor_value( "Длительность начального участка S-кривой разгона",   1,24, 2),
+                add_float_invertor_value( "Длительность конечного участка S-кривой разгона",    1,25, 2),
+                add_float_invertor_value( "Длительность начального участка S-кривой замедления",1,26, 2),
+                add_float_invertor_value( "Длительность конечного участка S-кривой замедления", 1,27, 2),
 
 
                 
                 // 1.28 - 1.33 -- Частота пропуска (1, 2, 3)
                 
-                add_simple_invertor_value("Выбор режима разгона/замедления",  1, 44), // 0 - 4
+                add_invertor_value("Выбор режима разгона/замедления",  1, 44), // 0 - 4
                 
             ];
             reg.append(&mut vec![
@@ -350,17 +355,19 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             
             // Part 5
             reg.append(&mut vec![
+                add_invertor_value( "Автотестирование двигателя",  5, 0),
+
                 add_simple_value_read("ac4e9ff84c", 5, 31, "Наработка двигателя (мин)"),
                 add_simple_value_read("b735f11d88", 5, 32, "Наработка двигателя (дни)"),
 
-                add_simple_invertor_value( "Выбор между асинхронным двигателем и двигателем с постоянными магнитами",  5, 33),
-                add_simple_invertor_value( "Ном. ток двигателя с постоянными магнитами",  5, 34),
-                add_simple_invertor_value( "Ном. мощность двигателя с постоянными магнитами",  5, 35),
+                add_invertor_value( "Выбор между асинхронным двигателем и двигателем с постоянными магнитами",  5, 33),
+                add_float_invertor_value( "Ном. ток двигателя с постоянными магнитами",  5,34, 2),
+                add_float_invertor_value( "Ном. мощность двигателя с постоянными магнитами",  5,35, 2),
                 // ... // Вставить!
                 add_simple_invertor_value( "Инерция двигателя с постоянными магнитами",  5, 38),
 
                 add_simple_invertor_value( "Угол между магнитным полюсом и нулевой меткой датчика ОС",  5, 42),
-                add_simple_invertor_value( "Параметр Ke двигателя с постоянными магнитами",  5, 43),
+                add_invertor_value( "Параметр Ke двигателя с постоянными магнитами",  5, 43),
 
 
             ]);
@@ -373,39 +380,40 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
 
                 add_simple_invertor_value( "Уровень ограничения перенапряжения",  6, 01),
 
-                add_simple_invertor_value( "Токоограничение при разгоне",  6, 03),
-                add_simple_invertor_value( "Токоограничение в установившемся режиме",  6, 04),
-                add_simple_invertor_value( "Выбор времени разгона/торможения при токоограничении в установившемся режиме",  6, 05),
+                add_invertor_value( "Токоограничение при разгоне",  6, 03),
+                add_invertor_value( "Токоограничение в установившемся режиме",  6, 04),
+                add_invertor_value( "Выбор времени разгона/торможения при токоограничении в установившемся режиме",  6, 05),
 
-                add_simple_invertor_value( "Уровень ограничения тока",  6, 12),
+                add_invertor_value( "Уровень ограничения тока",  6, 12),
 
                 add_simple_invertor_value( "Уровень перегрева радиатора (OH)",  6, 15),
-                add_simple_invertor_value( "Порог ограничения для функций токоограничения",  6, 16),
+                add_invertor_value( "Порог ограничения для функций токоограничения",  6, 16),
 
-                add_simple_invertor_value( "Заданная частота при аварии",  6, 31),
-                add_simple_invertor_value( "Выходная частота при аварии",  6, 32),
+                add_float_invertor_value( "Заданная частота при аварии",  6,31, 2),
+                add_float_invertor_value( "Выходная частота при аварии",  6,32, 2),
                 add_simple_invertor_value( "Выходное напряжение при аварии",  6, 33),
                 add_simple_invertor_value( "Напряжение на шине DC при аварии",  6, 34),
                 add_simple_invertor_value( "Выходной ток при аварии",  6, 35),
 
-                add_simple_invertor_value( "Снижение несущей частоты ШИМ",  6, 55),
+                add_invertor_value( "Снижение несущей частоты ШИМ",  6, 55),
 
             // 07.32
-                add_simple_invertor_value( "Функция автоматической регулировки выходного напряжения",  7, 23),
-                add_simple_invertor_value( "Коэффициент компенсации неустойчивости вращения",  7, 32),
+                add_invertor_value( "Функция автоматической регулировки выходного напряжения",  7, 23),
+                add_invertor_value( "Коэффициент компенсации неустойчивости вращения",  7, 32),
             // 10.00-01
-                add_simple_invertor_value( "Выбор типа датчика обратной связи по скорости",  10, 00),
-                add_simple_invertor_value( "Число импульсов на оборот",  10, 01),
+                add_invertor_value( "Выбор типа датчика обратной связи по скорости",  10, 00),
+                add_invertor_value( "Число импульсов на оборот",  10, 01),
+                add_invertor_value( "Выбор типа энкодера",  10, 02),
                 // 10.02
             // 10.25
                 add_simple_invertor_value( "Частота контроля скорости в режиме FOC",  10, 25),
 
-                add_simple_invertor_value( "Коэффициент усиление Интегральный",  10, 35),
-                add_simple_invertor_value( "Коэффициент усиление Пропорциональный",  10, 36),
+                add_float_invertor_value( "Коэффициент усиление Интегральный",      10,35, 2),
+                add_float_invertor_value( "Коэффициент усиление Пропорциональный",  10,36, 2),
 
             // 11.12-14 -- Обратная связь
-                add_simple_invertor_value( "PDFF усиление",  11, 13),
-                add_simple_invertor_value( "НЧ-фильтр для ASR выхода",  11, 14),
+                add_invertor_value( "PDFF усиление",  11, 13),
+                add_float_invertor_value( "НЧ-фильтр для ASR выхода",  11,14, 3),
             ]);
             
             // Part 9 

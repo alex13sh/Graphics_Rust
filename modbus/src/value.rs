@@ -167,7 +167,7 @@ impl ValueSize {
     pub fn size(&self) -> u8 {
         use ValueSize::*;
         match self {
-        INT8 | UINT8 | INT16 | UINT16 | UInt16Map(_) => 1,
+        INT8 | UINT8 | INT16 | UINT16 | UInt16Dot(_) | UInt16Map(_) => 1,
         INT32 | UINT32 | FLOAT | FloatMap(_) => 2,
         BitMap(_) | Bit(_) => 1,
         }
@@ -240,6 +240,7 @@ pub use std::convert::{TryInto, TryFrom};
 impl TryFrom<&Value> for f32 {
     type Error = ValueFloatError;
     fn try_from(val: &Value) -> Result<f32, Self::Error> {
+        const fdot: [f32; 4] = [1_f32, 10_f32, 100_f32, 1_000_f32];
         let res = match val.size {
         ValueSize::FLOAT =>
             if let Some(err) = ValueFloatError::new(val.value()) {
@@ -259,6 +260,10 @@ impl TryFrom<&Value> for f32 {
             if let Some(err) = ValueFloatError::new_u16(val.value()) {
                 Err(err)
             } else {Ok(f(val.value()))},
+        ValueSize::UInt16Dot(dot) =>
+            if let Some(err) = ValueFloatError::new_u16(val.value()) {
+                Err(err)
+            } else {Ok(val.value() as f32 / fdot[dot as usize] )},
         ValueSize::Bit(_pin) => Ok(if val.get_bit() {1.0} else {0.0}),
         _ => Err(ValueFloatError::ValueFalse),
         };

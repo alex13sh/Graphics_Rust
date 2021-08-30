@@ -45,6 +45,7 @@ struct UI {
 struct HistoryValues {
     logs_path: Vec<std::path::PathBuf>,
     cur_values: Option<ValuesOld>,
+    prev_values: Option<ValuesOld>,
     cur_num: usize,
 }
 
@@ -59,25 +60,31 @@ impl HistoryValues {
         let logs_path = func_files::get_list_log(&log::get_file_path("tables/log/")).ok()?;
         if logs_path.is_empty() {return None;}
         let cur_num = logs_path.len()-1;
-        let cur_values = func_files::read_file(logs_path.get(cur_num).unwrap());
 
-        Some(HistoryValues {
+        let mut h = HistoryValues {
             logs_path: logs_path,
             cur_num: cur_num,
-            cur_values: cur_values,
-        })
+            cur_values: None,
+            prev_values: None,
+        };
+        h.update_values();
+        Some(h)
     }
 
+    fn update_values(&mut self) {
+        self.cur_values = func_files::read_file(self.logs_path.get(self.cur_num).unwrap());
+        self.prev_values = self.logs_path.get(self.cur_num-1).and_then(|path| func_files::read_file(path));
+    }
     fn update(&mut self, message: HistMessage) {
-        let Self {cur_num, cur_values, logs_path} = self;
+//         let Self {cur_num, cur_values, logs_path} = self;
         match message {
         HistMessage::Prev => {
-            if *cur_num > 0 { *cur_num -= 1;}
-            *cur_values = func_files::read_file(logs_path.get(*cur_num).unwrap());
+            if self.cur_num > 0 { self.cur_num -= 1;}
+            self.update_values();
         }
         HistMessage::Next => {
-            if *cur_num < logs_path.len()-1 {*cur_num += 1;}
-            *cur_values = func_files::read_file(logs_path.get(*cur_num).unwrap());
+            if self.cur_num < self.logs_path.len()-1 {self.cur_num += 1;}
+            self.update_values();
         }
         }
     }
@@ -207,6 +214,18 @@ impl Application for App {
         let value_to_f32 = |adr, value| {
             f32::try_from(&values[&adr].new_value(value)).unwrap_or(value as f32)
         };
+        let new_text_value = |text| Text::new(text)
+                .width(Length::Units(50))
+                .height(Length::Units(40))
+                .vertical_alignment(iced::VerticalAlignment::Center);
+        let new_text_value_from = |adr, values_old: Option<&ValuesOld>|
+                new_text_value(
+                    if let Some(prev_values) = values_old {
+                        if let Some(v) = prev_values.get(&adr) {value_to_f32(adr, *v).to_string()}
+                        else {"None".into()}
+                    } else {String::new()}
+                );
+
         let values = ui_values_old_new.iter_mut()
             .fold(Column::new()
                 .spacing(10).align_items(Align::Center), 
@@ -218,6 +237,8 @@ impl Application for App {
                     lst.push(Row::new().spacing(20)
                         .push(Text::new(format!("{} - {}", log::InvertorParametr::parametr_str(adr), p_name))
                             .width(Length::Fill))
+                        .push(new_text_value_from(adr, hist.as_ref().and_then(|h| h.prev_values.as_ref())))
+                        .push(new_text_value_from(adr, hist.as_ref().and_then(|h| h.cur_values.as_ref())))
                         .push(TextInput::new(input_state, "Value", &value_to_f32(adr, value_old_new.1).to_string(),
                             move |value| Message::ValueEdited(adr, value))
                             .width(Length::Units(50))
@@ -226,13 +247,6 @@ impl Application for App {
                                 changed: value_old_new.0 != value_old_new.1
                             })
                         )
-                        .push(Text::new(if let Some(prev_values) = hist.as_ref().and_then(|h| h.cur_values.as_ref()) {
-                                    if let Some(v) = prev_values.get(&adr) {value_to_f32(adr, *v).to_string()}
-                                    else {"None".into()}
-                                } else {String::new()})
-                                .width(Length::Units(50))
-                                .height(Length::Units(40))
-                                .vertical_alignment(iced::VerticalAlignment::Center))
                     )
 //                 } else {lst}
             });
@@ -307,7 +321,6 @@ mod func_files {
     use std::path::PathBuf;
     
     pub fn read_file(file_name: &PathBuf) -> Option<ValuesOld> {
-        dbg!(file_name);
         let values = log::csv::read_invertor_parametrs(file_name)?
             .into_iter().map(|p| (p.address(), p.value))
             .collect();

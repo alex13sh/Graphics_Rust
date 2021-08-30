@@ -408,7 +408,7 @@ impl App {
         let dt = log::date_time_now();
         dbg!(&dt);
         let dt = log::date_time_to_string_name_short(&dt);
-        let path = log::get_file_path("tables/log/").join(dt).with_extension(".csv");
+        let path = log::get_file_path("tables/log/").join(dt).with_extension("csv");
         dbg!(&path);
         let parametrs: Vec<_> = self.logic.invertor_1.device().values_map()
             .iter_values().map(|(adr, v, n)| log::InvertorParametr {

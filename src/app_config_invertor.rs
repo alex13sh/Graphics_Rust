@@ -84,7 +84,7 @@ impl Application for App {
             .into_iter().map(|v| (v.address(), v)).collect();
         let values_old_new = make_values(&values);
 
-        let logs_path = func_files::get_list_log(&log::get_file_path("tables/csv/log")).ok();
+        let logs_path = func_files::get_list_log(&log::get_file_path("tables/log/")).ok();
         let prev_values = logs_path.as_ref().and_then(|paths| paths.last())
             .and_then(|path| func_files::read_file(&path));
         
@@ -149,7 +149,7 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
         let Self {
             values_old_new,
-            values,
+            values, prev_values,
             ui: UI {
                 scroll: ui_scroll,
                 values_old_new: ui_values_old_new,
@@ -172,15 +172,22 @@ impl Application for App {
 //                 if let Some(ref txt_value) = values_old_new.get(name) {
                     lst.push(Row::new().spacing(20)
                         .push(Text::new(format!("{} - {}", log::InvertorParametr::parametr_str(adr), p_name))
-                            .width(Length::FillPortion(70)))
+                            .width(Length::Fill))
                         .push(TextInput::new(input_state, "Value", &value_to_f32(adr, value_old_new.1).to_string(),
                             move |value| Message::ValueEdited(adr, value))
-                            .width(Length::FillPortion(30))
+                            .width(Length::Units(50))
                             .padding(10)
                             .style(style::ValueInput {
                                 changed: value_old_new.0 != value_old_new.1
                             })
                         )
+                        .push(Text::new(if let Some(prev_values) = prev_values {
+                                    if let Some(v) = prev_values.get(&adr) {value_to_f32(adr, *v).to_string()}
+                                    else {"None".into()}
+                                } else {String::new()})
+                                .width(Length::Units(50))
+                                .height(Length::Units(40))
+                                .vertical_alignment(iced::VerticalAlignment::Center))
                     )
 //                 } else {lst}
             });
@@ -252,18 +259,20 @@ mod func_files {
     use std::path::PathBuf;
     
     pub fn read_file(file_name: &PathBuf) -> Option<ValuesOld> {
+        dbg!(file_name);
         let values = log::csv::read_invertor_parametrs(file_name)?
             .into_iter().map(|p| (p.address(), p.value))
             .collect();
         Some(values)
     }
     pub fn get_list_log(dir: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
-        let v = if dir.is_dir() {
+        let mut v = if dir.is_dir() {
             std::fs::read_dir(dir)?.into_iter()
                 .filter_map(|e| Some(e.ok()?.path()))
-                .filter(|p| p.is_file())
+                .filter(|p| p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("csv") )
                 .collect()
         } else {Vec::new()};
+        v.sort_by_key(|p| p.metadata().unwrap().modified().unwrap());
         Ok(v)
     }
 }

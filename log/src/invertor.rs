@@ -33,8 +33,8 @@ where
     let s: String = Deserialize::deserialize(deserializer)?;
     let adr = s.trim_matches(|c| c == '(' || c==')').split_once(',').ok_or("Address Invalid").map_err(D::Error::custom)?;
     Ok((
-        adr.0.parse().map_err(D::Error::custom)?, 
-        adr.1.parse().map_err(D::Error::custom)?
+        adr.0.trim().parse().map_err(D::Error::custom)?,
+        adr.1.trim().parse().map_err(D::Error::custom)?
     ))
 }
 

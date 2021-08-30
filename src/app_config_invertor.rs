@@ -27,9 +27,8 @@ pub struct App {
 
     values: Values,
     values_old_new: ValuesOldNew,
-    prev_values: Option<ValuesOld>,
-    
-    logs_path: Option<Vec<std::path::PathBuf>>
+
+    hist: Option<HistoryValues>,
 }
 
 #[derive(Default)]
@@ -38,6 +37,27 @@ struct UI {
     values_old_new: BTreeMap<u16, text_input::State>,
     pb_update: button::State,
     pb_write: button::State,
+}
+
+struct HistoryValues {
+    logs_path: Vec<std::path::PathBuf>,
+    cur_values: Option<ValuesOld>,
+    cur_num: usize,
+}
+
+impl HistoryValues {
+    fn new() -> Option<Self> {
+        let logs_path = func_files::get_list_log(&log::get_file_path("tables/log/")).ok()?;
+        if logs_path.is_empty() {return None;}
+        let cur_num = logs_path.len()-1;
+        let cur_values = func_files::read_file(logs_path.get(cur_num).unwrap());
+
+        Some(HistoryValues {
+            logs_path: logs_path,
+            cur_num: cur_num,
+            cur_values: cur_values,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -84,9 +104,7 @@ impl Application for App {
             .into_iter().map(|v| (v.address(), v)).collect();
         let values_old_new = make_values(&values);
 
-        let logs_path = func_files::get_list_log(&log::get_file_path("tables/log/")).ok();
-        let prev_values = logs_path.as_ref().and_then(|paths| paths.last())
-            .and_then(|path| func_files::read_file(&path));
+
         
         (
         Self {
@@ -101,9 +119,8 @@ impl Application for App {
             update_enb: false,
             values: values,
             values_old_new: values_old_new,
-            prev_values: prev_values,
-            
-            logs_path: logs_path,
+
+            hist: HistoryValues::new(),
         },
         Command::none()
         )
@@ -149,7 +166,8 @@ impl Application for App {
     fn view(&mut self) -> Element<Self::Message> {
         let Self {
             values_old_new,
-            values, prev_values,
+            values,
+            hist,
             ui: UI {
                 scroll: ui_scroll,
                 values_old_new: ui_values_old_new,
@@ -181,7 +199,7 @@ impl Application for App {
                                 changed: value_old_new.0 != value_old_new.1
                             })
                         )
-                        .push(Text::new(if let Some(prev_values) = prev_values {
+                        .push(Text::new(if let Some(prev_values) = hist.as_ref().and_then(|h| h.cur_values.as_ref()) {
                                     if let Some(v) = prev_values.get(&adr) {value_to_f32(adr, *v).to_string()}
                                     else {"None".into()}
                                 } else {String::new()})

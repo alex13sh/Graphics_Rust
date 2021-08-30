@@ -37,12 +37,21 @@ struct UI {
     values_old_new: BTreeMap<u16, text_input::State>,
     pb_update: button::State,
     pb_write: button::State,
+
+    pb_hist_prev: button::State,
+    pb_hist_next: button::State,
 }
 
 struct HistoryValues {
     logs_path: Vec<std::path::PathBuf>,
     cur_values: Option<ValuesOld>,
     cur_num: usize,
+}
+
+#[derive(Debug, Clone)]
+pub enum HistMessage {
+    Prev,
+    Next,
 }
 
 impl HistoryValues {
@@ -58,11 +67,26 @@ impl HistoryValues {
             cur_values: cur_values,
         })
     }
+
+    fn update(&mut self, message: HistMessage) {
+        let Self {cur_num, cur_values, logs_path} = self;
+        match message {
+        HistMessage::Prev => {
+            if *cur_num > 0 { *cur_num -= 1;}
+            *cur_values = func_files::read_file(logs_path.get(*cur_num).unwrap());
+        }
+        HistMessage::Next => {
+            if *cur_num < logs_path.len()-1 {*cur_num += 1;}
+            *cur_values = func_files::read_file(logs_path.get(*cur_num).unwrap());
+        }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ValueEdited(u16, String), // name, value
+    Hist(HistMessage),
 
     ModbusWrite,
     ModbusUpdate(MessageMudbusUpdate),
@@ -127,7 +151,7 @@ impl Application for App {
     }
     
     fn title(&self) -> String {
-        String::from("Config Modules - Iced")
+        String::from("Config Invertor - Iced")
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -159,6 +183,7 @@ impl Application for App {
             }
         },
         Message::ModbusUpdate(m) => return self.modbus_update(m),
+        Message::Hist(m) => if let Some(ref mut hist) = self.hist { hist.update(m); },
         };
         Command::none()
     }
@@ -172,6 +197,8 @@ impl Application for App {
                 scroll: ui_scroll,
                 values_old_new: ui_values_old_new,
                 pb_update, pb_write,
+
+                pb_hist_prev, pb_hist_next,
             },
             ..
         } = self;
@@ -222,6 +249,9 @@ impl Application for App {
             .push(Row::new().spacing(20)
                 .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
                 .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
+
+                .push(Button::new(pb_hist_prev, Text::new("Предыдущее")).on_press(Message::Hist(HistMessage::Prev)))
+                .push(Button::new(pb_hist_next, Text::new("Следующее")).on_press(Message::Hist(HistMessage::Next)))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)

@@ -23,6 +23,8 @@ pub struct App {
     ui: UI,
     
     invertor_1: Invertor,
+    update_enb: bool,
+
     values: Values,
     values_old_new: ValuesOldNew,
     prev_values: Option<ValuesOld>,
@@ -96,6 +98,7 @@ impl Application for App {
             },
             
             invertor_1: invertor_1,
+            update_enb: false,
             values: values,
             values_old_new: values_old_new,
             prev_values: prev_values,
@@ -207,21 +210,24 @@ impl App {
                 self.invertor_1.device().update();
                 self.values_old_new = make_values(&self.values);
             },
-            MessageMudbusUpdate::ModbusUpdateAsync => {
+            MessageMudbusUpdate::ModbusUpdateAsync => if self.update_enb {
+                self.update_enb = false;
                 let d = self.invertor_1.device();
                 let f = async move {d.update_async(UpdateReq::All).await};
 
                 return Command::perform(f, move |res| Message::ModbusUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
-            }
+            },
             MessageMudbusUpdate::ModbusConnect => {
                 println!("MessageMudbusUpdate::ModbusConnect ");
+                self.update_enb = false;
                 let d = self.invertor_1.device();
                 let f = async move {d.connect().await};
                 return Command::perform(f, move |res| Message::ModbusUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
+                self.update_enb = true;
                 self.values_old_new = make_values(&self.values);
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {

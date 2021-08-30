@@ -83,6 +83,17 @@ impl HistoryValues {
         if let Some(eq) = eq {eq} else {false}
     }
 
+    fn prev_cur_name(&self) -> (String, String) {
+        (
+            self.logs_path.get(self.cur_num-1)
+                .and_then(|p| p.file_name()).and_then(|n| n.to_str())
+                .unwrap_or("None").into(),
+            self.logs_path.get(self.cur_num)
+                .and_then(|p| p.file_name()).and_then(|n| n.to_str())
+                .unwrap_or("None").into(),
+        )
+    }
+
     fn update(&mut self, message: HistMessage) {
 //         let Self {cur_num, cur_values, logs_path} = self;
         match message {
@@ -237,6 +248,9 @@ impl Application for App {
                     } else {String::new()}
                 );
 
+        let prev_cur_file_name = hist.as_ref().map(|h| h.prev_cur_name())
+            .map(|(p, c)| format!("({}, {})",  p, c)).unwrap_or("".into());
+
         let values = ui_values_old_new.iter_mut()
             .filter(|(adr, _)| {
                 if *filter_delta {
@@ -280,10 +294,11 @@ impl Application for App {
             .push(Row::new().spacing(20)
                 .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
                 .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
-
+            ).push(Row::new().spacing(20)
                 .push(Button::new(pb_hist_prev, Text::new("Предыдущее")).on_press(Message::Hist(HistMessage::Prev)))
                 .push(Button::new(pb_hist_next, Text::new("Следующее")).on_press(Message::Hist(HistMessage::Next)))
                 .push(Checkbox::new(*filter_delta, "Только изменения", Message::FilterDelta))
+                .push(Text::new(prev_cur_file_name))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)

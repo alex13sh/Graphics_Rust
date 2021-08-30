@@ -24,7 +24,7 @@ pub struct App {
     
     invertor_1: Invertor,
     values: Values,
-    txt_values: ValuesOldNew,
+    values_old_new: ValuesOldNew,
     prev_values: Option<ValuesOld>,
     
     logs_path: Option<Vec<std::path::PathBuf>>
@@ -33,7 +33,7 @@ pub struct App {
 #[derive(Default)]
 struct UI {
     scroll: scrollable::State,
-    txt_values: BTreeMap<u16, text_input::State>,
+    values_old_new: BTreeMap<u16, text_input::State>,
     pb_update: button::State,
     pb_write: button::State,
 }
@@ -43,7 +43,7 @@ pub enum Message {
     ValueEdited(u16, String), // name, value
 
     ModbusWrite,
-    MessageUpdate(MessageMudbusUpdate),
+    ModbusUpdate(MessageMudbusUpdate),
 }
 
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ fn make_values(values: &Values) -> ValuesOldNew {
 impl App {
 
     fn make_new_values(&self) -> Values {
-        self.txt_values.iter()
+        self.values_old_new.iter()
             .filter(|(_, (old, new))| old != new)
             .map(|(adr, (_, new))| ((adr.clone(), Arc::new(self.values[adr].new_value(*new)))))
             .collect()
@@ -80,7 +80,7 @@ impl Application for App {
 
         let values = invertor_1.device().values()
             .into_iter().map(|v| (v.address(), v)).collect();
-        let txt_values = make_values(&values);
+        let values_old_new = make_values(&values);
 
         let logs_path = func_files::get_list_log(&log::get_file_path("tables/csv/log")).ok();
         let prev_values = logs_path.as_ref().and_then(|paths| paths.last())
@@ -89,7 +89,7 @@ impl Application for App {
         (
         Self {
             ui: UI {
-                txt_values: values.iter()
+                values_old_new: values.iter()
                     .map(|(k, v)| (k.clone(), text_input::State::default()))
                     .collect(),
                 .. UI::default()
@@ -97,7 +97,7 @@ impl Application for App {
             
             invertor_1: invertor_1,
             values: values,
-            txt_values: txt_values,
+            values_old_new: values_old_new,
             prev_values: prev_values,
             
             logs_path: logs_path,
@@ -109,12 +109,18 @@ impl Application for App {
     fn title(&self) -> String {
         String::from("Config Modules - Iced")
     }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        time::every(std::time::Duration::from_millis(5000))
+            .map(|_| MessageMudbusUpdate::ModbusConnect)
+            .map(Message::ModbusUpdate)
+    }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         use modbus::UpdateReq;
         match message {
         Message::ValueEdited(name, value) => 
-            if let Some((_old, new)) = self.txt_values.get_mut(&name) {
+            if let Some((_old, new)) = self.values_old_new.get_mut(&name) {
                 if let Ok(v) = value.parse() {
                     *new = v;
                 }
@@ -128,35 +134,35 @@ impl Application for App {
                     .set_value(v.name(), v.value());
             }
             self.invertor_1.device().update_new_values();
-            for (ref mut old, new) in self.txt_values.values_mut() {
+            for (ref mut old, new) in self.values_old_new.values_mut() {
                 *old = new.clone();
             }
         },
-        Message::MessageUpdate(m) => return self.modbus_update(m),
+        Message::ModbusUpdate(m) => return self.modbus_update(m),
         };
         Command::none()
     }
     
     fn view(&mut self) -> Element<Self::Message> {
         let Self {
-            txt_values,
+            values_old_new,
             values,
             ui: UI {
                 scroll: ui_scroll,
-                txt_values: ui_txt_values,
+                values_old_new: ui_values_old_new,
                 pb_update, pb_write,
             },
             ..
         } = self;
         
-        let values = ui_txt_values.iter_mut()
+        let values = ui_values_old_new.iter_mut()
             .fold(Column::new()
                 .spacing(10).align_items(Align::Center), 
                 |lst, (adr, input_state)| {
                 let adr = adr.clone();
-                let txt_value = &txt_values[&adr];
+                let txt_value = &values_old_new[&adr];
                 let p_name = values[&adr].name();
-//                 if let Some(ref txt_value) = txt_values.get(name) {
+//                 if let Some(ref txt_value) = values_old_new.get(name) {
                     lst.push(Row::new().spacing(20)
                         .push(Text::new(format!("{} - {}", log::InvertorParametr::parametr_str(adr), p_name))
                             .width(Length::FillPortion(70)))
@@ -182,7 +188,7 @@ impl Application for App {
 
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
-                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
+                .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
                 .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
@@ -199,31 +205,31 @@ impl App {
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
                 self.invertor_1.device().update();
-                self.txt_values = make_values(&self.values);
+                self.values_old_new = make_values(&self.values);
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 let d = self.invertor_1.device();
                 let f = async move {d.update_async(UpdateReq::All).await};
 
-                return Command::perform(f, move |res| Message::MessageUpdate(
+                return Command::perform(f, move |res| Message::ModbusUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             }
             MessageMudbusUpdate::ModbusConnect => {
                 println!("MessageMudbusUpdate::ModbusConnect ");
                 let d = self.invertor_1.device();
                 let f = async move {d.connect().await};
-                return Command::perform(f, move |res| Message::MessageUpdate(
+                return Command::perform(f, move |res| Message::ModbusUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
-                self.txt_values = make_values(&self.values);
+                self.values_old_new = make_values(&self.values);
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
     //             dbg!(&d);
                 if !d.is_connect() {
                     println!("\tis not connect");
                 } else {
-                    self.txt_values = make_values(&self.values);
+                    self.values_old_new = make_values(&self.values);
                 }
             },
         }

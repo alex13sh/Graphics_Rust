@@ -1,6 +1,6 @@
 use iced::{
     Application, executor, Command, Subscription, time,
-    text_input, TextInput, button, Button, slider, Slider, scrollable, Scrollable,
+    text_input, TextInput, button, Button, Checkbox, slider, Slider, scrollable, Scrollable,
     Element, Container, Text, Column, Row, Space, Length, Align,
     Settings, Clipboard,
 };
@@ -29,6 +29,7 @@ pub struct App {
     values_old_new: ValuesOldNew,
 
     hist: Option<HistoryValues>,
+    filter_delta: bool,
 }
 
 #[derive(Default)]
@@ -75,6 +76,13 @@ impl HistoryValues {
         self.cur_values = func_files::read_file(self.logs_path.get(self.cur_num).unwrap());
         self.prev_values = self.logs_path.get(self.cur_num-1).and_then(|path| func_files::read_file(path));
     }
+    fn prev_eq_cur(&self, adr: u16) -> bool {
+        let eq = self.prev_values.as_ref().zip(self.cur_values.as_ref())
+            .and_then(|(prev,cur)| Some((prev.get(&adr)?, cur.get(&adr)?)))
+            .map(|(prev, cur)| prev==cur);
+        if let Some(eq) = eq {eq} else {false}
+    }
+
     fn update(&mut self, message: HistMessage) {
 //         let Self {cur_num, cur_values, logs_path} = self;
         match message {
@@ -94,6 +102,7 @@ impl HistoryValues {
 pub enum Message {
     ValueEdited(u16, String), // name, value
     Hist(HistMessage),
+    FilterDelta(bool),
 
     ModbusWrite,
     ModbusUpdate(MessageMudbusUpdate),
@@ -152,6 +161,7 @@ impl Application for App {
             values_old_new: values_old_new,
 
             hist: HistoryValues::new(),
+            filter_delta: false,
         },
         Command::none()
         )
@@ -176,6 +186,7 @@ impl Application for App {
                     *new = v;
                 }
             },
+        Message::FilterDelta(enb) => self.filter_delta = enb,
         Message::ModbusWrite => {
             let new_values = self.make_new_values();
             dbg!(&new_values);
@@ -199,7 +210,7 @@ impl Application for App {
         let Self {
             values_old_new,
             values,
-            hist,
+            hist, filter_delta,
             ui: UI {
                 scroll: ui_scroll,
                 values_old_new: ui_values_old_new,
@@ -227,6 +238,12 @@ impl Application for App {
                 );
 
         let values = ui_values_old_new.iter_mut()
+            .filter(|(adr, _)| {
+                if *filter_delta {
+                    if let Some(ref h) = hist {!h.prev_eq_cur(**adr)}
+                    else {false}
+                } else {true}
+            })
             .fold(Column::new()
                 .spacing(10).align_items(Align::Center), 
                 |lst, (adr, input_state)| {
@@ -266,6 +283,7 @@ impl Application for App {
 
                 .push(Button::new(pb_hist_prev, Text::new("Предыдущее")).on_press(Message::Hist(HistMessage::Prev)))
                 .push(Button::new(pb_hist_next, Text::new("Следующее")).on_press(Message::Hist(HistMessage::Next)))
+                .push(Checkbox::new(*filter_delta, "Только изменения", Message::FilterDelta))
             ).push(Scrollable::new(ui_scroll)
                 .padding(10)
                 .push(content)

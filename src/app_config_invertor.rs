@@ -76,11 +76,18 @@ impl HistoryValues {
         self.cur_values = func_files::read_file(self.logs_path.get(self.cur_num).unwrap());
         self.prev_values = self.logs_path.get(self.cur_num-1).and_then(|path| func_files::read_file(path));
     }
-    fn prev_eq_cur(&self, adr: u16) -> bool {
+    fn prev_eq_cur(&self, adr: u16) -> Option<bool> {
         let eq = self.prev_values.as_ref().zip(self.cur_values.as_ref())
             .and_then(|(prev,cur)| Some((prev.get(&adr)?, cur.get(&adr)?)))
             .map(|(prev, cur)| prev==cur);
-        if let Some(eq) = eq {eq} else {false}
+//         if let Some(eq) = eq {eq} else {false}
+        eq
+    }
+    fn cur_eq_value(&self, adr: u16, value: u32) -> Option<bool> {
+        let eq = self.cur_values.as_ref()
+            .and_then(|cur| cur.get(&adr))
+            .map(|cur| cur==&value);
+        eq
     }
 
     fn prev_cur_name(&self) -> (String, String) {
@@ -254,8 +261,10 @@ impl Application for App {
         let values = ui_values_old_new.iter_mut()
             .filter(|(adr, _)| {
                 if *filter_delta {
-                    if let Some(ref h) = hist {!h.prev_eq_cur(**adr)}
-                    else {false}
+                    !hist.as_ref()
+                        .and_then(|h| h.prev_eq_cur(**adr)
+//                         .or_else(||h.cur_eq_value(**adr, values_old_new[&adr].1))
+                    ).unwrap_or(true)
                 } else {true}
             })
             .fold(Column::new()

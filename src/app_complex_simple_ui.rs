@@ -62,7 +62,8 @@ pub enum Message {
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
     ModbusUpdate, ModbusUpdateAsyncAnswer,
-    ModbusUpdateAsync, ModbusUpdateAsync_Vibro, ModbusConnect,
+    ModbusUpdateAsync, ModbusUpdateAsync_Vibro, ModbusUpdateAsync_Invertor,
+    ModbusConnect, ModbusConnectAnswer(Arc<Device>, Result<(), DeviceError>),
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 //     GraphicUpdate,
     LogUpdate,
@@ -125,6 +126,8 @@ impl Application for App {
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
                 time::every(std::time::Duration::from_millis(5000))
                 .map(|_| MessageMudbusUpdate::ModbusConnect),
+                time::every(std::time::Duration::from_millis(5000))
+                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
@@ -258,21 +261,23 @@ impl App {
                 println!("MessageMudbusUpdate::ModbusConnect ");
 //                 self.save_invertor();
                 let mut device_futures = self.logic.reconnect_devices();
-                let c1 = Command::batch(device_futures.into_iter()
+                return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+                        MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res)))
                     ));
-                let mut device_futures = Vec::new();
-                let d = self.logic.invertor_1.device().clone();
+            },
+            MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
                 let dc = d.clone();
                 let f = async move {dc.update_async(UpdateReq::All).await};
+                return Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+            },
+            MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
+                let d = self.logic.invertor_1.device();
                 let dc = d.clone();
-                device_futures.push((dc.clone(),  f ));
-                let c2 = Command::batch(device_futures.into_iter()
-                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
-                    ));
-                return Command::batch(vec![c1,c2]);
+                let f = async move {dc.update_async(UpdateReq::All).await};
+                return Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();

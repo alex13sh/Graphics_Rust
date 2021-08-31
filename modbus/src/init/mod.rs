@@ -172,10 +172,14 @@ pub fn make_i_digit(ip_address: String) -> Device {
                     .direct(ValueDirect::read())
                     .size(ValueSize::UINT8)
                     .with_log(Log::hash("Битовая маска состояния выходов")),
+                Value::new(51, &format!("{}/{}", prefix,"Битовая маска состояния входов")) // DO1 - DO8
+                    .direct(ValueDirect::read())
+                    .size(ValueSize::UINT8)
+                    .with_log(Log::hash("Битовая маска состояния входов")),
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
             (0..12).map(|i| {
-                make_read_bit(i, &format!("Клапан ШК{} {}", i/2+1,
+                make_read_bit_51(i+1, &format!("Клапан ШК{} {}", i/2+1,
                     if i%2==0 {"открыт"} else {"закрыт"}))
             }).flatten().collect(),
             // Клапана

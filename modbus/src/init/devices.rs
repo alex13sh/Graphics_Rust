@@ -66,7 +66,16 @@ pub mod owen_digit {
             make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::read()),
         ]
     }
-    
+    pub fn make_read_bit_51(pin: u8, name: &str) -> Vec<Value> {
+        let pin = pin as u16 - 1;
+        let prefix = name;
+        let bitn = pin as u8;
+        vec![
+//             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "bit", 51, ValueSize::Bit(bitn), ValueDirect::read()),
+        ]
+    }
+
     pub fn make_shim(pin: u8, name: &str) -> Vec<Value> {
         let pin = pin as u16 - 1;
         let prefix = name;

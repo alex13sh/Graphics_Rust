@@ -415,7 +415,7 @@ impl ModbusValues {
         Ok(())
     }
     pub fn get_bit(&self, name: &str) -> Result<bool, ()> {
-        let v = self.get(name).ok_or_else(|| ())?;
+        let v = self.get(&format!("{}/bit",name)).ok_or_else(|| ())?;
         Ok(v.get_bit())
     }
 }

@@ -288,6 +288,9 @@ impl App {
 //                         self.proccess_values();
 //                         self.proccess_speed();
                     }
+                    if d.name() == "4) МУ210-410" {
+                        self.klapans.update_klapans();
+                    }
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

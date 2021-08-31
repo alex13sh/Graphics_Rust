@@ -141,6 +141,17 @@ impl Klapans {
 }
 
 impl Klapans {
+    pub fn update_klapans(&mut self) {
+//         dbg!("update klapans");
+        for k in self.klapans.iter_mut() {
+//             dbg!(&k.shk);
+            if let Ok(enb) = self.values.get_bit(&format!("Клапан {} открыт", k.shk)) {
+                k.enb = enb;
+//                 dbg!(enb);
+            }
+        }
+    }
+
     fn set_klapan(&mut self, name: &str, enb: bool) {
         if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
             v.enb = enb;

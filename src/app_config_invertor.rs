@@ -36,8 +36,11 @@ pub struct App {
 struct UI {
     scroll: scrollable::State,
     values_old_new: BTreeMap<u16, text_input::State>,
+
+    pb_connect: button::State,
     pb_update: button::State,
     pb_write: button::State,
+    pb_save: button::State,
 
     pb_hist_prev: button::State,
     pb_hist_next: button::State,
@@ -124,6 +127,8 @@ pub enum Message {
 
     ModbusWrite,
     ModbusUpdate(MessageMudbusUpdate),
+
+    SaveValues,
 }
 
 #[derive(Debug, Clone)]
@@ -189,11 +194,11 @@ impl Application for App {
         String::from("Config Invertor - Iced")
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
-        time::every(std::time::Duration::from_millis(5000))
-            .map(|_| MessageMudbusUpdate::ModbusConnect)
-            .map(Message::ModbusUpdate)
-    }
+//     fn subscription(&self) -> Subscription<Self::Message> {
+//         time::every(std::time::Duration::from_millis(5000))
+//             .map(|_| MessageMudbusUpdate::ModbusConnect)
+//             .map(Message::ModbusUpdate)
+//     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         use modbus::UpdateReq;
@@ -204,6 +209,7 @@ impl Application for App {
                     *new = v;
                 }
             },
+        Message::SaveValues => self.save_invertor(),
         Message::FilterDelta(enb) => self.filter_delta = enb,
         Message::ModbusWrite => {
             let new_values = self.make_new_values();
@@ -232,7 +238,7 @@ impl Application for App {
             ui: UI {
                 scroll: ui_scroll,
                 values_old_new: ui_values_old_new,
-                pb_update, pb_write,
+                pb_connect, pb_update, pb_write, pb_save,
 
                 pb_hist_prev, pb_hist_next,
             },
@@ -301,8 +307,10 @@ impl Application for App {
 
         Column::new().spacing(20)
             .push(Row::new().spacing(20)
+                .push(Button::new(pb_connect, Text::new("Connect")).on_press(Message::ModbusUpdate(MessageMudbusUpdate::ModbusConnect)))
                 .push(Button::new(pb_update, Text::new("Обновление")).on_press(Message::ModbusUpdate(MessageMudbusUpdate::ModbusUpdateAsync)))
                 .push(Button::new(pb_write, Text::new("Записать")).on_press(Message::ModbusWrite))
+                .push(Button::new(pb_save, Text::new("Сохранить")).on_press(Message::SaveValues))
             ).push(Row::new().spacing(20)
                 .push(Button::new(pb_hist_prev, Text::new("Предыдущее")).on_press(Message::Hist(HistMessage::Prev)))
                 .push(Button::new(pb_hist_next, Text::new("Следующее")).on_press(Message::Hist(HistMessage::Next)))
@@ -355,6 +363,23 @@ impl App {
             },
         }
         Command::none()
+    }
+
+    fn save_invertor(&self) {
+        let dt = log::date_time_now();
+        dbg!(&dt);
+        let dt = log::date_time_to_string_name_short(&dt);
+        let path = log::get_file_path("tables/log/").join(dt).with_extension("csv");
+        dbg!(&path);
+        let parametrs: Vec<_> = self.invertor_1.device().values_map()
+            .iter_values().map(|(adr, v, n)| log::InvertorParametr {
+                address: ((adr/256) as u8, (adr%256) as u8),
+                value: v,
+                name: n,
+            }).collect();
+        if let Err(e) = log::csv::write_invertor_parametrs(&path, parametrs) {
+            dbg!(e);
+        }
     }
 }
 

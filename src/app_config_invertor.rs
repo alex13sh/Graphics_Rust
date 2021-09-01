@@ -44,6 +44,7 @@ struct UI {
 
     pb_hist_prev: button::State,
     pb_hist_next: button::State,
+    txt_input_num_prev: text_input::State,
 }
 
 struct HistoryValues {
@@ -51,12 +52,14 @@ struct HistoryValues {
     cur_values: Option<ValuesOld>,
     prev_values: Option<ValuesOld>,
     cur_num: usize,
+    step_prev: u8,
 }
 
 #[derive(Debug, Clone)]
 pub enum HistMessage {
     Prev,
     Next,
+    StepPrevChange(u8),
 }
 
 impl HistoryValues {
@@ -70,6 +73,7 @@ impl HistoryValues {
             cur_num: cur_num,
             cur_values: None,
             prev_values: None,
+            step_prev: 1,
         };
         h.update_values();
         Some(h)
@@ -77,7 +81,7 @@ impl HistoryValues {
 
     fn update_values(&mut self) {
         self.cur_values = func_files::read_file(self.logs_path.get(self.cur_num).unwrap());
-        self.prev_values = self.logs_path.get(self.cur_num-1).and_then(|path| func_files::read_file(path));
+        self.prev_values = self.logs_path.get(self.cur_num - self.step_prev as usize).and_then(|path| func_files::read_file(path));
     }
     fn prev_eq_cur(&self, adr: u16) -> Option<bool> {
         let eq = self.prev_values.as_ref().zip(self.cur_values.as_ref())
@@ -113,6 +117,10 @@ impl HistoryValues {
         }
         HistMessage::Next => {
             if self.cur_num < self.logs_path.len()-1 {self.cur_num += 1;}
+            self.update_values();
+        }
+        HistMessage::StepPrevChange(stp) => {
+            self.step_prev = stp;
             self.update_values();
         }
         }
@@ -240,12 +248,13 @@ impl Application for App {
                 values_old_new: ui_values_old_new,
                 pb_connect, pb_update, pb_write, pb_save,
 
-                pb_hist_prev, pb_hist_next,
+                pb_hist_prev, pb_hist_next, txt_input_num_prev,
             },
             ..
         } = self;
         
         use std::convert::TryFrom;
+        use std::str::FromStr;
         let value_to_f32 = |adr, value| {
             f32::try_from(&values[&adr].new_value(value)).unwrap_or(value as f32)
         };
@@ -314,6 +323,10 @@ impl Application for App {
             ).push(Row::new().spacing(20)
                 .push(Button::new(pb_hist_prev, Text::new("Предыдущее")).on_press(Message::Hist(HistMessage::Prev)))
                 .push(Button::new(pb_hist_next, Text::new("Следующее")).on_press(Message::Hist(HistMessage::Next)))
+                .push(TextInput::new(txt_input_num_prev, "1",
+                    &self.hist.as_ref().map_or(1, |h| h.step_prev).to_string(),
+                    |v| Message::Hist(HistMessage::StepPrevChange(u8::from_str(&v).unwrap()))
+                ))
                 .push(Checkbox::new(*filter_delta, "Только изменения", Message::FilterDelta))
                 .push(Text::new(prev_cur_file_name))
             ).push(Scrollable::new(ui_scroll)

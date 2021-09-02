@@ -203,6 +203,10 @@ impl OutputValues {
         }
     }
 
+    pub fn get_state_build(&self) -> TableStateBuild {
+        TableStateBuild::new(self)
+    }
+
     pub fn fill_empty(mut self) -> Self {
         self.values.fill_empty();
         self
@@ -312,6 +316,93 @@ impl OutputValues {
         Ok(new_path)
     }
 
+}
+
+#[derive(Default)]
+pub struct TableStateFields {
+    pub time_work: Option<f32>, // время работы // count * step_sec = time
+    pub time_work_before_after_6_000: Option<(f32, f32)>, // время работы до и после 6 тыс
+    pub time_work_hz: Option<Vec<f32>>, // время работы на разных частотах кратном 1_000
+
+    pub time_acel: Option<f32>, // Время разгона
+    pub hz_max: Option<u32>, // ValueHZ
+    pub vibro_max: Option<f32>,
+    pub hz_vibro: Option<u32>, // Зона вибрации
+    pub tok_max: Option<u32>,
+    pub temps_min_max: Option<Vec<(String, (f32, f32))>>,
+}
+
+pub struct TableStateBuild <'a> {
+    values: &'a OutputValues,
+    pub fields: TableStateFields,
+}
+
+impl <'a> TableStateBuild<'a> {
+    fn new(values: &'a OutputValues) -> Self {
+        TableStateBuild {
+            values: values,
+            fields: TableStateFields::default(),
+        }
+    }
+
+    pub fn time_work(mut self) -> Self {
+        let time_work = self.values.info.count as f32 * self.values.info.step_sec;
+        self.fields.time_work = Some(time_work);
+        self
+    }
+    pub fn time_work_before_after_6_000(mut self) -> Self {
+        let column_hz = self.values.fields.iter().position(|s| s=="Скорость").unwrap();
+        let column_time = self.values.fields.iter().position(|s| s=="time").unwrap();
+
+        let mut time_work_before_after_6_000: (f32, f32) = (0.0, 0.0);
+        let mut itr = self.values.values.0.iter();
+        if let Some((hz, time_before_6_000)) = itr
+            .map(|row| (row[column_hz] as u32, row[column_time]))
+            .find(|(hz, _)| *hz>6_000) {
+
+            time_work_before_after_6_000.0 = time_before_6_000;
+        } else {
+            if let Some(time_work) = self.fields.time_work {
+                time_work_before_after_6_000.0 = time_work;
+            } else {
+                self = self.time_work();
+                time_work_before_after_6_000.0 = self.fields.time_work.unwrap();
+            }
+        }
+
+        self.fields.time_work_before_after_6_000 = Some(time_work_before_after_6_000);
+        self
+    }
+
+    pub fn time_work_hz(mut self) -> Self {
+        let column_hz = self.values.fields.iter().position(|s| s=="Скорость").unwrap();
+        let column_time = self.values.fields.iter().position(|s| s=="time").unwrap();
+
+//         for row in self.values.values.0.iter() {
+//             let hz = row[column_hz] as u32;
+//             let time = row[column_time];
+//
+//         }
+
+        use itertools::Itertools;
+        let mut time_work_hz = vec![0_f32; 24];
+        let arr: Vec<_> = self.values.values.0.iter()
+                .map(|row| (row[column_hz] as u32, row[column_time]))
+                .collect();
+
+        for (hz_1000, mut group) in arr.into_iter()
+                .group_by(|(hz, _time)| *hz / 1_000).into_iter() {
+
+            let time_first = group.next();
+            let time_last = group.last();
+            let time_work = time_first.zip(time_last)
+                .map(|(t1, t2)| t2.1 - t1.1).unwrap_or(0_f32);
+
+            time_work_hz[hz_1000 as usize] += time_work;
+        }
+        self.fields.time_work_hz = Some(time_work_hz);
+        self
+    }
 }
 
 mod excel {

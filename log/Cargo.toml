@@ -13,6 +13,7 @@ csv = "1.1.5"
 umya-spreadsheet = "0.2.2"
 directories = "2.0"
 chrono = "0.4"
+itertools = "*"
 
 [features]
 default = ["convert"]

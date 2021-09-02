@@ -156,12 +156,8 @@ impl Klapans {
 
     fn set_klapan(&mut self, name: &str, enb: bool) {
         pub use std::convert::TryFrom;
-        if !self.values.get_value_arc("Давление воздуха компрессора")
-            .and_then(|v| Some((
-                    f32::try_from(v.value().as_ref()).ok()?,
-                    v.value().get_error_min_max().0?.red
-                ))
-            ).map(|(davl, err_red)| davl > err_red).unwrap_or(false)
+        if self.values.get_value_arc("Давление воздуха компрессора")
+            .map(|v| v.value().is_error()).unwrap_or(true)
         {
             return;
         }

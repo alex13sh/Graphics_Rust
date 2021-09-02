@@ -90,6 +90,7 @@ impl Application for App {
             top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
             klapans: ui::Klapans::new(logic.digit_o.device().values_map()
                 + logic.digit_i.device().values_map()
+                + logic.get_values().get_values_by_name_starts(&["Давление воздуха компрессора"])
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
 //                 .clone()
                 ),
@@ -197,7 +198,7 @@ impl Application for App {
             .push(right_column.width(Length::FillPortion(10)));
 
         let dozator = self.dozator.view().map(Message::DozatorUI);
-        let klapans = if bd_2 && !self.dvij_is_started {self.klapans.view().map(Message::KlapansUI)} else {Text::new("Отключен модуль с клапанами").into()};
+        let klapans = if bd_2 /*&& !self.dvij_is_started*/ {self.klapans.view().map(Message::KlapansUI)} else {Text::new("Отключен модуль с клапанами").into()};
         let col = Column::new()
             .spacing(10)
             .push(dozator)

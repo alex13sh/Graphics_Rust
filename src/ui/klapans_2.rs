@@ -69,8 +69,9 @@ impl Klapans {
     pub fn update(&mut self, message: Message) {
         match message {
         Message::ToggleKlapan(name, enb) => {
-            self.klapans.iter_mut().find(|s| s.name==name).unwrap().enb = enb;
-            self.values.set_bit(&name, enb).unwrap();
+//             self.klapans.iter_mut().find(|s| s.name==name).unwrap().enb = enb;
+//             self.values.set_bit(&name, enb).unwrap();
+            self.set_klapan(name.as_str(), enb);
         }
         Message::PressButton(name) => {
             let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
@@ -154,6 +155,18 @@ impl Klapans {
     }
 
     fn set_klapan(&mut self, name: &str, enb: bool) {
+        pub use std::convert::TryFrom;
+        if !self.values.get_value_arc("Давление воздуха компрессора")
+            .and_then(|v| Some((
+                    f32::try_from(v.value().as_ref()).ok()?,
+                    v.value().get_error_min_max().0?.red
+                ))
+            ).map(|(davl, err_red)| davl > err_red).unwrap_or(false)
+        {
+            return;
+        }
+
+        // Если давление воздуха меньше 4, то клапана открываться не будут.
         if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
             v.enb = enb;
         }

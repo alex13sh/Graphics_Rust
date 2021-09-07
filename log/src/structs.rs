@@ -27,6 +27,7 @@ pub struct OutputValues {
 
 struct TableInfo {
     step_sec: f32, // Шаг времени
+//     step_hz: u32, // Шаг скорости
     count: u32, // Кол-во значений
 }
 
@@ -246,6 +247,37 @@ impl OutputValues {
             *v = *v / 135.0;
         }
     }
+    pub fn conert_to_speed_values(mut self, hz: u32, step_hz: u32) -> Self {
+        let cnt = hz/step_hz;
+        let mut values_f32 = ValuesF::from_size(2, cnt as usize, 0.0);
+        let mut speed_cnt = vec![0; cnt as usize];
+        let column_hz = self.fields.iter().position(|s| s=="Скорость").unwrap();
+        let column_vibro = self.fields.iter().position(|s| s=="Вибродатчик").unwrap();
+        for row in self.values.0.iter().rev() {
+            let i = row[column_hz] as u32 / step_hz;
+            let i = i as usize;
+            if i<values_f32.0.len() {
+                values_f32.0[i][0] = row[column_hz];
+                values_f32.0[i][1] += row[column_vibro];
+                speed_cnt[i] +=1;
+            }
+        }
+        
+        for (i, cnt) in (0..).zip(speed_cnt) {
+            values_f32.0[i][1] /=cnt as f32;
+        }
+        
+        OutputValues {
+            converter: self.converter,
+            info: TableInfo {
+                step_sec: self.info.step_sec,
+//                 step_hz: step_hz,
+                count: cnt,
+            },
+            fields: vec!["Скорость".into(), "Вибродатчик".into()],
+            values: values_f32,
+        }
+    }
     
     pub fn write_csv(self) -> crate::MyResult {
         let conv = &self.converter.ok_or("Converter is empty")?;
@@ -315,7 +347,21 @@ impl OutputValues {
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(new_path)
     }
+    pub fn write_excel_lite(mut self, file_path: &PathBuf) -> crate::MyResult {
+        use excel::*;
+        let mut book = umya_spreadsheet::new_file();
+        let sht = book.get_sheet_by_name_mut("Sheet1")?;
+        let mut values_str = self.values.to_string();
+        for (f, col) in self.fields.iter().zip(1..) {
+            sht.set_cell_value(col, 1, f);
+        }
 
+        for (s, row) in values_str.into_iter().zip(2..) {
+            sht.set_row_values(row, &s);
+        }
+        let _ = umya_spreadsheet::writer::xlsx::write(&book, &file_path);
+        Ok(())
+    }
 }
 
 #[derive(Default)]
@@ -514,7 +560,8 @@ mod inner {
     where T: std::clone::Clone
     {
         pub fn from_size(cols: usize, rows: usize, value: T) -> Self {
-            let v = std::iter::repeat(vec![value;cols]).take(rows+1).collect();
+//             let v = std::iter::repeat(vec![value;cols]).take(rows+1).collect();
+            let v = vec![vec![value; cols]; rows];
             ValuesMat(v)
         }
         pub fn insert_column(&mut self, col: usize, values: impl Iterator<Item=T>) -> &mut Self {

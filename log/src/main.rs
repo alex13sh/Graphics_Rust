@@ -32,7 +32,8 @@ fn main_1() -> MyResult {
 }
 
 fn main() -> MyResult {
-    calc_hz()
+//     calc_hz()
+    compare_vibro()
 }
 
 fn filter_values(file_name: &str) -> crate::MyResult {
@@ -84,6 +85,51 @@ fn calc_hz() -> crate::MyResult {
     Ok(())
 }
 
+use std::path::Path;
+
+fn compare_vibro() -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+    ];
+    use std::collections::BTreeMap;
+    let mut map = BTreeMap::new();
+    
+    for f in get_file_list("tables/csv/").iter().rev().take(8) {
+        let values_log = csv::read_values(&f).ok_or("Ошибка чтения файла")?;
+        let values = structs::InputValues::from_log_values(values_log)
+            .fields(hashs.clone())
+            .make_values_3(Duration::from_millis(100))
+                .fill_empty()
+                .shift_vibro()
+            .conert_to_speed_values(16_500, 100);
+        let file_name = f.file_name().ok_or("Нет имени файла")?
+            .to_owned().into_string().map_err(|_| "into_string")?;
+        let file_name = file_name.strip_prefix("value_")
+            .and_then(|f| f.strip_suffix(".csv"))
+            .ok_or("file_name strip")?.to_owned();
+        map.insert(file_name, values);
+    }
+    let values = merge_value_by_speed(map).ok_or("merge_values")?;
+    values.write_excel_lite(&Path::new("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log/tables/").join("table_speed_vibro.xlsx"))?;
+    Ok(())
+}
+
+fn merge_value_by_speed(
+        values: impl IntoIterator<Item = (String, structs::OutputValues)>
+    ) -> Option<structs::OutputValues> {
+    let mut values = values.into_iter();
+    let mut res = values.next()?.1;
+    for ((n,v), i) in values.zip(2..) {
+        res.fields.insert(i, n);
+        res.values.insert_column(i, 
+            v.values.into_iter()
+            .map(|row| row[1])
+        );
+    }
+    Some(res)
+}
+
 fn convert_json_old_new() -> MyResult {
     use json::convert::*;
     
@@ -121,12 +167,14 @@ fn get_file_list(dir: &str) -> Vec<PathBuf> {
     let path = get_file_path(dir);
     let paths = std::fs::read_dir(path).unwrap();
 //     dbg!(paths);
-    paths.filter_map(|res| res.ok())
+    let mut res: Vec<_> = paths.filter_map(|res| res.ok())
     .map(|dir| dir.path())
     .filter(|path| 
         if let Some(ext) = path.extension() {
             ext == "csv"
         } else {false}
-    ).collect()
+    ).collect();
+    res.sort_by_key(|p| p.metadata().unwrap().modified().unwrap());
+    res
 }
 

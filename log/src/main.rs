@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
+#![feature(decl_macro)]
 
 use log::*;
 use std::time::Duration;
@@ -33,7 +34,9 @@ fn main_1() -> MyResult {
 
 fn main() -> MyResult {
 //     calc_hz()
-    compare_vibro()
+//     compare_vibro()
+//     test_group_path()
+    compare_vibro_month()
 }
 
 fn filter_values(file_name: &str) -> crate::MyResult {
@@ -87,36 +90,43 @@ fn calc_hz() -> crate::MyResult {
 
 use std::path::Path;
 
-fn compare_vibro() -> crate::MyResult {
+fn open_file_speed_vibro(file_path: &PathBuf) -> Option<structs::OutputValues> {
     let hashs = vec![
         ("Скорость", "4bd5c4e0a9"),
         ("Вибродатчик", "Виброскорость дв. М1/value"),
     ];
+    let values_log = csv::read_values(file_path)?;
+    let values = structs::InputValues::from_log_values(values_log)
+        .fields(hashs)
+        .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .shift_vibro()
+        .conert_to_speed_values(15_000, 100);
+    Some(values)
+}
+fn path_to_string(path: &PathBuf) -> Option<String> {
+    let file_name = path.file_name()?
+        .to_owned().into_string().ok()?;
+    let file_name = file_name.strip_prefix("value_")?
+        .strip_suffix(".csv")?.to_owned();
+    Some(file_name)
+}
+fn compare_vibro() -> crate::MyResult {
     use std::collections::BTreeMap;
     let mut map = BTreeMap::new();
     
     for f in get_file_list("tables/csv/").iter().rev().take(8) {
-        let values_log = csv::read_values(&f).ok_or("Ошибка чтения файла")?;
-        let values = structs::InputValues::from_log_values(values_log)
-            .fields(hashs.clone())
-            .make_values_3(Duration::from_millis(100))
-                .fill_empty()
-                .shift_vibro()
-            .conert_to_speed_values(16_500, 100);
-        let file_name = f.file_name().ok_or("Нет имени файла")?
-            .to_owned().into_string().map_err(|_| "into_string")?;
-        let file_name = file_name.strip_prefix("value_")
-            .and_then(|f| f.strip_suffix(".csv"))
-            .ok_or("file_name strip")?.to_owned();
-        map.insert(file_name, values);
+        let values = open_file_speed_vibro(&f).ok_or("Ошибка чтения файла")?;        
+        map.insert(path_to_string(f).unwrap(), values);
     }
+    
     let values = merge_value_by_speed(map).ok_or("merge_values")?;
-    values.write_excel_lite(&Path::new("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log/tables/").join("table_speed_vibro.xlsx"))?;
+    values.write_excel_lite(&get_file_path("tables/table_speed_vibro (1000).xlsx"))?;
     Ok(())
 }
 
 fn merge_value_by_speed(
-        values: impl IntoIterator<Item = (String, structs::OutputValues)>
+        mut values: impl IntoIterator<Item = (String, structs::OutputValues)>
     ) -> Option<structs::OutputValues> {
     let mut values = values.into_iter();
     let mut res = values.next()?.1;
@@ -128,6 +138,110 @@ fn merge_value_by_speed(
         );
     }
     Some(res)
+}
+fn merge_value_vibro_average<'a>(
+        mut values: impl Iterator<Item = &'a structs::OutputValues>
+    ) -> Option<structs::OutputValues> {
+    let mut res = values.next()?.clone();
+    let mut cnt = 1;
+    for v in values {
+        for i in 0..res.values.0.len() {
+            res.values.0[i][1] += v.values.0[i][1];
+        }
+        cnt+=1;
+    }
+    for i in 0..res.values.0.len() {
+        res.values.0[i][1] /= cnt as f32;
+    }
+    Some(res)
+}
+
+pub macro batch_iner_m($itr:ident, $days:expr) {
+    if let Some(p) = $itr.next() {
+        let mut arr = Vec::new();
+        let dt = p.0;
+        arr.push(p.1);
+        while let Some(p2) = $itr.peek() {
+            let dt2 = p2.0;
+            if dt2 - dt > chrono::Duration::days($days as i64) {break;}
+            let p2 = $itr.next().unwrap();
+            arr.push(p2.1);
+        }
+        Some((dt, arr))
+    } else {None}
+}
+
+fn test_group_path() -> crate::MyResult {
+    use itertools::Itertools;
+    let paths : Vec<_> = get_file_list("tables/csv/").into_iter()
+        .map(|p| (DateTimeLocal::from(p.metadata().unwrap().modified().unwrap()), p))
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 1)
+        })
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 7)
+        })
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 30)
+        })
+        .map(|(dt, v)| (dt.date(), v))
+        .collect();
+    dbg!(paths);
+    Ok(())
+}
+
+fn compare_vibro_month() -> crate::MyResult {
+    use itertools::Itertools;
+    let out_path = get_file_path("tables/table_speed_vibro/");
+    let paths : Vec<_> = get_file_list("tables/csv/").into_iter()
+        .map(|p| (DateTimeLocal::from(p.metadata().unwrap().modified().unwrap()), p))
+        .map(|(dt, p)| (dt, (path_to_string(&p).unwrap(), open_file_speed_vibro(&p).unwrap())))
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 1)
+        })
+        .inspect(|(dt, v)| {
+            let p = date_time_to_string_name_short(&dt.clone().into());
+            let values = merge_value_by_speed(v.clone()).unwrap();
+            values.write_excel_lite(&out_path.join(&format!("{} (d1).xlsx", p))).unwrap()
+        })
+        .map(|(dt, v)| {
+            let itr = v.iter().map(|(f,v)| v);
+            let v = merge_value_vibro_average(itr).unwrap();
+            let p = date_time_to_string_name_short(&dt.clone().into());
+            (dt, (p, v))
+        })
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 7)
+        })
+        .inspect(|(dt, v)| {
+            let p = date_time_to_string_name_short(&dt.clone().into());
+            let values = merge_value_by_speed(v.clone()).unwrap();
+            values.write_excel_lite(&out_path.join(&format!("{} (d7).xlsx", p))).unwrap()
+        })
+        .map(|(dt, v)| {
+            let itr = v.iter().map(|(f,v)| v);
+            let v = merge_value_vibro_average(itr).unwrap();
+            let p = date_time_to_string_name_short(&dt.clone().into());
+            (dt, (p, v))
+        })
+        .peekable()
+        .batching(|path| {
+            batch_iner_m!(path, 30)
+        })
+        .inspect(|(dt, v)| {
+            let p = date_time_to_string_name_short(&dt.clone().into());
+            let values = merge_value_by_speed(v.clone()).unwrap();
+            values.write_excel_lite(&out_path.join(&format!("{} (d30).xlsx", p))).unwrap()
+        })
+        .map(|(dt, v)| (dt.date(), v))
+        .collect();
+    
+    Ok(())
 }
 
 fn convert_json_old_new() -> MyResult {

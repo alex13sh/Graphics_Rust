@@ -6,6 +6,7 @@ use std::io::prelude::*;
 use std::time::Duration;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct Converter {
     input_path_csv: PathBuf,
     pub(crate) output_path: PathBuf,
@@ -18,6 +19,7 @@ pub struct InputValues {
     values: Vec<crate::LogValue>
 }
 
+#[derive(Clone)]
 pub struct OutputValues {
     pub(crate) converter: Option<Converter>,
     info: TableInfo,
@@ -25,6 +27,7 @@ pub struct OutputValues {
     pub values: ValuesF,
 }
 
+#[derive(Clone)]
 struct TableInfo {
     step_sec: f32, // Шаг времени
 //     step_hz: u32, // Шаг скорости
@@ -264,7 +267,9 @@ impl OutputValues {
         }
         
         for (i, cnt) in (0..).zip(speed_cnt) {
-            values_f32.0[i][1] /=cnt as f32;
+            if cnt != 0 {
+                values_f32.0[i][1] /=cnt as f32;
+            }
         }
         
         OutputValues {
@@ -347,7 +352,7 @@ impl OutputValues {
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(new_path)
     }
-    pub fn write_excel_lite(mut self, file_path: &PathBuf) -> crate::MyResult {
+    pub fn write_excel_lite(&self, file_path: &PathBuf) -> crate::MyResult {
         use excel::*;
         let mut book = umya_spreadsheet::new_file();
         let sht = book.get_sheet_by_name_mut("Sheet1")?;
@@ -554,6 +559,7 @@ mod inner {
     pub type ValuesF = ValuesMat<f32>;
     pub type ValuesS = ValuesMat<String>;
 
+    #[derive(Clone)]
     pub struct ValuesMat<T>(pub Vec<Vec<T>>);
 
     impl <T> ValuesMat <T>

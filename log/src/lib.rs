@@ -5,7 +5,8 @@ use std::fs::File;
 use std::io::prelude::*;
 pub use chrono::{SecondsFormat, Offset, FixedOffset, Duration};
 
-type DateTimeLocal = chrono::DateTime<chrono::Local>;
+pub type DateTimeLocal = chrono::DateTime<chrono::Local>;
+pub type DateLocal = chrono::Date<chrono::Local>;
 pub type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
 // type DateTimeMSK = chrono::DateTime<MSK>;
 pub type DateTime = DateTimeFix;

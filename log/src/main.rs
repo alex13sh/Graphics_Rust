@@ -129,7 +129,8 @@ fn merge_value_by_speed(
         mut values: impl IntoIterator<Item = (String, structs::OutputValues)>
     ) -> Option<structs::OutputValues> {
     let mut values = values.into_iter();
-    let mut res = values.next()?.1;
+    let (n, mut res) = values.next()?;
+    res.fields[1] = n;
     for ((n,v), i) in values.zip(2..) {
         res.fields.insert(i, n);
         res.values.insert_column(i, 
@@ -143,15 +144,25 @@ fn merge_value_vibro_average<'a>(
         mut values: impl Iterator<Item = &'a structs::OutputValues>
     ) -> Option<structs::OutputValues> {
     let mut res = values.next()?.clone();
-    let mut cnt = 1;
-    for v in values {
-        for i in 0..res.values.0.len() {
-            res.values.0[i][1] += v.values.0[i][1];
+    let size = res.values.0.len();
+    let mut cnt = vec![0; size];
+    for i in 0..size {
+        if res.values.0[i][1] != 0.0 {
+            cnt[i] += 1;
         }
-        cnt+=1;
     }
-    for i in 0..res.values.0.len() {
-        res.values.0[i][1] /= cnt as f32;
+    for v in values {
+        for i in 0..size {
+            if v.values.0[i][1] != 0.0 {
+                res.values.0[i][1] += v.values.0[i][1];
+                cnt[i] += 1;
+            }
+        }
+    }
+    for i in 0..size {
+        if cnt[i] != 0 {
+            res.values.0[i][1] /= cnt[i] as f32;
+        }
     }
     Some(res)
 }

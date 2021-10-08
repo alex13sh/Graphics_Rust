@@ -33,8 +33,9 @@ path = "./src/app_config.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# iced = { version = "0.2",  features = ["canvas", "tokio", "svg"] }
-# iced_native = { version = "0.2"}
+iced = { version = "0.3", features = ["canvas", "tokio", "svg"] }
+iced_native = "0.3"
+iced_futures = "0.3"
 
 futures = "0.3.12"
 futures-core = "0.3"
@@ -52,17 +53,10 @@ modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
 graphic = {path = "./graphic"}
 
-[dependencies.iced]
-#path = "../plotters"
-# version = "0.2"
-git = "https://github.com/hecrj/iced"
-features = ["canvas", "tokio", "svg"] 
-
-[dependencies.iced_native]
-git = "https://github.com/hecrj/iced"
-
-[dependencies.iced_futures]
-git = "https://github.com/hecrj/iced"
+[patch.crates-io]
+iced = {git = "https://github.com/hecrj/iced", rev="391825788"}
+iced_native = {git = "https://github.com/hecrj/iced", rev="391825788"}
+iced_futures = {git = "https://github.com/hecrj/iced", rev="391825788"}
 
 [workspace]
 members = [

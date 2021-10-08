@@ -1,4 +1,4 @@
-use iced_futures::futures;
+use iced_futures::*;
 use async_stream::stream;
 
 use super::animations::Progress;
@@ -54,7 +54,7 @@ impl LinerAnimation {
     }
 }
 
-impl<H, I> iced_native::subscription::Recipe<H, I> for LinerAnimation
+impl<H, I> subscription::Recipe<H, I> for LinerAnimation
 where
     H: std::hash::Hasher,
 {

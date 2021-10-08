@@ -493,6 +493,7 @@ impl Deref for ValueArc {
 fn test_value_into_f32() {
     let v = Value::from(ValueInit{
         name: "Name_1".into(),
+        suffix_name: "".into(),
         address: 1,
         direct: ValueDirect::Write,
         size: ValueSize::FLOAT,

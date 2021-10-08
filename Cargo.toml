@@ -3,6 +3,7 @@ name = "meln_graphics"
 version = "0.1.0"
 authors = ["alex13sh <alex97sh@yandex.ru>"]
 edition = "2018"
+resolver = "2"
 
 [[bin]]
 name = "meln_graphics"

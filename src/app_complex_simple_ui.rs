@@ -15,6 +15,8 @@ use modbus::{ModbusValues, Device, DeviceError};
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::path::PathBuf;
+
 
 pub struct App {
     ui: UI,
@@ -55,9 +57,11 @@ pub enum Message {
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
     InfoPane(ui::info_pane::Message),
+//     InfoPaneUpdate(Option<(log::structs::TableState, PathBuf)>),
     
     MessageUpdate(MessageMudbusUpdate),
     MelnMessage(MelnMessage),
+    ResultEmpty,
 }
 
 #[derive(Debug, Clone)]
@@ -127,7 +131,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.6}
+    fn scale_factor(&self) -> f64 {0.45}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         use ui::animations::PropertyAnimation;
@@ -189,7 +193,8 @@ impl Application for App {
         }
         Message::InfoPane(m) => self.info_pane.update(m),
         Message::MessageUpdate(m) => return self.modbus_update(m),
-        Message::MelnMessage(m) => self.meln_update(m),
+        Message::MelnMessage(m) => return self.meln_update(m),
+        Message::ResultEmpty => {},
         }
         Command::none()
     }
@@ -327,7 +332,7 @@ impl App {
         Command::none()
     }
     
-    fn meln_update(&mut self, message: MelnMessage) {
+    fn meln_update(&mut self, message: MelnMessage) -> Command<Message> {
         use MelnMessage::*;
         match message {
         IsStartedChanged(is_started) => {
@@ -335,13 +340,15 @@ impl App {
             if is_started {
                 self.reset_values();
             } else {
-                self.log_save();
+                let f = Self::log_save(std::mem::take(&mut self.log_values));
+                return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
             }
         }
         NextStep(step) => {
             self.txt_status = format!("{:?}",step);
         }
         }
+        Command::none()
     }
     
     fn proccess_values(&mut self) {
@@ -355,6 +362,7 @@ impl App {
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
                 .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
             };
+            // Разницу записывать
             self.log_values.append(&mut log_values);
         }
 
@@ -363,54 +371,36 @@ impl App {
             .any(|err| err);
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
-    
-    fn log_save(&mut self) {
-        if self.log_values.len() > 0 {
-            self.log.new_session(&self.log_values);
+        
+    async fn log_save(values: Vec<log::LogValue>) -> Option<(log::structs::TableState, PathBuf)> {
+        if values.is_empty() { return None; }
+            
+        log::new_csv_raw(&values);
 
-            let vec_map = vec![
-            ("Скорость", "4bd5c4e0a9"),
-            ("Ток", "5146ba6795"),
-            ("Напряжение", "5369886757"),
-            ("Вибродатчик", "Виброскорость дв. М1/value"),
-            ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
-            ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
-            ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
-            ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
-            ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
-            ];
-            
-//             let values: Vec<modbus::ValueArc> = {
-//             let values = self.logic.get_values().get_values_by_name_ends(&["value", "bit"]);
-//             let values: HashMap<_,_> = values.iter()
-//                 .filter(|(k,_)| k.matches("/").count()<=1)
-//                 .map(|(k,v)| (k.clone(), v.clone()))
-//                 .collect();
-//             let values = ModbusValues::from(values);
-//                 values.into()
-//             };
-//             let vec_map: Vec<(&str, &str)> = values.iter()
-//                 .filter_map(|v| Some((v.name()?, v.full_name().as_str())) ).collect();
-            
-            let values = std::mem::take(&mut self.log_values);
-            let res = log::Logger::new_table_fields(values, 1, vec_map);
-            
-            self.save_invertor();
-            if let Some((stat, path)) = res {
-                self.info_pane.set_info(stat);
-                self.info_pane.set_file_path(path);
-            }
-        }
+        let vec_map = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Напряжение", "5369886757"),
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+        ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
+        ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
+        ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
+        ];
+        
+        let res = log::new_table_fields(values, 1, vec_map);
+        return res;
     }
 
-    fn save_invertor(&self) {
+    fn save_invertor(invertor_values: &ModbusValues) {
         let dt = log::date_time_now();
         dbg!(&dt);
         let dt = log::date_time_to_string_name_short(&dt);
         let path = log::get_file_path("tables/log/").join(dt).with_extension(".csv");
         dbg!(&path);
-        let parametrs: Vec<_> = self.logic.invertor_1.device().values_map()
-            .iter_values().map(|(adr, v, n)| log::InvertorParametr {
+        let parametrs: Vec<_> = invertor_values.iter_values()
+            .map(|(adr, v, n)| log::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
                 value: v,
                 name: n,

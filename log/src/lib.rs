@@ -39,13 +39,14 @@ pub mod convert;
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn get_file_path(file_name: &str) -> PathBuf {
-    let mut path = if let Some(project_dirs) =
+    let mut path: PathBuf = if let Some(project_dirs) =
         directories::ProjectDirs::from("rs", "modbus", "GraphicModbus")
     {
         project_dirs.data_dir().into()
     } else {
         std::env::current_dir().unwrap_or(PathBuf::new())
     };
+    path = std::path::Path::new("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log/").into();
     path.push(file_name);
     path
 }
@@ -141,51 +142,52 @@ impl Logger {
     }
     
     pub fn new_session(&mut self, values: &Vec<crate::LogValue>) {
-        dbg!();
-        if values.len() < 2 {return;}
-        let start = values.first().unwrap().date_time;
-        let finish = values.last().unwrap().date_time;
-        
         match self.log_type {
         LoggerType::CSV {ref mut sessions} => {
+            let start = values.first().unwrap().date_time;
+            let finish = values.last().unwrap().date_time;
             let s = csv::SessionTime {
                 start: start,
                 finish: finish,
                 file_name: Some(format!("value_{}.csv", date_time_to_string_name_short(&start))),
                 values: Some(values.clone()),
             };
-            csv::write_values(&get_file_path("tables/csv/").join(s.file_name.clone().unwrap()), s.values.clone().unwrap());
             sessions.push(s);
             csv::write_session(&get_file_path("csv/session.csv"), sessions.clone());
-        },
-//         LoggerType::Json {ref mut sessions} => sessions.push(json::NewJsonLog {
-//             start: start,
-//             finish: finish,
-//             values: values.clone(),
-//         }),
-        _ => {}
+        }
+//         LoggerType::Json {ref _sessions} => {},
+        _ => {},
         }
     }
     
-    pub fn new_table_fields(values: Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) -> Option<(structs::TableState, PathBuf)> {
-        if values.is_empty() {return None;}
-        use std::time::Duration;
-        let start = values[0].date_time;
-        let values = structs::Converter::output_file(crate::get_file_path("tables/excel/"),
-            &format!("{}", date_time_to_string_name_short(&start)))
-            .from_log_values(values)
-            .fields(name_hash)
-            .make_values_3(Duration::from_millis(100))
-                .fill_empty()
-                .shift_vibro()
-                .insert_time_f32();
-        let mut res = (
-            values.get_state(),
-            values.converter.as_ref().unwrap().get_output_file_path().with_extension("xlsx")
-        );
-        res.1 = values.write_excel().ok()?;
-        Some(res)
-    }
+}
+
+pub fn new_csv_raw(values: &Vec<crate::LogValue>) {
+    if values.len() < 2 {return;}
+    let start = values.first().unwrap().date_time;
+    
+    let file_name = format!("value_{}.csv", date_time_to_string_name_short(&start));
+    csv::write_values(&get_file_path("tables/csv/").join(file_name), values);
+}
+
+pub fn new_table_fields(values: Vec<crate::LogValue>, step_sec: u16, name_hash: Vec<(&str, &str)>) -> Option<(structs::TableState, PathBuf)> {
+    if values.is_empty() {return None;}
+    use std::time::Duration;
+    let start = values[0].date_time;
+    let values = structs::Converter::output_file(crate::get_file_path("tables/excel/"),
+        &format!("{}", date_time_to_string_name_short(&start)))
+        .from_log_values(values)
+        .fields(name_hash)
+        .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .shift_vibro()
+            .insert_time_f32();
+    let mut res = (
+        values.get_state(),
+        values.converter.as_ref().unwrap().get_output_file_path().with_extension("xlsx")
+    );
+    res.1 = values.write_excel().ok()?;
+    Some(res)
 }
 
 pub fn open_log_state(file_name: &str) -> Option<(structs::TableState, PathBuf)> {

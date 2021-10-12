@@ -188,6 +188,18 @@ impl From<ValueInit> for Value {
     }
 }
 
+#[cfg(test)]
+fn test_value_init() -> Value {
+    Value::from(ValueInit{
+        name: "Name_1".into(),
+        suffix_name: Some("".into()),
+        address: 1,
+        direct: ValueDirect::Write,
+        size: ValueSize::FLOAT,
+        log: None,
+    })
+}
+
 #[derive(Debug)]
 pub enum ValueFloatError {
 //     None, // Измерение успешно
@@ -287,9 +299,28 @@ impl ValueArc {
         name @ _ => Some(name)
         }
     }
-    pub fn value(&self) -> Arc<Value> {
+    pub fn sensor_name(&self) -> Option<&str> {
+        let mut parts = self.0.rsplit("/");
+        parts.skip(1).next()
+    }
+    pub fn device_name(&self) -> Option<&str> {
+        let mut parts = self.0.rsplit("/");
+        let name_end = parts.skip(2).next()?;
+        let pos_end = name_end.as_ptr() as usize - self.0.as_ptr() as usize 
+            + name_end.len();
+        Some(&self.0[..pos_end])
+    }
+    pub fn value_clone(&self) -> Arc<Value> {
         self.1.clone()
     }
+}
+
+#[test]
+fn test_value_arc_names() {
+    let v = test_value_init();
+    let v = ValueArc("Device/SubDevice/Sensor/ValueName".into(), Arc::new(v));
+    assert_eq!(v.sensor_name().unwrap(), "Sensor");
+    assert_eq!(v.device_name().unwrap(), "Device/SubDevice");
 }
 
 // impl TryFrom<ValueArc> for f32 {
@@ -441,6 +472,12 @@ impl From<HashMap<String, Arc<Value>>> for ModbusValues {
     }
 }
 
+impl From<Arc<Value>> for ValueArc {
+    fn from(value: Arc<Value>) -> Self {
+        ValueArc(value.name().to_owned(), value)
+    }
+}
+
 impl From<ModbusValues> for Vec<ValueArc> {
     fn from(values: ModbusValues) -> Self {
         values.0.into_iter()
@@ -491,14 +528,7 @@ impl Deref for ValueArc {
 
 #[test]
 fn test_value_into_f32() {
-    let v = Value::from(ValueInit{
-        name: "Name_1".into(),
-        suffix_name: "".into(),
-        address: 1,
-        direct: ValueDirect::Write,
-        size: ValueSize::FLOAT,
-        log: None,
-    });
+    let v = test_value_init();
     *v.value.lock().unwrap() = (u32::from_le_bytes([0x00,0x00,0x20,0x3E]), false);
     let f: f32 = (&v).try_into().unwrap();
     assert_eq!(f, 0.15625);

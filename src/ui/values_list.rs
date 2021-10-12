@@ -55,7 +55,7 @@ impl ValuesList {
         let err = value.get_error_min_max();
         let name = value.name().unwrap();
         let suffix_name = if let Some(txt) = value.suffix_name() {format!("({})", txt)} else {String::from("")};
-        let value = f32::try_from(value.value().as_ref());
+        let value = f32::try_from(&value as &modbus::Value);
         let color;
         let txt_value;
         match value {

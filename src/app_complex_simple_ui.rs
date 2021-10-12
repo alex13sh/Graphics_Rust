@@ -562,10 +562,10 @@ mod half_complect {
             let speed_value = self.invertor.get_hz_out_value();
             let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
 
-            let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap().value();
-            let vibra_value = f32::try_from(vibra_value.as_ref()).unwrap();
-            let tok_value = self.values.get_value_arc("Выходной ток (A)").unwrap().value(); // "Выходной ток (A)"
-            let tok_value = f32::try_from(tok_value.as_ref()).unwrap();
+            let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap();
+            let vibra_value = f32::try_from(&vibra_value as &modbus::Value).unwrap();
+            let tok_value = self.values.get_value_arc("Выходной ток (A)").unwrap(); // "Выходной ток (A)"
+            let tok_value = f32::try_from(&tok_value as &modbus::Value).unwrap();
 
             if self.invertor.is_started == false && (speed_value > 1.0 || tok_value > 1.0) {
                 return Some(SpeedChange::Up);

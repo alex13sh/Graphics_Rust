@@ -46,7 +46,7 @@ pub enum Message {
 
 fn make_values(values: &Values) -> ValuesOldNew {
     values.iter()
-        .map(|(k, v)| {let v = v.value().to_string(); (k.clone(), (v.clone(), v))})
+        .map(|(k, v)| {let v = v.to_string(); (k.clone(), (v.clone(), v))})
         .collect()
 }
 

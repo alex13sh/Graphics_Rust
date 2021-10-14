@@ -274,6 +274,16 @@ impl TryFrom<&Value> for f32 {
     }
 }
 
+impl ToString for Value {
+    fn to_string(&self) -> String {
+        if let Ok(v) = f32::try_from(self) {
+            v.to_string()
+        } else {
+            "None".into()
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ValueArc (String, Arc<Value>);
 impl ValueArc {

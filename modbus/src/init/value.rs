@@ -141,6 +141,7 @@ pub enum ValueSize {
     INT32,
     UINT32,
     FLOAT,
+    FloatRev, // обратный порядок байтов
     FloatMap(fn(f32) -> f32),
     BitMap (Vec<ValueBit>),
     Bit(u8), // Номер бита

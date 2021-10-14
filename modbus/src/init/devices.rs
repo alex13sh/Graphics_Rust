@@ -38,8 +38,8 @@ pub mod owen_analog {
 
             make_value(prefix, "type", 0x00+pin*1, ValueSize::UINT16, ValueDirect::Write), // "Тип датчика"
             make_value(prefix, "point", 0x20+pin*1, ValueSize::UINT16, ValueDirect::Write), // "положение десятичной точки"
-            make_value(prefix, "Верхняя граница", 0x68+pin*2, ValueSize::FLOAT, ValueDirect::Write),
-            make_value(prefix, "Нижняя граница", 0x58+pin*16, ValueSize::FLOAT, ValueDirect::Write),
+            make_value(prefix, "Верхняя граница", 0x68+pin*2, ValueSize::FloatRev, ValueDirect::Write),
+            make_value(prefix, "Нижняя граница", 0x58+pin*2, ValueSize::FloatRev, ValueDirect::Write),
             make_value(prefix, "interval", 0x08+pin*1, ValueSize::UINT16, ValueDirect::Write),
         ]
     }

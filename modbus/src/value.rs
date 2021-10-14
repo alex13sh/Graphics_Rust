@@ -168,7 +168,7 @@ impl ValueSize {
         use ValueSize::*;
         match self {
         INT8 | UINT8 | INT16 | UINT16 | UInt16Dot(_) | UInt16Map(_) => 1,
-        INT32 | UINT32 | FLOAT | FloatMap(_) => 2,
+        INT32 | UINT32 | FLOAT | FloatRev | FloatMap(_) => 2,
         BitMap(_) | Bit(_) => 1,
         }
     }
@@ -250,6 +250,18 @@ impl TryFrom<&Value> for f32 {
             if let Some(err) = ValueFloatError::new(val.value()) {
                 Err(err)
             } else {Ok(f(f32::from_bits(val.value())))},
+        ValueSize::FloatRev => if let Some(err) = ValueFloatError::new(val.value()) {
+                Err(err)
+            } else {
+                let mut bytes = val.value().to_be_bytes();
+                {
+//                     let (left, right) = bytes.split_at_mut(2);
+//                     left.swap_with_slice(&mut right[..]);
+                    bytes.swap(0,2);
+                    bytes.swap(1,3);
+                }
+                Ok(f32::from_be_bytes(bytes))
+            },
         ValueSize::UINT32
         | ValueSize::INT32
         | ValueSize::UINT16

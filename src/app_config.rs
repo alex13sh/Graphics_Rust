@@ -40,6 +40,7 @@ pub enum Message {
     ValueEdited(String, String), // name, value
     ModbusUpdate, ModbusWrite,
     ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusConnect, ModbusConnectAnswer(Arc<Device>, Result<(), DeviceError>),
     ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
 }
 
@@ -85,7 +86,7 @@ impl Application for App {
             values: values,
             txt_values: txt_values,
         },
-        Command::none()
+        async{Message::ModbusConnect}.into()
         )
     }
     
@@ -140,6 +141,21 @@ impl Application for App {
                 }
             }
         },
+        Message::ModbusConnect => {
+                println!("MessageMudbusUpdate::ModbusConnect ");
+//                 self.save_invertor();
+                let mut device_futures = self.logic.reconnect_devices();
+                return Command::batch(device_futures.into_iter()
+                    .map(|(d, f)| Command::perform(f, move |res|
+                        Message::ModbusConnectAnswer(d.clone(), res))
+                    ));
+            },
+            Message::ModbusConnectAnswer(d, res) => {
+                let dc = d.clone();
+                let f = async move {dc.update_async(UpdateReq::All).await};
+                return Command::perform(f, move |res|
+                        Message::ModbusUpdateAsyncAnswerDevice(d.clone(), res));
+            },
         };
         Command::none()
     }

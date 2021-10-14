@@ -6,6 +6,7 @@ use iced::{
 };
 
 fn main() {
+    env_logger::init();
     App::run(Settings::default());
 }
 

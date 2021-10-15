@@ -296,6 +296,49 @@ impl ToString for Value {
     }
 }
 
+pub enum ValueVariant {
+    Num(i32),
+    UNum(u32),
+    Float(f32),
+    Bool(bool),
+    BitMap([bool; 16]),
+}
+
+impl From<&Value> for ValueVariant {
+    fn from(val: &Value) -> Self {
+        const fdot: [f32; 4] = [1_f32, 10_f32, 100_f32, 1_000_f32];
+        match val.size {
+        ValueSize::FLOAT => Self::Float(f32::from_bits(val.value())),
+        ValueSize::FloatMap(f) => Self::Float(f(f32::from_bits(val.value()))),
+        ValueSize::FloatRev => {
+                let mut bytes = val.value().to_be_bytes();
+                bytes.swap(0,2);
+                bytes.swap(1,3);
+                Self::Float(f32::from_be_bytes(bytes))
+            },
+        ValueSize::INT32
+        | ValueSize::INT16
+        | ValueSize::INT8 => Self::Num(val.value() as i32),
+
+        ValueSize::UINT32
+        | ValueSize::UINT16
+        | ValueSize::UINT8 => Self::UNum(val.value() as u32),
+        ValueSize::UInt16Map(f) => Self::Float(f(val.value())),
+        ValueSize::UInt16Dot(dot) => Self::Float(val.value() as f32 / fdot[dot as usize] ),
+        ValueSize::Bit(_pin) => Self::Bool(val.get_bit()),
+        ValueSize::BitMap(ref vec) => {
+            let mut bits = [false; 16];
+            for v in vec {
+                dbg!(v);
+
+            }
+            unimplemented!();
+            ValueVariant::BitMap(bits)
+        }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ValueArc (String, Arc<Value>);
 impl ValueArc {

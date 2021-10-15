@@ -38,6 +38,7 @@ pub struct TableState {
     pub vibro_max: f32,
     pub hz_vibro: u32, // Зона вибрации
     pub tok_max: u32,
+    pub vacuum_min: f32,
     pub temps_min_max: Vec<(String, (f32, f32))>,
 }
 
@@ -185,6 +186,11 @@ impl OutputValues {
             .map(|row| row[column_tok] as u32)
             .max().unwrap();
 
+        let column_vacuum = self.fields.iter().position(|s| s=="Разрежение воздуха в системе").unwrap();
+        let vacuum_min = self.values.0.iter()
+            .map(|row| row[column_vacuum] )
+            .min_by(|a, b| a.partial_cmp(&b).unwrap()).unwrap();
+
         for col in col_temp_1..self.fields.len() {
             temps_min_max.push((
                 self.fields[col].clone(),
@@ -199,6 +205,7 @@ impl OutputValues {
             hz_vibro: hz_vibro, // Вибро Зона
             vibro_max: vibro_max,
             tok_max: tok_max,
+            vacuum_min: vacuum_min,
             temps_min_max: temps_min_max,
         }
     }

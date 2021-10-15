@@ -26,8 +26,9 @@ fn main_1() -> MyResult {
 }
 
 fn main() -> MyResult {
-    main_1()
+//     main_1()
 //     calc_hz()
+    print_file_state()
 }
 
 fn filter_values(file_name: &str) -> crate::MyResult {
@@ -80,6 +81,29 @@ fn calc_hz() -> crate::MyResult {
     Ok(())
 }
 
+fn print_file_state() -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "4bd5c4e0a9"),
+        ("Ток", "5146ba6795"),
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+        ("Давление масла на выходе маслостанции", "Давление масла на выходе маслостанции/value"),
+        ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+    ];
+
+    for f in get_file_list("tables/csv/").iter().rev().take(10) {
+        let values_log = csv::read_values(&f).ok_or("Ошибка чтения файла")?;
+        let stat = structs::InputValues::from_log_values(values_log)
+            .fields(hashs.clone())
+            .make_values_3(Duration::from_millis(100))
+                .fill_empty()
+                .insert_time_f32()
+            .get_state();
+        dbg!(f, stat);
+    }
+    Ok(())
+}
+
 fn convert_json_old_new() -> MyResult {
     use json::convert::*;
     
@@ -117,12 +141,25 @@ fn get_file_list(dir: &str) -> Vec<PathBuf> {
     let path = get_file_path(dir);
     let paths = std::fs::read_dir(path).unwrap();
 //     dbg!(paths);
-    paths.filter_map(|res| res.ok())
+    let mut res: Vec<_> = paths.filter_map(|res| res.ok())
     .map(|dir| dir.path())
     .filter(|path| 
         if let Some(ext) = path.extension() {
             ext == "csv"
         } else {false}
-    ).collect()
+    ).collect();
+    res.sort_by_key(|p| p.metadata().unwrap().modified().unwrap());
+    res
+}
+
+pub fn get_list_log(dir: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
+    let mut v = if dir.is_dir() {
+        std::fs::read_dir(dir)?.into_iter()
+            .filter_map(|e| Some(e.ok()?.path()))
+            .filter(|p| p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("csv") )
+            .collect()
+    } else {Vec::new()};
+    v.sort_by_key(|p| p.metadata().unwrap().modified().unwrap());
+    Ok(v)
 }
 

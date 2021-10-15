@@ -11,13 +11,7 @@ fn main_1() -> MyResult {
 //     test_read_csv_2()?;
 //     convert_session()?;
     let names = [
-        "value_23_04_2021__14_10_44_951678936",
-        "value_27_04_2021__12_48_14_722166742",
-        "value_27_04_2021__13_36_14_460047525",
-        "value_27_04_2021__13_37_46_459645663",
-        "value_27_04_2021__13_38_46_459439921",
-        "value_27_04_2021__13_39_32_958736343",
-        "value_27_04_2021__13_43_35_959273451",
+        "value_15_10_2021 11_39_26",
         
     ];
     for name in &names {
@@ -32,7 +26,8 @@ fn main_1() -> MyResult {
 }
 
 fn main() -> MyResult {
-    calc_hz()
+    main_1()
+//     calc_hz()
 }
 
 fn filter_values(file_name: &str) -> crate::MyResult {
@@ -54,6 +49,7 @@ fn filter_values(file_name: &str) -> crate::MyResult {
         .make_values_3(Duration::from_millis(100))
             .fill_empty()
             .shift_vibro()
+            .convert_davl()
             .insert_time_f32()
         .write_excel()?;
     Ok(())

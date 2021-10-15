@@ -239,12 +239,13 @@ impl OutputValues {
         }
         self
     }
-    fn convert_davl(&mut self) {
+    pub fn convert_davl(mut self) -> Self {
         let col_davl = self.fields.iter().position(|s| s=="Давление масла на выходе маслостанции").unwrap();
         for v in self.values.0.iter_mut()
             .map(|row| &mut row[col_davl]) {
-            *v = *v / 135.0;
+            *v = *v * 1.7;
         }
+        self
     }
     
     pub fn write_csv(self) -> crate::MyResult {

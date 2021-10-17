@@ -32,10 +32,10 @@ impl From<&HalfPartInner> for HalfPart {
 }
 
 impl HalfMeln {
-    pub fn low(invertor: modbus::Invertor, values: ModbusValues) -> Self {
+    pub fn low(values: ModbusValues) -> Self {
         let temper_oil = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
         HalfMeln {
-            invertor: Invertor::from_device(invertor),
+            invertor: Invertor::from_values(&values),
             motor: Motor::from(values.clone()),
             vibro: values.get_value_arc("Виброскорость").unwrap(),
             part: HalfPartInner::Low{
@@ -44,11 +44,11 @@ impl HalfMeln {
             values: values,
         }
     }
-    pub fn top(invertor: modbus::Invertor, values: ModbusValues) -> Self {
+    pub fn top(values: ModbusValues) -> Self {
         // values.get_values_by_name_contains(
         let temp_podshib = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
         HalfMeln {
-            invertor: Invertor::from_device(invertor),
+            invertor: Invertor::from_values(&values),
             motor: Motor::from(values.clone()),
             vibro: values.get_value_arc("Виброскорость").unwrap(),
             part: HalfPartInner::Top{
@@ -63,39 +63,26 @@ impl HalfMeln {
 }
 
 pub struct Invertor {
-    values: ModbusValues,
-    device: Option<modbus::Invertor>,
-    
-    hz: ValueArc,
-    
-    amper: ValueArc,
-//     volt: ValueArc,
+    values: modbus::InvertorValues,
 }
 
 impl Invertor {
-    fn from_values(values: ModbusValues) -> Self {
+    fn from_values(values: &ModbusValues) -> Self {
     
         Invertor {
-            hz: values.get_value_arc("Скорость двигателя").unwrap(),
-            amper: values.get_value_arc("Выходной ток (A)").unwrap(),
-            values: values,
-            device: None,
+            values: modbus::InvertorValues::from_values(values),
         }
     }
-    pub fn from_device(device: modbus::Invertor) -> Self {
-        let values = device.device().values_map().clone();
-        Self {
-            hz: device.get_hz_out_value().into(),
-            amper: device.get_amper_out_value().into(),
-            device: Some(device),
-            .. Self::from_values(values)
-        }
-    }
+//     pub fn from_device(device: modbus::Invertor) -> Self {
+//         Invertor {
+//             values: device::InvertorValues::from_device(&device),
+//         }
+//     }
 }
 
 impl From<ModbusValues> for Invertor {
     fn from(values: ModbusValues) -> Invertor {
-        Invertor::from_values(values)
+        Invertor::from_values(&values)
     }
 }
 

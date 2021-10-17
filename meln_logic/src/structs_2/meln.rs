@@ -1,10 +1,21 @@
 use super::HalfMeln;
 use super::Dozator;
+use modbus::ModbusValues;
 
 pub struct Meln {
     dozator: Dozator,
     half_top: HalfMeln,
     half_button: HalfMeln,
+}
+
+impl From<&ModbusValues> for Meln {
+    fn from(values: &ModbusValues) -> Self {
+        Meln {
+            dozator: values.into(),
+            half_top: HalfMeln::top(values),
+            half_button: HalfMeln::low(values),
+        }
+    }
 }
 
 pub mod watcher {

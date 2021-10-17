@@ -12,10 +12,10 @@ pub struct HalfMeln {
 
 enum HalfPartInner {
     Low {
-        temper_oil_values: ModbusValues,
+        температура_масла_values: ModbusValues,
     }, 
     Top {
-        temp_podshib_values: ModbusValues,
+        температура_подшибника_values: ModbusValues,
     }, 
 }
 pub enum HalfPart {
@@ -36,13 +36,13 @@ impl HalfMeln {
     pub fn low(values: &ModbusValues) -> Self {
         let values = values.get_values_by_name_ends(&["М1"]) 
             + values.get_values_by_name_starts(&["5) Invertor"]);
-        let temper_oil = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
+        let температура_масла = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
             vibro: values.get_value_arc("Виброскорость").unwrap(),
             part: HalfPartInner::Low{
-                temper_oil_values: values.get_values_by_name_contains(&temper_oil)
+                температура_масла_values: values.get_values_by_name_contains(&температура_масла)
             },
             values: values,
         }
@@ -51,13 +51,13 @@ impl HalfMeln {
         let values = values.get_values_by_name_ends(&["М2"]) 
             + values.get_values_by_name_starts(&["6) Invertor"]);
         // values.get_values_by_name_contains(
-        let temp_podshib = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
+        let температура_подшибника = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
             vibro: values.get_value_arc("Виброскорость").unwrap(),
             part: HalfPartInner::Top{
-                temp_podshib_values: values.get_values_by_name_contains(&temp_podshib)
+                температура_подшибника_values: values.get_values_by_name_contains(&температура_подшибника)
             },
             values: values,
         }
@@ -75,14 +75,14 @@ pub struct Motor {
     
     // "Температура статора",
     // "Температура ротора Пирометр",
-    temper_values: ModbusValues, // Значения температур
+    температуры_values: ModbusValues, // Значения температур
 }
 
 impl From<&ModbusValues> for Motor {
     fn from(values: &ModbusValues) -> Self {
         Motor {
             speed: values.get_value_arc("Скорость двигателя").unwrap(),
-            temper_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
+            температуры_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
         }
     }
 }

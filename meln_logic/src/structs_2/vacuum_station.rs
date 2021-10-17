@@ -1,4 +1,6 @@
-use modbus::{Value, ValueArc, ModbusValues};
+#![allow(dead_code)]
+
+use modbus::{ValueArc, ModbusValues};
 
 pub struct VacuumStation {
     vacuum: ValueArc,
@@ -6,8 +8,8 @@ pub struct VacuumStation {
     motor_1: ValueArc,
     motor_2: ValueArc,
     
-    klp_napusk: ValueArc,
-    klp_nasos: ValueArc,
+    клапан_напуска: ValueArc,
+    клапан_насоса: ValueArc,
 }
 
 impl From<&ModbusValues> for VacuumStation {
@@ -16,31 +18,34 @@ impl From<&ModbusValues> for VacuumStation {
             vacuum: values.get_value_arc("Разрежение воздуха в системе").unwrap(),
             motor_1: values.get_value_arc("Двигатель насоса вакуума 1").unwrap(),
             motor_2: values.get_value_arc("Двигатель насоса вакуума 2").unwrap(),
-            klp_napusk: values.get_value_arc("Клапан напуска").unwrap(),
-            klp_nasos: values.get_value_arc("Клапан насоса М5").unwrap(),
+            клапан_напуска: values.get_value_arc("Клапан напуска").unwrap(),
+            клапан_насоса: values.get_value_arc("Клапан насоса М5").unwrap(),
         }
     }
 }
 
 impl VacuumStation {
+    // Уменьшить давление
     pub fn davl_down(&self) {
         self.motor_1.set_bit(true);
         self.motor_2.set_bit(true);
         // Добавить задержку
-        self.klp_nasos.set_bit(true);
+        self.клапан_насоса.set_bit(true);
     }
+    // Отключить насосы
     pub fn davl_dis(&self) {
-        self.klp_nasos.set_bit(false);
+        self.клапан_насоса.set_bit(false);
         // Добавить задержку
         self.motor_1.set_bit(false);
         self.motor_2.set_bit(false);
         
-        self.klp_napusk.set_bit(false);
+        self.клапан_напуска.set_bit(false);
     }
+    // Увеличить давление
     pub fn davl_up(&self) {
         self.davl_dis();
         
-        self.klp_napusk.set_bit(true);
+        self.клапан_напуска.set_bit(true);
     }
 }
 
@@ -51,8 +56,8 @@ pub mod watcher {
         
         pub motor: Property<bool>,
         
-        pub klp_napusk: Property<bool>,
-        pub klp_nasos: Property<bool>,
+        pub клапан_напуска: Property<bool>,
+        pub клапан_насоса: Property<bool>,
     }
     
     impl VacuumStation {
@@ -64,8 +69,8 @@ pub mod watcher {
                 values.motor_1.get_bit()
                 && values.motor_2.get_bit()
             );
-            self.klp_napusk.set(values.klp_napusk.get_bit());
-            self.klp_nasos.set(values.klp_nasos.get_bit());
+            self.клапан_напуска.set(values.клапан_напуска.get_bit());
+            self.клапан_насоса.set(values.клапан_насоса.get_bit());
         }
     }
 }

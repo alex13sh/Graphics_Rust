@@ -1,13 +1,16 @@
 #![allow(dead_code)]
 
+use modbus::ModbusValues;
 use super::HalfMeln;
 use super::Dozator;
-use modbus::ModbusValues;
+use super::OilStation;
 
 pub struct Meln {
     dozator: Dozator,
     half_top: HalfMeln,
     half_button: HalfMeln,
+    
+    oil: OilStation,
 }
 
 impl From<&ModbusValues> for Meln {
@@ -16,6 +19,8 @@ impl From<&ModbusValues> for Meln {
             dozator: values.into(),
             half_top: HalfMeln::top(values),
             half_button: HalfMeln::low(values),
+            
+            oil: values.into(),
         }
     }
 }

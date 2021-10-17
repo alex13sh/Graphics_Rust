@@ -117,3 +117,44 @@ pub enum SpeedChange {
     Decel, // Замедление
     Stop, // Остановка
 }
+
+mod watcher {
+    use crate::Property;
+    struct HalfMeln {
+        invertor: Invertor,
+        motor: Motor,
+        
+        vibro: Property<f32>,
+        oil_temp: Property<f32>,
+        
+        speed_changed: Property<super::SpeedChange>,
+    }
+    
+    impl HalfMeln {
+        fn update_property(&self, values: &super::HalfMeln) {
+            self.invertor.update_property(&values.invertor);
+        }
+    }
+    
+    struct Invertor {
+        hz: Property<u32>,
+        speed: Property<u32>,
+        amper: Property<u32>,
+        volt: Property<u32>,
+        watt: Property<u32>,
+    }
+    
+    impl Invertor {
+        fn update_property(&self, values: &super::Invertor) {
+            let hz: u32 = values.values.get_hz_out_value().value();
+            self.hz.set(hz);
+            let amper: u32 = values.values.get_amper_out_value().value();
+            self.amper.set(amper);
+        }
+    }
+    
+    struct Motor {
+        speed: Property<u32>,
+        
+    }
+}

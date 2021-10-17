@@ -9,7 +9,7 @@ mod error;
 #[derive(Clone)]
 pub struct Invertor {
     device: Arc<Device>, // make mut
-    // device_analog_output: Arc<Device>, // Owen Analog
+    values: InvertorValues,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,64 +18,89 @@ pub enum DvijDirect {
     REV,
 }
 
+#[derive(Clone)]
+pub struct InvertorValues {
+    values: ModbusValues,
+}
+
+impl InvertorValues {
+    pub fn from_device(device: &Device) -> Self {
+        Self::from_values(device.values_map())
+    }
+    pub fn from_values(values: &ModbusValues) -> Self {
+        let values_str = [
+            "Stop", "Run",
+            "FWD", "REV",
+            "Команда задания частоты",
+            "Выходной ток (A)", "Скорость двигателя",
+        ];
+        InvertorValues {
+            values: values.get_values_by_name_starts(&values_str),
+        }
+    }
+}
+
 impl Invertor {
     pub fn new(device: Device) -> Self {
         Invertor {
-            device: Arc::new(device)
+            values: InvertorValues::from_device(&device),
+            device: Arc::new(device),
         }
     }
-    
-    pub fn start(&self) ->  Result<(), DeviceError> {
-        let vm = self.device.values_map();
+}
+
+impl std::ops::Deref for Invertor {
+    type Target = InvertorValues;
+    fn deref(&self) -> &InvertorValues {
+        &self.values
+    }
+}
+
+impl InvertorValues {
+    pub fn start(&self) {
+        let vm = &self.values;
 
         vm.get("Stop").unwrap().set_bit(false);
         vm.get("Run").unwrap().set_bit(true);
-        
-//         self.device.context()?.set_value(&v_bitmap)?;
-        Ok(())
     }
-    pub fn stop(&self) ->  Result<(), DeviceError> {
-        let vm = self.device.values_map();
+    pub fn stop(&self) {
+        let vm = &self.values;
 
         vm.get("Stop").unwrap().set_bit(true);
         vm.get("Run").unwrap().set_bit(false);
-
-//         self.device.context()?.set_value(&v_bitmap)?;
-        Ok(())
     }
-    pub fn set_direct(&self, direct: DvijDirect) ->  Result<(), DeviceError> {
-//         dbg!(direct);
-        let vm = self.device.values_map();
+    pub fn set_direct(&self, direct: DvijDirect) {
+        let vm = &self.values;
 
         match direct {
         DvijDirect::FWD => {
             vm.get("FWD").unwrap().set_bit(true);
             vm.get("REV").unwrap().set_bit(false);
-        }, DvijDirect::REV => {
+        }
+        DvijDirect::REV => {
             vm.get("FWD").unwrap().set_bit(false);
             vm.get("REV").unwrap().set_bit(true);
         }
         }
-//         self.device.context()?.set_value(&v_bitmap)?;
-        Ok(())
     }
-    pub fn set_speed(&self, hz: u32) ->  Result<(), DeviceError> {
-        let vm = self.device.values_map();
+    pub fn set_speed(&self, hz: u32) {
+        let vm = &self.values;
 //         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
         let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();
         v_set_speed.set_value(hz);
-        
-        Ok(())
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {
-        let vm = self.device.values_map();
+        let vm = &self.values;
         vm.get("Выходной ток (A)").unwrap().clone()
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
-        let vm = self.device.values_map();
+        let vm = &self.values;
         vm.get("Скорость двигателя").unwrap().clone()
     }
-    
+}
+
+// Configure
+impl Invertor {
     fn get_address_function(&self, num_func: u8) -> Option<u16> {
         match &self.device.device_type {
         DeviceType::Invertor {functions} => {
@@ -155,15 +180,14 @@ impl Invertor {
 
 impl From<Device> for Invertor {
     fn from(d: Device) -> Self {
-        Invertor {
-            device: Arc::new(d)
-        }
+        Invertor::new(d)
     }
 }
 
 impl From<Arc<Device>> for Invertor {
     fn from(d: Arc<Device>) -> Self {
         Invertor {
+            values: InvertorValues::from_device(&d),
             device: d.clone(),
         }
     }

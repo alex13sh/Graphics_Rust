@@ -1,4 +1,4 @@
-use modbus::{Value, ModbusValues, ValueError};
+use modbus::{Value, ModbusValues};
 use std::sync::Arc;
 
 use futures_core::stream::Stream;

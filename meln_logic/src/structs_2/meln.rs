@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::HalfMeln;
 use super::Dozator;
 use modbus::ModbusValues;

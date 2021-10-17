@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use tokio::sync::watch;
 use std::fmt::Debug;
 

@@ -1,4 +1,4 @@
-use modbus::{Value, ValueArc, ModbusValues};
+use modbus::{ValueArc, ModbusValues};
 
 pub struct Dozator {
     speed: ValueArc, // скоость ШИМа

@@ -1,4 +1,5 @@
-use modbus::{Value, ValueArc, ModbusValues, ValueError};
+#![allow(dead_code)]
+use modbus::{ValueArc, ModbusValues, /*ValueError*/};
 
 pub struct HalfMeln {
     values: ModbusValues, // Все значения

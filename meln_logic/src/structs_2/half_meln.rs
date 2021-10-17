@@ -111,6 +111,7 @@ impl From<ModbusValues> for Motor {
 }
 
 // Сообщение об изменение скорости
+#[derive(Debug)]
 pub enum SpeedChange {
     Acel, // Ускорение
     Plato, // Ускорение завершилось и скорость вышла на плато
@@ -127,12 +128,36 @@ mod watcher {
         vibro: Property<f32>,
         oil_temp: Property<f32>,
         
-        speed_changed: Property<super::SpeedChange>,
+        speed_changed: Property<super::SpeedChange>, // Stop
+        is_started: Property<bool>, // false
     }
     
     impl HalfMeln {
         fn update_property(&self, values: &super::HalfMeln) {
             self.invertor.update_property(&values.invertor);
+        }
+        
+        async fn automation(&self) {
+            let mut vibro = self.vibro.subscribe();
+            let mut hz = self.invertor.hz.subscribe();
+            let mut amper = self.invertor.amper.subscribe();
+            loop {
+                crate::changed_any!(vibro, hz, amper);
+                {
+                    let vibro = *vibro.borrow();
+                    let hz = *hz.borrow();
+                    let amper = *amper.borrow();
+                    if self.is_started.get() == false 
+                            && (hz > 1 || amper > 1) {
+                        self.speed_changed.send(super::SpeedChange::Acel);
+                        self.is_started.set(true);
+                    } else if self.is_started.get() == true 
+                            && hz < 2 && vibro < 0.2 && amper < 2 {
+                        self.speed_changed.send(super::SpeedChange::Stop);
+                        self.is_started.set(false);
+                    }
+                }
+            }
         }
     }
     

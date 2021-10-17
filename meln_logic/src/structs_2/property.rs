@@ -34,3 +34,20 @@ impl <T> Property<T> {
         self.sender.subscribe()
     }
 }
+
+// pub fn changed_any<I, T>(iter: I) 
+// where
+//     I: IntoIterator,
+//     I::Item: watch::Receiver<T>,
+// {
+//     futures::future::select_all(iter.map(|r| r.changed()));
+// }
+
+#[macro_export]
+macro_rules! changed_any(
+    ($($r:ident),+) => {
+        tokio::select! {
+        $(_ = $r.changed() => {}),+
+        };
+    }
+);

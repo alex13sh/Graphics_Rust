@@ -20,11 +20,11 @@ impl Dozator {
 
 pub mod watcher {
     use crate::Property;
-    struct Dozator {
+    pub struct Dozator {
         speed: Property<i32>,
     }
     impl Dozator {
-        fn update_property(&self, values: &super::Dozator) {
+        pub(crate) fn update_property(&self, values: &super::Dozator) {
             let mut speed: i32 = values.speed.value() as i32;
             if values.direct.get_bit() == false {
                 speed = -speed;

@@ -119,9 +119,9 @@ pub enum SpeedChange {
     Stop, // Остановка
 }
 
-mod watcher {
+pub mod watcher {
     use crate::Property;
-    struct HalfMeln {
+    pub struct HalfMeln {
         invertor: Invertor,
         motor: Motor,
         
@@ -133,7 +133,7 @@ mod watcher {
     }
     
     impl HalfMeln {
-        fn update_property(&self, values: &super::HalfMeln) {
+        pub(crate) fn update_property(&self, values: &super::HalfMeln) {
             self.invertor.update_property(&values.invertor);
         }
         

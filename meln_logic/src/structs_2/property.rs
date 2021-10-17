@@ -7,20 +7,20 @@ pub struct Property<T> {
 }
 
 impl <T> Property<T> {
-    pub fn new(value: T) -> Self {
+    pub(crate) fn new(value: T) -> Self {
         Property{
             sender: watch::channel(value).0
         }
     }
-    pub fn set(&self, value: T) 
-    where T: Eq + Debug
+    pub(crate) fn set(&self, value: T) 
+    where T: PartialEq + Debug
     {
         if self.sender.is_closed() {return;}
         if self.sender.borrow().ne(&value) {
             self.sender.send(value).unwrap();
         }
     }
-    pub fn send(&self, value: T) 
+    pub(crate) fn send(&self, value: T) 
     where T: Debug 
     {
         if self.sender.is_closed() {return;}

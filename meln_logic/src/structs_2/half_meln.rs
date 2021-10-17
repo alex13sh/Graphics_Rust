@@ -111,7 +111,10 @@ pub mod watcher {
     
     impl HalfMeln {
         pub(crate) fn update_property(&self, values: &super::HalfMeln) {
+            use modbus::{Value, TryFrom};
             self.invertor.update_property(&values.invertor);
+            let vibro: f32 = f32::try_from(&values.vibro as &Value).unwrap(); // todo: Необходимо обработать ошибку
+            self.vibro.set(vibro);
         }
         
         async fn automation(&self) {

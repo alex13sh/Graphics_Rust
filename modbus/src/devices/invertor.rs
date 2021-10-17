@@ -40,6 +40,12 @@ impl InvertorValues {
     }
 }
 
+impl From<&ModbusValues> for InvertorValues {
+    fn from(values: &ModbusValues) -> Self {
+        InvertorValues::from_values(values)
+    }
+}
+
 impl Invertor {
     pub fn new(device: Device) -> Self {
         Invertor {
@@ -94,6 +100,10 @@ impl InvertorValues {
         vm.get("Выходной ток (A)").unwrap().clone()
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
+        let vm = &self.values;
+        vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
+    }
+    pub fn get_speed_out_value(&self) -> Arc<Value> {
         let vm = &self.values;
         vm.get("Скорость двигателя").unwrap().clone()
     }

@@ -66,17 +66,7 @@ impl HalfMeln {
     }
 }
 
-pub struct Invertor {
-    values: modbus::InvertorValues,
-}
-
-impl From<&ModbusValues> for Invertor {
-    fn from(values: &ModbusValues) -> Self {
-        Invertor {
-            values: modbus::InvertorValues::from_values(values),
-        }
-    }
-}
+pub type Invertor = modbus::InvertorValues;
 
 pub struct Motor {
     pub speed: ValueArc,
@@ -157,9 +147,9 @@ pub mod watcher {
     
     impl Invertor {
         fn update_property(&self, values: &super::Invertor) {
-            let hz: u32 = values.values.get_hz_out_value().value();
+            let hz: u32 = values.get_hz_out_value().value();
             self.hz.set(hz);
-            let amper: u32 = values.values.get_amper_out_value().value();
+            let amper: u32 = values.get_amper_out_value().value();
             self.amper.set(amper);
         }
     }

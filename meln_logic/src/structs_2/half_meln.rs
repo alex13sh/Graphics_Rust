@@ -70,7 +70,7 @@ impl HalfMeln {
 pub type Invertor = modbus::InvertorValues;
 
 pub struct Motor {
-    pub speed: ValueArc,
+    speed: ValueArc,
     // speed_changed: Signal<SpeedChange>,
     
     // "Температура статора",
@@ -99,14 +99,14 @@ pub enum SpeedChange {
 pub mod watcher {
     use crate::Property;
     pub struct HalfMeln {
-        invertor: Invertor,
-        motor: Motor,
+        pub invertor: Invertor,
+        pub motor: Motor,
         
-        vibro: Property<f32>,
-        oil_temp: Property<f32>,
+        pub vibro: Property<f32>,
+        pub oil_temp: Property<f32>,
         
-        speed_changed: Property<super::SpeedChange>, // Stop
-        is_started: Property<bool>, // false
+        pub speed_changed: Property<super::SpeedChange>, // Stop
+        pub is_started: Property<bool>, // false
     }
     
     impl HalfMeln {
@@ -141,12 +141,12 @@ pub mod watcher {
         }
     }
     
-    struct Invertor {
-        hz: Property<u32>,
-        speed: Property<u32>,
-        amper: Property<u32>,
-        volt: Property<u32>,
-        watt: Property<u32>,
+    pub struct Invertor {
+        pub hz: Property<u32>,
+        pub speed: Property<u32>,
+        pub amper: Property<u32>,
+        pub volt: Property<u32>,
+        pub watt: Property<u32>,
     }
     
     impl Invertor {
@@ -158,8 +158,8 @@ pub mod watcher {
         }
     }
     
-    struct Motor {
-        speed: Property<u32>,
+    pub struct Motor {
+        pub speed: Property<u32>,
         
     }
 }

@@ -117,7 +117,7 @@ pub mod watcher {
             self.vibro.set(vibro);
         }
         
-        async fn automation(&self) {
+        pub(crate) async fn automation(&self) {
             let mut vibro = self.vibro.subscribe();
             let mut hz = self.invertor.hz.subscribe();
             let mut amper = self.invertor.amper.subscribe();

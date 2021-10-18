@@ -44,6 +44,7 @@ pub mod watcher {
         
         pub half_top: HalfMeln,
         pub half_bottom: HalfMeln,
+        pub is_started: Property<bool>,
         
         pub oil: OilStation,
         pub vacuum: VacuumStation,
@@ -59,5 +60,26 @@ pub mod watcher {
             self.oil.update_property(&values.oil);
             self.vacuum.update_property(&values.vacuum);
         }
+        
+        pub async fn automation(&self) {
+            let is_started = async {
+                let mut start_top = self.half_top.is_started.subscribe();
+                let mut start_bottom = self.half_bottom.is_started.subscribe();
+                
+                loop {
+                    crate::changed_any!(start_top, start_bottom);
+                    let start_top = *start_top.borrow();
+                    let start_bottom = *start_bottom.borrow();
+                    
+                    self.is_started.set(start_top || start_bottom);
+                }
+            };
+            tokio::join!(
+                is_started,
+                self.half_top.automation(),
+                self.half_bottom.automation(),
+            );
+        }
+    }
     }
 }

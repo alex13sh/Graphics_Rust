@@ -88,7 +88,7 @@ impl From<&ModbusValues> for Motor {
 }
 
 // Сообщение об изменение скорости
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SpeedChange {
     Acel, // Ускорение
     Plato, // Ускорение завершилось и скорость вышла на плато
@@ -129,11 +129,11 @@ pub mod watcher {
                     let amper = *amper.borrow();
                     if self.is_started.get() == false 
                             && (hz > 1 || amper > 1) {
-                        self.speed_changed.send(super::SpeedChange::Acel);
+                        self.speed_changed.set(super::SpeedChange::Acel);
                         self.is_started.set(true);
                     } else if self.is_started.get() == true 
                             && hz < 2 && vibro < 0.2 && amper < 2 {
-                        self.speed_changed.send(super::SpeedChange::Stop);
+                        self.speed_changed.set(super::SpeedChange::Stop);
                         self.is_started.set(false);
                     }
                 }

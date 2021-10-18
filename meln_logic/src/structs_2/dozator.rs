@@ -26,7 +26,7 @@ impl From<&ModbusValues> for Dozator {
 pub mod watcher {
     use crate::Property;
     pub struct Dozator {
-        speed: Property<i32>,
+        pub speed: Property<i32>,
     }
     impl Dozator {
         pub(crate) fn update_property(&self, values: &super::Dozator) {

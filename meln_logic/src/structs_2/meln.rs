@@ -48,6 +48,8 @@ pub mod watcher {
         
         pub oil: OilStation,
         pub vacuum: VacuumStation,
+        
+        pub step: Property<MelnStep>,
     }
     
     impl Meln {
@@ -62,7 +64,7 @@ pub mod watcher {
         }
         
         pub async fn automation(&self) {
-            let is_started = async {
+            let f_is_started = async {
                 let mut start_top = self.half_top.is_started.subscribe();
                 let mut start_bottom = self.half_bottom.is_started.subscribe();
                 
@@ -74,12 +76,43 @@ pub mod watcher {
                     self.is_started.set(start_top || start_bottom);
                 }
             };
+            let f_step = async {
+                loop {
+                    let next_step = self.step.get()
+                        .check_next_step(self).await;
+                    self.step.set(next_step);
+                }
+            };
             tokio::join!(
-                is_started,
+                f_is_started,
+                f_step,
                 self.half_top.automation(),
                 self.half_bottom.automation(),
             );
         }
     }
+    
+    // Шаги алгоритма работы мельницы
+    #[derive(Debug, PartialEq, Clone)]
+    #[allow(non_camel_case_types)]
+    pub enum MelnStep {
+        Начало_работы,
+        Накачка_воздуха,
+        Step_3, // Установка ШК вакуумной системы в рабочее положение
+        Откачка_воздуха_из_вакуумной_системы,
+        Запуск_маслостанции_и_основных_двигателей,
+        Подача_материала, // 6 Запуск дозатора, подача материала для измельчения
+        Измельчение_материала,
+        Предварительное_завершение_работы_мельницы,
+        Завершение_работы_мельницы,
+        Стартовое_положение,
+        
+        ErrorStep,
+    }
+    
+    impl MelnStep {
+        async fn check_next_step(self, meln: &Meln) -> Self {
+            self
+        }
     }
 }

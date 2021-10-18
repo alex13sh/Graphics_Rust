@@ -12,7 +12,7 @@ pub struct Meln {
     pub material: Material,
     
     pub half_top: HalfMeln,
-    pub half_button: HalfMeln,
+    pub half_bottom: HalfMeln,
     
     pub oil: OilStation,
     pub vacuum: VacuumStation,
@@ -24,7 +24,7 @@ impl From<&ModbusValues> for Meln {
             material: values.into(),
             
             half_top: HalfMeln::top(values),
-            half_button: HalfMeln::low(values),
+            half_bottom: HalfMeln::low(values),
             
             oil: values.into(),
             vacuum: values.into(),
@@ -43,7 +43,7 @@ pub mod watcher {
         pub material: Material,
         
         pub half_top: HalfMeln,
-        pub half_button: HalfMeln,
+        pub half_bottom: HalfMeln,
         
         pub oil: OilStation,
         pub vacuum: VacuumStation,
@@ -54,7 +54,7 @@ pub mod watcher {
             self.material.update_property(&values.material);
             
             self.half_top.update_property(&values.half_top);
-            self.half_button.update_property(&values.half_button);
+            self.half_bottom.update_property(&values.half_bottom);
             
             self.oil.update_property(&values.oil);
             self.vacuum.update_property(&values.vacuum);

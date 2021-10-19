@@ -27,6 +27,7 @@ pub mod watcher {
     use crate::structs::*;
     use dozator::watcher::Dozator;
     
+    #[derive(Default)]
     pub struct Material {
         pub dozator: Dozator,
     

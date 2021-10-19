@@ -6,6 +6,12 @@ pub struct Property<T> {
     sender: watch::Sender<T>
 }
 
+impl <T: Default> Default for Property <T> {
+    fn default() -> Self {
+        Property::new(T::default())
+    }
+}
+
 impl <T> Property<T> {
     pub(crate) fn new(value: T) -> Self {
         Property{

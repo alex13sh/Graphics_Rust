@@ -96,9 +96,17 @@ pub enum SpeedChange {
     Stop, // Остановка
 }
 
+impl Default for SpeedChange {
+    fn default() -> Self {
+        SpeedChange::Stop
+    }
+}
+
 pub mod watcher {
 //     #[macro_use]
     use crate::structs::{Property, changed_any};
+    
+    #[derive(Default)]
     pub struct HalfMeln {
         pub invertor: Invertor,
         pub motor: Motor,
@@ -142,6 +150,7 @@ pub mod watcher {
         }
     }
     
+    #[derive(Default)]
     pub struct Invertor {
         pub hz: Property<u32>,
         pub speed: Property<u32>,
@@ -159,6 +168,7 @@ pub mod watcher {
         }
     }
     
+    #[derive(Default)]
     pub struct Motor {
         pub speed: Property<u32>,
         

@@ -76,6 +76,7 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let logic = meln_logic::init::Complect::new();
+        let meln = meln_logic::create_meln(logic.get_values());
 
         let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
         let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);

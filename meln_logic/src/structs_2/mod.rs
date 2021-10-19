@@ -15,4 +15,12 @@ use oil_station::OilStation;
 use vacuum_station::VacuumStation;
 use material::Material;
 
+pub use meln::watcher::Meln as MelnWatch;
 use property::{changed_all, changed_any};
+
+pub fn create_meln(values: &modbus::ModbusValues) -> (Meln, MelnWatch) {
+    (
+        values.into(),
+        Default::default(),
+    )
+}

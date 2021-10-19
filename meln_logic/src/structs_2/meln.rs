@@ -40,6 +40,7 @@ pub mod watcher {
     pub use material::watcher::Material;
     pub use dozator::watcher::Dozator;
     
+    #[derive(Default)]
     pub struct Meln {
         pub material: Material,
         
@@ -115,6 +116,12 @@ pub mod watcher {
         Стартовое_положение,
         
         ErrorStep,
+    }
+    
+    impl Default for MelnStep {
+        fn default() -> Self {
+            MelnStep::Начало_работы
+        }
     }
     
     impl MelnStep {

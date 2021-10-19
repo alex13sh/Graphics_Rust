@@ -51,6 +51,8 @@ impl VacuumStation {
 
 pub mod watcher {
     use crate::structs::Property;
+    
+    #[derive(Default)]
     pub struct VacuumStation {
         pub vacuum: Property<f32>,
         

@@ -358,7 +358,7 @@ impl App {
                 .map(|(_k, v)| v)
                 .filter(|v| v.is_log())
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect()
+                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
             };
             // Разницу записывать
             self.log_values.append(&mut log_values);
@@ -369,7 +369,7 @@ impl App {
             .any(|err| err);
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
-        
+
     async fn log_save(values: Vec<log::LogValue>) -> Option<(log::structs::TableState, PathBuf)> {
         if values.is_empty() { return None; }
             

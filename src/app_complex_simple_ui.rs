@@ -20,6 +20,7 @@ pub struct App {
     ui: UI,
     has_exit: bool,
     logic: meln_logic::init::Complect,
+    meln: meln_logic::Meln,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -76,7 +77,8 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let logic = meln_logic::init::Complect::new();
-        let meln = meln_logic::create_meln(logic.get_values());
+        let meln = meln_logic::Meln::new(logic.get_values());
+        let meln_fut = meln.clone();
 
         let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
         let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);
@@ -100,6 +102,7 @@ impl Application for App {
             info_pane: ui::InfoPane::new(),
         
             logic: logic,
+            meln: meln,
             log: log::Logger::open_csv(),
             log_values: Vec::new(),
         },
@@ -108,8 +111,8 @@ impl Application for App {
                 async{Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect)}.into(),
                 async move {
                     tokio::join!(
-                        meln.1.automation(), 
-                        meln_logic::meln_automation_mut(&meln.0, &meln.1)
+                        meln_fut.automation(), 
+                        meln_fut.automation_mut()
                     );
                     Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsyncAnswer)
                 }.into()

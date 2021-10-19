@@ -1,7 +1,7 @@
 pub mod init {
-use modbus::{Value, ModbusValues, ValueError};
+use modbus::{Value, ModbusValues, /*ValueError*/};
 use modbus::init;
-use modbus::invertor::{Invertor, DvijDirect}; // Device
+use modbus::invertor::{Invertor, /*DvijDirect*/}; // Device
 use modbus::{Device, DeviceResult, DeviceError, UpdateReq, DigitIO};
 
 use std::collections::{BTreeMap, HashMap};

@@ -49,6 +49,13 @@ impl Dozator {
             self.set_speed(self.speed() + step);
         }
     }
+    pub async fn animation(&self) {
+        use tokio::time::{sleep, Duration};
+        loop {
+            self.next_step();
+            sleep(Duration::from_millis(1000 / super::Dozator::STEPS as u64)).await;
+        }
+    }
 }
 
 impl From<&ModbusValues> for Dozator {
@@ -76,11 +83,7 @@ pub mod watcher {
         }
         
         pub(crate) async fn automation_mut(values: &super::Dozator, properties: &Dozator) {
-            use tokio::time::{sleep, Duration};
-            loop {
-                values.next_step();
-                sleep(Duration::from_millis(1000 / super::Dozator::STEPS as u64)).await;
-            }
+            values.animation().await;
         }
     }
 }

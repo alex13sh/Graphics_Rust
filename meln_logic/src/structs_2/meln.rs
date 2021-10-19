@@ -92,12 +92,12 @@ pub mod watcher {
                 self.half_bottom.automation(),
             );
         }
-        pub async fn automation_mut(values: &super::Meln, properties: &Meln) {
-            Dozator::automation_mut(
-                &values.material.dozator, 
-                &properties.material.dozator
-            ).await;
-        }
+    }
+    pub async fn automation_mut(values: &super::Meln, properties: &Meln) {
+        Dozator::automation_mut(
+            &values.material.dozator, 
+            &properties.material.dozator
+        ).await;
     }
     
     // Шаги алгоритма работы мельницы

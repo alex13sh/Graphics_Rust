@@ -24,3 +24,5 @@ pub fn create_meln(values: &modbus::ModbusValues) -> (Meln, MelnWatch) {
         Default::default(),
     )
 }
+
+pub use meln::watcher::automation_mut as meln_automation_mut;

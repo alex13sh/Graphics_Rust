@@ -103,7 +103,18 @@ impl Application for App {
             log: log::Logger::open_csv(),
             log_values: Vec::new(),
         },
-        Command::perform(async{MessageMudbusUpdate::ModbusConnect}, Message::MessageUpdate))
+        
+            Command::batch(vec![
+                async{Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect)}.into(),
+                async move {
+                    tokio::join!(
+                        meln.1.automation(), 
+                        meln_logic::meln_automation_mut(&meln.0, &meln.1)
+                    );
+                    Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsyncAnswer)
+                }.into()
+            ])
+        )
     }
     
     fn title(&self) -> String {

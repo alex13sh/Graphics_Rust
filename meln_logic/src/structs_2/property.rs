@@ -52,3 +52,13 @@ macro_rules! changed_any(
         };
     }
 );
+
+#[macro_export]
+macro_rules! changed_all(
+    ($($r:ident),+) => {
+        let res = tokio::join! (
+            $($r.changed()),+
+        );
+        dbg!(res);
+    }
+);

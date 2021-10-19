@@ -27,6 +27,7 @@ pub mod watcher {
     use crate::Property;
     pub struct Dozator {
         pub speed: Property<i32>,
+        pub motor: Property<bool>,
     }
     impl Dozator {
         pub(crate) fn update_property(&self, values: &super::Dozator) {
@@ -35,6 +36,7 @@ pub mod watcher {
                 speed = -speed;
             }
             self.speed.set(speed);
+            self.motor.set(speed != 0);
         }
     }
 }

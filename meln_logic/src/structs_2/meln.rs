@@ -97,7 +97,7 @@ pub mod watcher {
     #[allow(non_camel_case_types)]
     pub enum MelnStep {
         Начало_работы,
-        Накачка_воздуха,
+//         Накачка_воздуха, // Этот этап вроде уже не нужен
         Step_3, // Установка ШК вакуумной системы в рабочее положение
         Откачка_воздуха_из_вакуумной_системы,
         Запуск_маслостанции_и_основных_двигателей,
@@ -112,7 +112,53 @@ pub mod watcher {
     
     impl MelnStep {
         async fn check_next_step(self, meln: &Meln) -> Self {
-            self
+            use MelnStep::*;
+            #[allow(unused_must_use)]
+            match self {
+            Начало_работы => {
+                let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
+                let mut клапан_верхнего_контейнера = meln.material.клапан_верхнего_контейнера.subscribe();
+                let mut клапан_нижнего_контейнера = meln.material.клапан_нижнего_контейнера.subscribe();
+                
+                crate::changed_all!(
+                    клапан_помольной_камеры,
+                    клапан_верхнего_контейнера,
+                    клапан_нижнего_контейнера
+                );
+                Step_3
+            }
+            Step_3 => {
+                let mut motor = meln.vacuum.motor.subscribe();
+                crate::changed_all!(motor);
+                Откачка_воздуха_из_вакуумной_системы
+            }
+            Откачка_воздуха_из_вакуумной_системы => {
+                let mut meln_motor = meln.is_started.subscribe();
+                let mut oil_motor = meln.oil.motor.subscribe();
+                let _klapan = meln.material.клапан_подачи_материала.get();
+                // klapan == false; // Проверить закрыт ли клапан, если нет, то ошибка!
+                crate::changed_all!(meln_motor, oil_motor);
+                Запуск_маслостанции_и_основных_двигателей
+            }
+            Запуск_маслостанции_и_основных_двигателей => {
+                let mut motor = meln.material.dozator.motor.subscribe();
+                crate::changed_all!(motor);
+                // *motor.borrow() == true
+                Подача_материала
+            }
+            Подача_материала => {
+                let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
+                let mut клапан_нижнего_контейнера = meln.material.клапан_помольной_камеры.subscribe();
+                crate::changed_all!(клапан_помольной_камеры, клапан_нижнего_контейнера);
+                
+                Измельчение_материала
+            }
+            Измельчение_материала => {
+                // ...
+                Предварительное_завершение_работы_мельницы
+            }
+            _ => self,
+            }
         }
     }
 }

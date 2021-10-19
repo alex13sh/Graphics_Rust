@@ -38,6 +38,7 @@ pub mod watcher {
     use oil_station::watcher::OilStation;
     use vacuum_station::watcher::VacuumStation;
     use material::watcher::Material;
+    use dozator::watcher::Dozator;
     
     pub struct Meln {
         pub material: Material,
@@ -53,7 +54,7 @@ pub mod watcher {
     }
     
     impl Meln {
-        fn update_property(&self, values: &super::Meln) {
+        pub fn update_property(&self, values: &super::Meln) {
             self.material.update_property(&values.material);
             
             self.half_top.update_property(&values.half_top);
@@ -89,6 +90,12 @@ pub mod watcher {
                 self.half_top.automation(),
                 self.half_bottom.automation(),
             );
+        }
+        pub async fn automation_mut(values: &super::Meln, properties: &Meln) {
+            Dozator::automation_mut(
+                &values.material.dozator, 
+                &properties.material.dozator
+            ).await;
         }
     }
     

@@ -33,12 +33,12 @@ impl From<&ModbusValues> for Meln {
 }
 
 pub mod watcher {
-    use super::super::*;
-    use half_meln::watcher::HalfMeln;
-    use oil_station::watcher::OilStation;
-    use vacuum_station::watcher::VacuumStation;
-    use material::watcher::Material;
-    use dozator::watcher::Dozator;
+    use crate::structs::*;
+    pub use half_meln::watcher::HalfMeln;
+    pub use oil_station::watcher::OilStation;
+    pub use vacuum_station::watcher::VacuumStation;
+    pub use material::watcher::Material;
+    pub use dozator::watcher::Dozator;
     
     pub struct Meln {
         pub material: Material,
@@ -70,7 +70,7 @@ pub mod watcher {
                 let mut start_bottom = self.half_bottom.is_started.subscribe();
                 
                 loop {
-                    crate::changed_any!(start_top, start_bottom);
+                    changed_any!(start_top, start_bottom);
                     let start_top = *start_top.borrow();
                     let start_bottom = *start_bottom.borrow();
                     
@@ -127,7 +127,7 @@ pub mod watcher {
                 let mut клапан_верхнего_контейнера = meln.material.клапан_верхнего_контейнера.subscribe();
                 let mut клапан_нижнего_контейнера = meln.material.клапан_нижнего_контейнера.subscribe();
                 
-                crate::changed_all!(
+                changed_all!(
                     клапан_помольной_камеры,
                     клапан_верхнего_контейнера,
                     клапан_нижнего_контейнера
@@ -136,7 +136,7 @@ pub mod watcher {
             }
             Step_3 => {
                 let mut motor = meln.vacuum.motor.subscribe();
-                crate::changed_all!(motor);
+                changed_all!(motor);
                 Откачка_воздуха_из_вакуумной_системы
             }
             Откачка_воздуха_из_вакуумной_системы => {
@@ -144,19 +144,19 @@ pub mod watcher {
                 let mut oil_motor = meln.oil.motor.subscribe();
                 let _klapan = meln.material.клапан_подачи_материала.get();
                 // klapan == false; // Проверить закрыт ли клапан, если нет, то ошибка!
-                crate::changed_all!(meln_motor, oil_motor);
+                changed_all!(meln_motor, oil_motor);
                 Запуск_маслостанции_и_основных_двигателей
             }
             Запуск_маслостанции_и_основных_двигателей => {
                 let mut motor = meln.material.dozator.motor.subscribe();
-                crate::changed_all!(motor);
+                changed_all!(motor);
                 // *motor.borrow() == true
                 Подача_материала
             }
             Подача_материала => {
                 let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
                 let mut клапан_нижнего_контейнера = meln.material.клапан_помольной_камеры.subscribe();
-                crate::changed_all!(клапан_помольной_камеры, клапан_нижнего_контейнера);
+                changed_all!(клапан_помольной_камеры, клапан_нижнего_контейнера);
                 
                 Измельчение_материала
             }

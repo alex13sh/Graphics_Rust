@@ -1,6 +1,7 @@
 mod meln;
 mod half_meln;
 mod dozator;
+#[macro_use]
 mod property;
 mod oil_station;
 mod vacuum_station;
@@ -13,3 +14,5 @@ pub use property::Property;
 use oil_station::OilStation;
 use vacuum_station::VacuumStation;
 use material::Material;
+
+use property::{changed_all, changed_any};

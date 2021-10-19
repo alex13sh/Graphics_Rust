@@ -30,7 +30,7 @@ impl OilStation {
 }
 
 pub mod watcher {
-    use crate::Property;
+    use crate::structs::Property;
     pub struct OilStation {
         pub температура: Property<f32>,
         pub motor: Property<bool>,

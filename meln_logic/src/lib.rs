@@ -10,5 +10,5 @@ pub use init_clear::init;
 // pub mod algorithm;
 pub mod devices;
 
-mod structs_2;
-use structs_2::*;
+pub mod structs_2;
+pub use structs_2 as structs;

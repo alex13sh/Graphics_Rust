@@ -24,8 +24,7 @@ impl From<&ModbusValues> for Material {
 }
 
 pub mod watcher {
-    use crate::Property;
-    use super::super::*;
+    use crate::structs::*;
     use dozator::watcher::Dozator;
     
     pub struct Material {

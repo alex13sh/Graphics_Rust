@@ -50,7 +50,7 @@ impl VacuumStation {
 }
 
 pub mod watcher {
-    use crate::Property;
+    use crate::structs::Property;
     pub struct VacuumStation {
         pub vacuum: Property<f32>,
         

@@ -97,7 +97,8 @@ pub enum SpeedChange {
 }
 
 pub mod watcher {
-    use crate::Property;
+//     #[macro_use]
+    use crate::structs::{Property, changed_any};
     pub struct HalfMeln {
         pub invertor: Invertor,
         pub motor: Motor,
@@ -122,7 +123,7 @@ pub mod watcher {
             let mut hz = self.invertor.hz.subscribe();
             let mut amper = self.invertor.amper.subscribe();
             loop {
-                crate::changed_any!(vibro, hz, amper);
+                changed_any!(vibro, hz, amper);
                 {
                     let vibro = *vibro.borrow();
                     let hz = *hz.borrow();

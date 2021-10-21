@@ -10,7 +10,6 @@ pub struct Invertor {
     ui: UI,
     pub is_started: bool,
     pub speed: u32,
-    values: &'static meln_logic::values::Invertor,
 }
 
 #[derive(Default)]
@@ -28,16 +27,15 @@ pub enum Message {
 }
 
 impl Invertor {
-    pub fn new(values: &'static meln_logic::values::Invertor) -> Self {
+    pub fn new() -> Self {
         Invertor {
             ui: UI::default(),
             is_started: false,
             speed: 0,
-            values: values,
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message, values: &meln_logic::values::Invertor) {
         match message {
         Message::ButtonStart(message) => self.ui.start.update(message),
         Message::ToggleStart(start) => {
@@ -46,15 +44,15 @@ impl Invertor {
             // Invertor SetSpeed
             // Invertor Start | Stop
             if start {
-                self.values.start();
+                values.start();
             } else {
-                self.values.stop();
+                values.stop();
             }
         },
         Message::SpeedChanged(speed) => {
             self.speed = speed;
 //             dbg!((10*speed)/6);
-            self.values.set_speed(100*speed/60);
+            values.set_speed(100*speed/60);
         },
         Message::SetSpeed(speed) => {},
         }

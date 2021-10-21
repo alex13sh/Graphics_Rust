@@ -20,7 +20,7 @@ pub struct App {
     ui: UI,
     has_exit: bool,
     logic: meln_logic::init::Complect,
-    meln: &'static meln_logic::Meln,
+    meln: meln_logic::Meln,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -83,9 +83,8 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let logic = meln_logic::init::Complect::new();
-        let meln = Box::new(meln_logic::Meln::new(logic.get_values()));
-        let meln = Box::leak(meln);
-        let meln_fut: &'static _ = meln;
+        let meln = meln_logic::Meln::new(logic.get_values());
+        let meln_fut = meln.clone();
 
         let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
         let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);
@@ -166,8 +165,8 @@ impl Application for App {
         Message::EmergencyStop => {
             self.meln.values.stop();
         },
-        Message::LowHalfComplectUI(m) => self.low.update(m),
-        Message::TopHalfComplectUI(m) => self.top.update(m),
+        Message::LowHalfComplectUI(m) => self.low.update(m, &self.meln.values.half_bottom),
+        Message::TopHalfComplectUI(m) => self.top.update(m, &self.meln.values.half_top),
         Message::DozatorUI(m) => {
             let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
                 .map(Message::DozatorUI);
@@ -430,7 +429,6 @@ mod half_complect {
     
     pub struct HalfComplect {
         pub invertor: ui::Invertor,
-        values: &'static meln_logic::values::HalfMeln,
         
         values_list: Vec<ui::ValuesList>,
         part: HalfPart,
@@ -448,11 +446,10 @@ mod half_complect {
     }
 
     impl HalfComplect {
-        pub fn new(values: &'static meln_logic::values::HalfMeln) -> Self {
-//             dbg!(values.keys());
-            let part = values.get_part();
+        pub fn new(values: &meln_logic::values::HalfMeln) -> Self {
+
             HalfComplect {
-                invertor: ui::Invertor::new(&values.invertor),
+                invertor: ui::Invertor::new(),
                 
                 values_list: vec![
                     ui::ValuesList {
@@ -475,14 +472,13 @@ mod half_complect {
                     }
                 ],
                 
-                values: values,
-                part: part,
+                part: values.get_part(),
             }
         }
         
-        pub fn update(&mut self, message: Message) {
+        pub fn update(&mut self, message: Message, values: &meln_logic::values::HalfMeln) {
             match message {
-            Message::InvertorUI(m) => self.invertor.update(m),
+            Message::InvertorUI(m) => self.invertor.update(m, &values.invertor),
             Message::UpdateValues => {},
             }
         }

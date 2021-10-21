@@ -34,13 +34,13 @@ impl From<&HalfPartInner> for HalfPart {
 
 impl HalfMeln {
     pub fn low(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_ends(&["М1"]) 
+        let values = values.get_values_by_name_contains(&["М1/"])
             + values.get_values_by_name_starts(&["5) Invertor"]);
         let температура_масла = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc("Виброскорость").unwrap(),
+            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
             part: HalfPartInner::Low{
                 температура_масла_values: values.get_values_by_name_contains(&температура_масла)
             },
@@ -48,14 +48,13 @@ impl HalfMeln {
         }
     }
     pub fn top(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_ends(&["М2"]) 
+        let values = values.get_values_by_name_contains(&["М2/"]) 
             + values.get_values_by_name_starts(&["6) Invertor"]);
-        // values.get_values_by_name_contains(
         let температура_подшибника = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc("Виброскорость").unwrap(),
+            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
             part: HalfPartInner::Top{
                 температура_подшибника_values: values.get_values_by_name_contains(&температура_подшибника)
             },
@@ -70,7 +69,7 @@ impl HalfMeln {
 pub type Invertor = modbus::InvertorValues;
 
 pub struct Motor {
-    speed: ValueArc,
+//     speed: ValueArc,
     // speed_changed: Signal<SpeedChange>,
     
     // "Температура статора",
@@ -81,7 +80,7 @@ pub struct Motor {
 impl From<&ModbusValues> for Motor {
     fn from(values: &ModbusValues) -> Self {
         Motor {
-            speed: values.get_value_arc("Скорость двигателя").unwrap(),
+//             speed: values.get_value_arc("Скорость двигателя").unwrap(),
             температуры_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
         }
     }

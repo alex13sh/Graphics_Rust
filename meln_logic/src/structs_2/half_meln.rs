@@ -70,6 +70,10 @@ impl HalfMeln {
     pub fn get_part(&self) -> HalfPart {
         HalfPart::from(&self.part)
     }
+    
+    pub fn stop(&self) {
+        self.invertor.stop();
+    }
 }
 
 pub type Invertor = modbus::InvertorValues;

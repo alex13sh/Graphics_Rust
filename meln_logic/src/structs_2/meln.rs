@@ -32,6 +32,14 @@ impl From<&ModbusValues> for Meln {
     }
 }
 
+impl Meln {
+    // Экстренное торможение ?
+    pub fn stop(&self) {
+        self.half_top.stop();
+        self.half_bottom.stop();
+    }
+}
+
 pub mod watcher {
     use crate::structs::{
         Property, changed_all, changed_any,

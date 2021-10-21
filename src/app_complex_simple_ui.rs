@@ -164,8 +164,7 @@ impl Application for App {
         match message {
         Message::ButtonExit => self.has_exit = true,
         Message::EmergencyStop => {
-            self.top.invertor.stop();
-            self.low.invertor.stop();
+            self.meln.values.stop();
         },
         Message::LowHalfComplectUI(m) => self.low.update(m),
         Message::TopHalfComplectUI(m) => self.top.update(m),
@@ -310,12 +309,6 @@ impl App {
     //             dbg!(&d);
                 if res.is_ok() {
     //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
-                    if !d.is_connect() {
-    //                     println!("\tis not connect");
-                    } else {
-//                         self.proccess_values();
-//                         self.proccess_speed();
-                    }
                     if d.name() == "4) МУ210-410" {
                         self.klapans.update_klapans();
                     }

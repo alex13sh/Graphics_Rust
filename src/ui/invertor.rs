@@ -97,15 +97,6 @@ impl Invertor {
     }
 }
 
-impl Invertor {
-    pub fn get_hz_out_value(&self) -> Arc<modbus::Value> {
-        self.values.get_hz_out_value()
-    }
-    pub fn stop(&self) {
-        self.values.stop();
-    }
-}
-
 mod ui_button_start {
     use super::*;
 

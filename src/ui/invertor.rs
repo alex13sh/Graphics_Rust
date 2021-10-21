@@ -10,7 +10,7 @@ pub struct Invertor {
     ui: UI,
     pub is_started: bool,
     pub speed: u32,
-    device: modbus::Invertor,
+    values: &'static meln_logic::values::Invertor,
 }
 
 #[derive(Default)]
@@ -28,12 +28,12 @@ pub enum Message {
 }
 
 impl Invertor {
-    pub fn new(invertor: modbus::Invertor) -> Self {
+    pub fn new(values: &'static meln_logic::values::Invertor) -> Self {
         Invertor {
             ui: UI::default(),
             is_started: false,
             speed: 0,
-            device: invertor,
+            values: values,
         }
     }
 
@@ -46,23 +46,22 @@ impl Invertor {
             // Invertor SetSpeed
             // Invertor Start | Stop
             if start {
-                self.device.start();
+                self.values.start();
             } else {
-                self.device.stop();
+                self.values.stop();
             }
-//             self.log_save();
         },
         Message::SpeedChanged(speed) => {
             self.speed = speed;
 //             dbg!((10*speed)/6);
-            self.device.set_speed((10*speed)/6);
+            self.values.set_speed(100*speed/60);
         },
         Message::SetSpeed(speed) => {},
         }
     }
 
     pub fn view(&mut self) -> Element<Message> {
-        if self.device.device().is_connect() {
+//         if self.device.device().is_connect() {
             let is_started = self.is_started;
             let start = self.ui.start.view(
                 self.is_started,
@@ -91,19 +90,19 @@ impl Invertor {
                         .push(slider)
                 ).push(start)
                 .into()
-        } else {
-            Text::new("Инвертор не подключен")
-                .into()
-        }
+//         } else {
+//             Text::new("Инвертор не подключен")
+//                 .into()
+//         }
     }
 }
 
 impl Invertor {
     pub fn get_hz_out_value(&self) -> Arc<modbus::Value> {
-        self.device.get_hz_out_value()
+        self.values.get_hz_out_value()
     }
     pub fn stop(&self) {
-        self.device.stop();
+        self.values.stop();
     }
 }
 

@@ -11,13 +11,13 @@ mod klapans;
 use meln::Meln as MelnValues;
 use half_meln::HalfMeln;
 use dozator::Dozator;
-pub use property::Property;
 use oil_station::OilStation;
 use vacuum_station::VacuumStation;
 use material::Material;
 use klapans::Klapans;
 
 pub use meln::watcher::Meln as MelnWatch;
+pub use property::Property;
 use property::{changed_all, changed_any};
 use std::sync::Arc;
 
@@ -65,4 +65,7 @@ pub mod watcher {
     pub use vacuum_station::watcher::VacuumStation;
     pub use material::watcher::Material;
     pub use klapans::watcher::Klapans;
+    
+    pub use property::Property;
+    pub use tokio::sync::watch::Receiver as Subscription;
 }

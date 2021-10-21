@@ -18,9 +18,11 @@ pub use info_pane::InfoPane;
 pub mod style;
 
 mod liner_animation;
+mod property_animation;
 
 pub mod animations {
     pub use super::liner_animation::LinerAnimation;
+    pub use super::property_animation::PropertyAnimation;
 
     #[derive(Debug, Clone)]
     pub enum Progress {

@@ -23,7 +23,6 @@ struct MyButton {
 pub struct Klapans {
     klapans: Vec<MyKlapan>,
     buttons: Vec<MyButton>,
-    values: modbus::ModbusValues,
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +32,7 @@ pub enum Message {
 }
 
 impl Klapans {
-    pub fn new(values: modbus::ModbusValues) -> Self {
+    pub fn new() -> Self {
         let klapan_names = [
             ("ШК1", "Клапан нижнего контейнера"), // ШК1
             ("ШК3", "Клапан верхнего контейнера"), // ШК5
@@ -62,7 +61,6 @@ impl Klapans {
                     enb: false,
                     state: Default::default()
                 }).collect(),
-            values: values,
         }
     }
 
@@ -150,18 +148,6 @@ impl Klapans {
 }
 
 impl Klapans {
-    pub fn update_klapans(&mut self) {
-//         dbg!("update klapans");
-        for k in self.klapans.iter_mut() {
-//             dbg!(&k.shk);
-//             if let Ok(enb) = self.values.get_bit(&format!("Клапан {} открыт", k.shk)) {
-            if let Ok(enb) = self.values.get_bit(&k.name) {
-                k.enb = enb;
-//                 dbg!(enb);
-            }
-        }
-    }
-
     fn set_button(&mut self, name: &str, enb: bool) {
         if let Some(v) = self.buttons.iter_mut().find(|s| s.name==name) {
             v.enb = enb;

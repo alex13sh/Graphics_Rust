@@ -97,12 +97,7 @@ impl Application for App {
             dvij_is_started: false,
             low: HalfComplect::new(&meln.values.half_bottom),
             top: HalfComplect::new(&meln.values.half_top),
-            klapans: ui::Klapans::new(logic.digit_o.device().values_map()
-                + logic.digit_i.device().values_map()
-                + logic.get_values().get_values_by_name_starts(&["Давление воздуха компрессора"])
-                //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
-//                 .clone()
-                ),
+            klapans: ui::Klapans::new(),
             dozator: ui::Dozator::new(),
             oil_station: ui::OilStation::new_by_meln(&meln.values),
             info_pane: ui::InfoPane::new(),
@@ -310,9 +305,6 @@ impl App {
     //             dbg!(&d);
                 if res.is_ok() {
     //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
-                    if d.name() == "4) МУ210-410" {
-                        self.klapans.update_klapans();
-                    }
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

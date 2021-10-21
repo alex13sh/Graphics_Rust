@@ -50,7 +50,7 @@ pub mod watcher {
         Property, changed_all, changed_any,
         watcher::{
             HalfMeln, OilStation, VacuumStation,
-            Material, Dozator,
+            Material, Dozator, Klapans,
         }
     };
     
@@ -65,6 +65,7 @@ pub mod watcher {
         
         pub oil: OilStation,
         pub vacuum: VacuumStation,
+        pub klapans: Klapans,
         
         pub step: Property<MelnStep>,
     }
@@ -78,6 +79,7 @@ pub mod watcher {
             
             self.oil.update_property(&values.oil);
             self.vacuum.update_property(&values.vacuum);
+            self.klapans.update_property(&values.klapans);
             
             self.is_worked.set(self.oil.motor.get());
         }
@@ -107,6 +109,7 @@ pub mod watcher {
                 f_step,
                 self.half_top.automation(),
                 self.half_bottom.automation(),
+                self.klapans.automation(),
             );
         }
     }

@@ -54,6 +54,7 @@ pub mod watcher {
     pub struct Klapans {
         pub давление_воздуха: Property<f32>,
         pub klapans: HashMap<String, Property<bool>>,
+        pub klapans_send: Property<(String, bool)>,
     }
     impl Klapans {
         pub(crate) fn update_property(&self, values: &super::Klapans) {
@@ -61,7 +62,21 @@ pub mod watcher {
                 p.set(values.klapans.get_bit(k).unwrap());
             }
         }
-
+        
+        pub(crate) async fn automation(&self) {
+            loop {
+                let futs = self.klapans.iter()
+                    .map(|(name, prop)| {
+                        let mut sub = prop.subscribe();
+                        async move {
+                            sub.changed().await;
+                            let klapan = sub.borrow();
+                            self.klapans_send.send((name.to_owned(), *klapan));
+                        }
+                    });
+                futures_util::future::join_all(futs);
+            }
+        }
     }
     
     impl Default for Klapans {
@@ -73,6 +88,7 @@ pub mod watcher {
                     "Клапан напуска", "Клапан насоса М5"].into_iter()
                     .map(|&n| (n.to_owned(), Property::<bool>::default()))
                     .collect(),
+                klapans_send: Property::default(),
             }
         }
     }

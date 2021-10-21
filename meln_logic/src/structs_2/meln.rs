@@ -48,6 +48,7 @@ pub mod watcher {
         pub half_top: HalfMeln,
         pub half_bottom: HalfMeln,
         pub is_started: Property<bool>,
+        pub is_worked: Property<bool>, // is started | oil.motor
         
         pub oil: OilStation,
         pub vacuum: VacuumStation,
@@ -64,6 +65,8 @@ pub mod watcher {
             
             self.oil.update_property(&values.oil);
             self.vacuum.update_property(&values.vacuum);
+            
+            self.is_worked.set(self.oil.motor.get());
         }
         
         pub async fn automation(&self) {

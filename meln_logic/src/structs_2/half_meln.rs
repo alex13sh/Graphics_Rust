@@ -8,6 +8,8 @@ pub struct HalfMeln {
     pub motor: Motor,
     pub vibro: ValueArc,
     part: HalfPartInner,
+    pub температура_верх: ValueArc,
+    pub температура_нижн: ValueArc,
 }
 
 enum HalfPartInner {
@@ -44,6 +46,8 @@ impl HalfMeln {
             part: HalfPartInner::Low{
                 температура_масла_values: values.get_values_by_name_contains(&температура_масла)
             },
+            температура_верх: values.get_value_arc(температура_масла[0]).unwrap(),
+            температура_нижн: values.get_value_arc(температура_масла[1]).unwrap(),
             values: values,
         }
     }
@@ -58,6 +62,8 @@ impl HalfMeln {
             part: HalfPartInner::Top{
                 температура_подшибника_values: values.get_values_by_name_contains(&температура_подшибника)
             },
+            температура_верх: values.get_value_arc(температура_подшибника[0]).unwrap(),
+            температура_нижн: values.get_value_arc(температура_подшибника[1]).unwrap(),
             values: values,
         }
     }
@@ -72,8 +78,9 @@ pub struct Motor {
 //     speed: ValueArc,
     // speed_changed: Signal<SpeedChange>,
     
-    // "Температура статора",
-    // "Температура ротора Пирометр",
+    pub температура_статора: ValueArc, // "Температура статора",
+    pub температура_ротора: ValueArc, // "Температура ротора Пирометр",
+    
     температуры_values: ModbusValues, // Значения температур
 }
 
@@ -81,6 +88,8 @@ impl From<&ModbusValues> for Motor {
     fn from(values: &ModbusValues) -> Self {
         Motor {
 //             speed: values.get_value_arc("Скорость двигателя").unwrap(),
+            температура_статора: values.get_value_arc("Температура статора").unwrap(),
+            температура_ротора: values.get_value_arc("Температура ротора Пирометр").unwrap(),
             температуры_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
         }
     }

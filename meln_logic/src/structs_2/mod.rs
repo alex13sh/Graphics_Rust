@@ -43,7 +43,10 @@ impl Meln {
 pub mod values {
     use super::*;
     pub use meln::Meln;
-    pub use half_meln::HalfMeln;
+    pub use half_meln::{
+        HalfMeln, HalfPart,
+        Invertor,
+    };
     pub use dozator::Dozator;
     pub use oil_station::OilStation;
     pub use vacuum_station::VacuumStation;

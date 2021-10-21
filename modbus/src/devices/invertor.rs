@@ -1,6 +1,7 @@
 use super::init::{DeviceType, InvertorFunc};
 use super::{Device, DeviceError, ModbusValues};
 use super::Value;
+use crate::ValueArc;
 
 use std::sync::Arc;
 
@@ -21,6 +22,9 @@ pub enum DvijDirect {
 #[derive(Clone)]
 pub struct InvertorValues {
     values: ModbusValues,
+    
+    pub выходной_ток: ValueArc,
+    pub скорость_двигателя: ValueArc,
 }
 
 impl InvertorValues {
@@ -32,9 +36,11 @@ impl InvertorValues {
             "Stop", "Run",
             "FWD", "REV",
             "Команда задания частоты",
-            "Выходной ток (A)", "Скорость двигателя",
+//             "Выходной ток (A)", "Скорость двигателя",
         ];
         InvertorValues {
+            выходной_ток: values.get_value_arc("Выходной ток (A)").unwrap(),
+            скорость_двигателя: values.get_value_arc("Скорость двигателя").unwrap(),
             values: values.get_values_by_name_starts(&values_str),
         }
     }
@@ -96,16 +102,14 @@ impl InvertorValues {
         v_set_speed.set_value(hz);
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {
-        let vm = &self.values;
-        vm.get("Выходной ток (A)").unwrap().clone()
+        self.выходной_ток.value_clone()
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
         let vm = &self.values;
         vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
     }
     pub fn get_speed_out_value(&self) -> Arc<Value> {
-        let vm = &self.values;
-        vm.get("Скорость двигателя").unwrap().clone()
+        self.скорость_двигателя.value_clone()
     }
 }
 

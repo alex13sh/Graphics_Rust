@@ -105,8 +105,9 @@ impl InvertorValues {
         self.выходной_ток.value_clone()
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
-        let vm = &self.values;
-        vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
+//         let vm = &self.values;
+//         vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
+        self.get_speed_out_value()
     }
     pub fn get_speed_out_value(&self) -> Arc<Value> {
         self.скорость_двигателя.value_clone()

@@ -6,6 +6,7 @@ use super::Dozator;
 use super::OilStation;
 use super::VacuumStation;
 use super::Material;
+use super::Klapans;
 
 pub struct Meln {
     
@@ -16,6 +17,8 @@ pub struct Meln {
     
     pub oil: OilStation,
     pub vacuum: VacuumStation,
+    
+    pub klapans: Klapans,
 }
 
 impl From<&ModbusValues> for Meln {
@@ -28,6 +31,8 @@ impl From<&ModbusValues> for Meln {
             
             oil: values.into(),
             vacuum: values.into(),
+            
+            klapans: values.into(),
         }
     }
 }

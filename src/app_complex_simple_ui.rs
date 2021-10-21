@@ -159,26 +159,28 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
-    
+        let meln = &self.meln.values;
         match message {
         Message::ButtonExit => self.has_exit = true,
         Message::EmergencyStop => {
             self.meln.values.stop();
         },
-        Message::LowHalfComplectUI(m) => self.low.update(m, &self.meln.values.half_bottom),
-        Message::TopHalfComplectUI(m) => self.top.update(m, &self.meln.values.half_top),
+        Message::LowHalfComplectUI(m) => self.low.update(m, &meln.half_bottom),
+        Message::TopHalfComplectUI(m) => self.top.update(m, &meln.half_top),
         Message::DozatorUI(m) => {
-            let res = self.dozator.update(m, &self.meln.values.material.dozator)
+            let res = self.dozator.update(m, &meln.material.dozator)
                 .map(Message::DozatorUI);
             self.logic.update_new_values();
             return res;
         },
         Message::OilStation(m) => {
-            self.oil_station.update(m, &self.meln.values.oil);
+            self.oil_station.update(m, &meln.oil);
             self.logic.update_new_values();
         },
         Message::KlapansUI(m) => {
-            self.klapans.update(m);
+            self.klapans.update_material(m.clone(), &meln.material);
+            self.klapans.update_vacuum(m.clone(), &meln.vacuum);
+            self.klapans.update(m, &meln.klapans);
             self.logic.update_new_values();
         }
         Message::InfoPane(m) => self.info_pane.update(m),

@@ -6,6 +6,7 @@ mod property;
 mod oil_station;
 mod vacuum_station;
 mod material;
+mod klapans;
 
 use meln::Meln as MelnValues;
 use half_meln::HalfMeln;
@@ -14,6 +15,7 @@ pub use property::Property;
 use oil_station::OilStation;
 use vacuum_station::VacuumStation;
 use material::Material;
+use klapans::Klapans;
 
 pub use meln::watcher::Meln as MelnWatch;
 use property::{changed_all, changed_any};
@@ -51,6 +53,7 @@ pub mod values {
     pub use oil_station::OilStation;
     pub use vacuum_station::VacuumStation;
     pub use material::Material;
+    pub use klapans::Klapans;
 }
 
 pub mod watcher {
@@ -61,4 +64,5 @@ pub mod watcher {
     pub use oil_station::watcher::OilStation;
     pub use vacuum_station::watcher::VacuumStation;
     pub use material::watcher::Material;
+    pub use klapans::watcher::Klapans;
 }

@@ -20,7 +20,7 @@ pub struct App {
     ui: UI,
     has_exit: bool,
     logic: meln_logic::init::Complect,
-    meln: meln_logic::Meln,
+    meln: &'static meln_logic::Meln,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -77,8 +77,9 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let logic = meln_logic::init::Complect::new();
-        let meln = meln_logic::Meln::new(logic.get_values());
-        let meln_fut = meln.clone();
+        let meln = Box::new(meln_logic::Meln::new(logic.get_values()));
+        let meln = Box::leak(meln);
+        let meln_fut: &'static _ = meln;
 
         let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
         let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);

@@ -33,12 +33,13 @@ impl From<&ModbusValues> for Meln {
 }
 
 pub mod watcher {
-    use crate::structs::*;
-    pub use half_meln::watcher::HalfMeln;
-    pub use oil_station::watcher::OilStation;
-    pub use vacuum_station::watcher::VacuumStation;
-    pub use material::watcher::Material;
-    pub use dozator::watcher::Dozator;
+    use crate::structs::{
+        Property, changed_all, changed_any,
+        watcher::{
+            HalfMeln, OilStation, VacuumStation,
+            Material, Dozator,
+        }
+    };
     
     #[derive(Default)]
     pub struct Meln {

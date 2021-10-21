@@ -3,7 +3,7 @@
 use modbus::{ValueArc, ModbusValues};
 
 pub struct VacuumStation {
-    vacuum: ValueArc,
+    pub vacuum: ValueArc,
     
     motor_1: ValueArc,
     motor_2: ValueArc,

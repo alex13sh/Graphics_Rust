@@ -13,8 +13,7 @@ pub struct Dozator {
     ui: UI,
     shim_hz_ui: i32, shim_hz_cur: i32, shim_hz_new: i32,
     klapan_enb: bool,
-    device: meln_logic::devices::Dozator,
-//     anim: LinerAnimation,
+    
 }
 
 #[derive(Default)]
@@ -33,13 +32,11 @@ pub enum Message {
 }
 
 impl Dozator {
-    pub fn new(device: meln_logic::devices::Dozator) -> Self {
+    pub fn new() -> Self {
         Dozator {
             ui: UI::default(),
             shim_hz_ui: 0, shim_hz_cur: 0, shim_hz_new: 0,
             klapan_enb: false,
-            device: device,
-//             anim: LinerAnimation::new(0.0, 20).duration(5_000),
         }
     }
 
@@ -54,13 +51,12 @@ impl Dozator {
 //         }
     }
 
-    pub fn update(&mut self, message: Message, devices: Vec<Arc<modbus::Device>>)  -> Command<Message> {
+    pub fn update(&mut self, message: Message, values: &meln_logic::values::Dozator)  -> Command<Message> {
         match message {
         Message::ShimHzChanged(hz) => self.shim_hz_ui = hz,
         Message::SetShimHz => {
             println!("Set HZ: {}", self.shim_hz_ui);
             self.shim_hz_new = self.shim_hz_ui;
-//             self.anim.set_from_to(self.shim_hz_cur as f32, self.shim_hz_new as f32);
         },
         Message::ToggleKlapan(enb) => {
             self.klapan_enb = enb;
@@ -69,7 +65,7 @@ impl Dozator {
             self.shim_hz_ui = value as i32;
             self.shim_hz_cur = self.shim_hz_ui;
 //             dbg!(value);
-            self.device.set_value(self.shim_hz_cur);
+            values.set_speed(self.shim_hz_cur);
         },
         Message::AnimationPos(super::animations::Progress::Finished) => {
 //            self.anim.stop();

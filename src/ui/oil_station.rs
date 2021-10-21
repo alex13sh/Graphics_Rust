@@ -8,7 +8,6 @@ use super::style;
 
 pub struct OilStation {
     ui: UI,
-    values: modbus::ModbusValues,
     values_list: super::ValuesList,
     pub is_started: bool,
 }
@@ -26,36 +25,54 @@ pub enum Message {
 }
 
 impl OilStation {
-    pub fn new(values: modbus::ModbusValues) -> Self {
+    pub fn new_by_meln(values: &meln_logic::values::Meln) -> Self {
 
         OilStation {
             ui: UI::default(),
-            values_list: super::make_value_lists(&values, crate::map!{BTreeMap,
-                    "МаслоСтанция" => [
-                        "PDU-RS/value",
-//                         "PDU-RS/hight limit",
-//                         "PDU-RS/low limit",
-                        "Температура масла на выходе маслостанции",
-                        "Давление масла на выходе маслостанции",
-                        "5) Invertor/Выходной ток (A)",
-                        "5) Invertor/Скорость двигателя",
-                        "2) МВ110-24.8АС/Виброскорость дв. М1",
-                        "2) МВ110-24.8АС/Давление воздуха компрессора",
-                        "2) МВ110-24.8АС/Разрежение воздуха в системе",
-                    ]
-                }).pop().unwrap(),
-            values: values,
+            values_list: super::ValuesList {
+                name: "МаслоСтанция".into(),
+                values: vec![
+                    values.oil.уровень_масла.clone(),
+                    values.oil.температура.clone(),
+                    values.oil.давление_масла.clone(),
+                    
+                    values.half_bottom.invertor.выходной_ток.clone(),
+                    values.half_bottom.invertor.скорость_двигателя.clone(),
+                    
+                    values.half_bottom.vibro.clone(),
+                    // Давление воздуха в Клапанах
+                    values.vacuum.vacuum.clone(),
+                ]
+            },
+                            
+            is_started: false,
+        }
+    }
+    
+    pub fn new(values: &meln_logic::values::OilStation) -> Self {
+
+        OilStation {
+            ui: UI::default(),
+            values_list: super::ValuesList {
+                name: "МаслоСтанция".into(),
+                values: vec![
+                    values.уровень_масла.clone(),
+                    values.температура.clone(),
+                    values.давление_масла.clone(),
+                ]
+            },
+                            
             is_started: false,
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message, values: &meln_logic::values::OilStation) {
         match message {
 //         Message::StartStop(enb) => self.is_started = enb;
         Message::StartStopToggle => {
             self.is_started = !self.is_started;
 //             dbg!(self.is_started);
-            self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(self.is_started);
+            values.motor_turn(self.is_started);
         },
         }
     }
@@ -80,12 +97,5 @@ impl OilStation {
             .width(Length::Fill);
 
         column.into()
-    }
-}
-
-impl OilStation {
-    pub fn oil_station(&mut self, enb: bool) {
-        self.is_started = enb;
-        self.values.get_value_arc("Двигатель маслостанции М4").unwrap().set_bit(enb);
     }
 }

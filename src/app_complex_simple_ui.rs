@@ -103,8 +103,8 @@ impl Application for App {
                 //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
 //                 .clone()
                 ),
-            dozator: ui::Dozator::new(logic.dozator.clone()),
-            oil_station: ui::OilStation::new(logic.get_values().clone()),
+            dozator: ui::Dozator::new(),
+            oil_station: ui::OilStation::new_by_meln(&meln.values),
             info_pane: ui::InfoPane::new(),
         
             logic: logic,
@@ -168,13 +168,13 @@ impl Application for App {
         Message::LowHalfComplectUI(m) => self.low.update(m, &self.meln.values.half_bottom),
         Message::TopHalfComplectUI(m) => self.top.update(m, &self.meln.values.half_top),
         Message::DozatorUI(m) => {
-            let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
+            let res = self.dozator.update(m, &self.meln.values.material.dozator)
                 .map(Message::DozatorUI);
             self.logic.update_new_values();
             return res;
         },
         Message::OilStation(m) => {
-            self.oil_station.update(m);
+            self.oil_station.update(m, &self.meln.values.oil);
             self.logic.update_new_values();
         },
         Message::KlapansUI(m) => {

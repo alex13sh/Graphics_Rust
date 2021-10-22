@@ -58,7 +58,7 @@ pub fn write_invertor_parametrs(file_name: &PathBuf, values: Vec<crate::Invertor
     Ok(())
 }
 
-pub fn write_values(file_name: &PathBuf, values: Vec<crate::LogValue>) -> crate::MyResult {
+pub fn write_values(file_name: &PathBuf, values: &Vec<crate::LogValue>) -> crate::MyResult {
     let file = File::create(file_name)?;
     let mut wrt = csv::WriterBuilder::new()
         .has_headers(true)

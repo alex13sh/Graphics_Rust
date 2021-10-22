@@ -68,7 +68,7 @@ impl Klapans {
     pub fn subscription(&self, props: &meln_logic::watcher::Klapans) -> iced::Subscription<Message> {
         use super::animations::PropertyAnimation;
         iced::Subscription::from_recipe(
-            PropertyAnimation::new("Клапана", props.klapans_send.subscribe())
+            PropertyAnimation::new("Клапана", props.klapans_шк_send.subscribe())
         ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
     }
     

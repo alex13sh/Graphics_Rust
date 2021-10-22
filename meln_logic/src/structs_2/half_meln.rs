@@ -134,8 +134,9 @@ pub mod watcher {
         pub(crate) fn update_property(&self, values: &super::HalfMeln) {
             use modbus::{Value, TryFrom};
             self.invertor.update_property(&values.invertor);
-            let vibro: f32 = f32::try_from(&values.vibro as &Value).unwrap(); // todo: Необходимо обработать ошибку
-            self.vibro.set(vibro);
+            if let Ok(vibro) = f32::try_from(&values.vibro as &Value) { // todo: Необходимо обработать ошибку
+                self.vibro.set(vibro);
+            }
         }
         
         pub(crate) async fn automation(&self) {

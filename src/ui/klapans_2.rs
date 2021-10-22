@@ -43,7 +43,7 @@ impl Klapans {
             ("ШК6", "Клапан насоса М5"),         // ШК6
         ];
         let button_names = [
-            "Двигатель компрессора воздуха",
+            // "Двигатель компрессора воздуха",
             "Уменьшить давление",
             "Увеличить давление",
             "ШК в рабочее положение",
@@ -123,15 +123,6 @@ impl Klapans {
                 v.enb = enb;
             }
         }
-        Message::PressButton(name) => {
-            let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
-            match (name.as_str(), pb.enb) {
-            ("Двигатель компрессора воздуха", _) => {
-                pb.enb = !pb.enb;
-                // values.двигатель_компрессора_воздуха_turn(pb.enb);
-            },
-            _ => {}
-            }
         }
         _ => {}
         }

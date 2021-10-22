@@ -99,7 +99,7 @@ pub mod watcher {
                         loop {
                             sub.changed().await;
                             let klapan = sub.borrow();
-                            let _ = self.klapans_send.send((name.to_owned(), *klapan));
+                            let _ = self.klapans_шк_send.send((name.to_owned(), *klapan));
                         }
                     }
                 });

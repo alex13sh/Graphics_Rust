@@ -59,15 +59,16 @@ impl Klapans {
 pub mod watcher {
     use crate::structs::Property;
     use std::collections::HashMap;
+    use tokio::sync::broadcast;
     
     pub struct Klapans {
         pub давление_воздуха: Property<f32>,
         
         pub klapans: HashMap<String, Property<bool>>,
-        pub klapans_send: Property<(String, bool)>,
+        pub klapans_send: broadcast::Sender<(String, bool)>,
         
         pub klapans_шк: HashMap<(String, String), Property<bool>>,
-        pub klapans_шк_send: Property<(String, bool)>,
+        pub klapans_шк_send: broadcast::Sender<(String, bool)>,
     }
     impl Klapans {
         pub(crate) fn update_property(&self, values: &super::Klapans) {
@@ -87,7 +88,7 @@ pub mod watcher {
                         loop {
                             sub.changed().await;
                             let klapan = sub.borrow();
-                            self.klapans_send.send((name.to_owned(), *klapan));
+                            let _ = self.klapans_send.send((name.to_owned(), *klapan));
                         }
                     }
                 });
@@ -98,7 +99,7 @@ pub mod watcher {
                         loop {
                             sub.changed().await;
                             let klapan = sub.borrow();
-                            self.klapans_send.send((name.to_owned(), *klapan));
+                            let _ = self.klapans_send.send((name.to_owned(), *klapan));
                         }
                     }
                 });
@@ -122,9 +123,9 @@ pub mod watcher {
             Klapans {
                 давление_воздуха: Property::default(),
                 klapans: klapan_names.iter().map(|&(_, n)| (n.to_owned(), Property::<bool>::default())).collect(),
-                klapans_send: Property::default(),
+                klapans_send: broadcast::channel(16).0,
                 klapans_шк: klapan_names.iter().map(|&(шк, n)| ((шк.to_owned(), n.to_owned()), Property::<bool>::default())).collect(),
-                klapans_шк_send: Property::default(),
+                klapans_шк_send: broadcast::channel(16).0,
             }
         }
     }

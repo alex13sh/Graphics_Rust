@@ -22,7 +22,7 @@ mod property_animation;
 
 pub mod animations {
     pub use super::liner_animation::LinerAnimation;
-    pub use super::property_animation::PropertyAnimation;
+    pub use super::property_animation::{PropertyAnimation, BroadcastAnimation};
 
     #[derive(Debug, Clone)]
     pub enum Progress {

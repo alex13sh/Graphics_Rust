@@ -45,3 +45,39 @@ where
         Box::pin(gen)
     }    
 }
+
+
+pub struct BroadcastAnimation<T> {
+    pub name: String,
+    pub sub: tokio::sync::broadcast::Receiver<T>,
+}
+
+impl<H, I, T> subscription::Recipe<H, I> for BroadcastAnimation<T>
+where
+    H: std::hash::Hasher,
+    T: Clone + Send + Sync + 'static
+{
+    type Output = T;
+
+    fn hash(&self, state: &mut H) {
+        use std::hash::Hash;
+
+        std::any::TypeId::of::<Self>().hash(state);
+//         self.sub.hash(state);
+        self.name.hash(state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: futures::stream::BoxStream<'static, I>,
+    ) -> futures::stream::BoxStream<'static, Self::Output> {
+        let mut sub = self.sub;
+        let gen = stream! {
+            loop {
+                let val = sub.recv().await.unwrap();
+                yield val;
+            }
+        };
+        Box::pin(gen)
+    }    
+}

@@ -113,11 +113,23 @@ pub mod watcher {
             );
         }
     }
-    pub async fn automation_mut(values: &super::Meln, properties: &Meln) {
-        Dozator::automation_mut(
-            &values.material.dozator, 
-            &properties.material.dozator
-        ).await;
+    pub async fn automation_mut(values: &super::Meln, props: &Meln) {
+        use tokio::time::{sleep, Duration};
+        let mut sub_is_started = props.is_started.subscribe();
+        let f_stop = async move {
+            let _ = sub_is_started.changed().await;
+            values.vacuum.davl_dis();
+            sleep(Duration::from_millis(10_000)).await;
+            values.oil.stop();
+        };
+    
+        tokio::join!(
+            Dozator::automation_mut(
+                &values.material.dozator, 
+                &props.material.dozator
+            ),
+            f_stop,
+        );
     }
     
     // Шаги алгоритма работы мельницы

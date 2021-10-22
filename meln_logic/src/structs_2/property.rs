@@ -6,6 +6,12 @@ pub struct Property<T> {
     sender: watch::Sender<T>
 }
 
+impl <T: Default> Default for Property <T> {
+    fn default() -> Self {
+        Property::new(T::default())
+    }
+}
+
 impl <T> Property<T> {
     pub(crate) fn new(value: T) -> Self {
         Property{
@@ -44,7 +50,7 @@ impl <T> Property<T> {
 //     futures::future::select_all(iter.map(|r| r.changed()));
 // }
 
-#[macro_export]
+// #[macro_export]
 macro_rules! changed_any(
     ($($r:ident),+) => {
         tokio::select! {
@@ -53,7 +59,7 @@ macro_rules! changed_any(
     }
 );
 
-#[macro_export]
+// #[macro_export]
 macro_rules! changed_all(
     ($($r:ident),+) => {
         let res = tokio::join! (
@@ -62,3 +68,6 @@ macro_rules! changed_all(
         dbg!(res);
     }
 );
+
+pub(in crate::structs_2) use changed_any;
+pub(in crate::structs_2) use changed_all;

@@ -11,10 +11,9 @@ use std::sync::Arc;
 
 pub struct Dozator {
     ui: UI,
-    shim_hz_ui: i32, shim_hz_cur: i32, shim_hz_new: i32,
+    shim_hz_ui: i32, shim_hz_new: i32,
     klapan_enb: bool,
-    device: meln_logic::devices::Dozator,
-//     anim: LinerAnimation,
+    
 }
 
 #[derive(Default)]
@@ -29,50 +28,39 @@ pub enum Message {
     ShimHzChanged(i32),
     SetShimHz, SetShimHzFinished,
     ToggleKlapan(bool),
-    AnimationPos(super::animations::Progress),
+    AnimationPos(i32),
 }
 
 impl Dozator {
-    pub fn new(device: meln_logic::devices::Dozator) -> Self {
+    pub fn new() -> Self {
         Dozator {
             ui: UI::default(),
-            shim_hz_ui: 0, shim_hz_cur: 0, shim_hz_new: 0,
+            shim_hz_ui: 0, shim_hz_new: 0,
             klapan_enb: false,
-            device: device,
-//             anim: LinerAnimation::new(0.0, 20).duration(5_000),
         }
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
-//         if self.shim_hz_cur != self.shim_hz_new {
-            iced::Subscription::from_recipe(
-                LinerAnimation::from_to(self.shim_hz_cur as f32, self.shim_hz_new as f32)
-                    .steps(20).duration(5_000)
-            ).map(Message::AnimationPos)
-//         } else {
-//             iced::Subscription::none()
-//         }
+    pub fn subscription(&self, props: &meln_logic::watcher::Dozator) -> iced::Subscription<Message> {
+        use super::animations::PropertyAnimation;
+        iced::Subscription::from_recipe(
+            PropertyAnimation::new("ШИМ", props.speed.subscribe())
+        ).map(Message::AnimationPos)
     }
 
-    pub fn update(&mut self, message: Message, devices: Vec<Arc<modbus::Device>>)  -> Command<Message> {
+    pub fn update(&mut self, message: Message, values: &meln_logic::values::Dozator)  -> Command<Message> {
         match message {
-        Message::ShimHzChanged(hz) => self.shim_hz_ui = hz,
+        Message::ShimHzChanged(hz) => {
+            self.shim_hz_ui = hz;
+            self.shim_hz_new = hz;
+        }
         Message::SetShimHz => {
-            println!("Set HZ: {}", self.shim_hz_ui);
-            self.shim_hz_new = self.shim_hz_ui;
-//             self.anim.set_from_to(self.shim_hz_cur as f32, self.shim_hz_new as f32);
+            values.set_target_speed(self.shim_hz_new);
         },
         Message::ToggleKlapan(enb) => {
             self.klapan_enb = enb;
         },
-        Message::AnimationPos(super::animations::Progress::Value(value)) => {
+        Message::AnimationPos(value) => {
             self.shim_hz_ui = value as i32;
-            self.shim_hz_cur = self.shim_hz_ui;
-//             dbg!(value);
-            self.device.set_value(self.shim_hz_cur);
-        },
-        Message::AnimationPos(super::animations::Progress::Finished) => {
-//            self.anim.stop();
         },
         _ => {},
         }

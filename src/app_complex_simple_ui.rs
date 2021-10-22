@@ -20,6 +20,7 @@ pub struct App {
     ui: UI,
     has_exit: bool,
     logic: meln_logic::init::Complect,
+    meln: meln_logic::Meln,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -56,7 +57,7 @@ pub enum Message {
     InfoPane(ui::info_pane::Message),
     
     MessageUpdate(MessageMudbusUpdate),
-    
+    MelnMessage(MelnMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -69,6 +70,12 @@ pub enum MessageMudbusUpdate {
     LogUpdate,
 }
 
+#[derive(Debug, Clone)]
+pub enum MelnMessage {
+    IsStartedChanged(bool),
+    NextStep(meln_logic::watcher::MelnStep),
+}
+
 impl Application for App {
     type Executor = executor::Default;
     type Flags = ();
@@ -76,33 +83,39 @@ impl Application for App {
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         let logic = meln_logic::init::Complect::new();
+        let meln = meln_logic::Meln::new(logic.get_values());
+        let meln_fut = meln.clone();
 
-        let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
-        let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);
-        
         (App {
             ui: Default::default(),
             has_exit: false,
             txt_status: "".into(),
 
             dvij_is_started: false,
-            low: HalfComplect::new(HalfPart::Low, values_1, logic.invertor_1.clone()),
-            top: HalfComplect::new(HalfPart::Top, values_2, logic.invertor_2.clone()),
-            klapans: ui::Klapans::new(logic.digit_o.device().values_map()
-                + logic.digit_i.device().values_map()
-                + logic.get_values().get_values_by_name_starts(&["Давление воздуха компрессора"])
-                //.get_values_by_name_starts(&["Клапан 24В", "Клапан 2", "Насос"])
-//                 .clone()
-                ),
-            dozator: ui::Dozator::new(logic.dozator.clone()),
-            oil_station: ui::OilStation::new(logic.get_values().clone()),
+            low: HalfComplect::new(&meln.values.half_bottom),
+            top: HalfComplect::new(&meln.values.half_top),
+            klapans: ui::Klapans::new(),
+            dozator: ui::Dozator::new(),
+            oil_station: ui::OilStation::new_by_meln(&meln.values),
             info_pane: ui::InfoPane::new(),
         
             logic: logic,
+            meln: meln,
             log: log::Logger::open_csv(),
             log_values: Vec::new(),
         },
-        Command::perform(async{MessageMudbusUpdate::ModbusConnect}, Message::MessageUpdate))
+        
+            Command::batch(vec![
+                async{Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect)}.into(),
+                async move {
+                    tokio::join!(
+                        meln_fut.automation(), 
+                        meln_fut.automation_mut()
+                    );
+                    Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsyncAnswer)
+                }.into()
+            ])
+        )
     }
     
     fn title(&self) -> String {
@@ -117,6 +130,9 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.6}
 
     fn subscription(&self) -> Subscription<Self::Message> {
+        use ui::animations::PropertyAnimation;
+        let props = &self.meln.properties;
+        
         let interval_update = if self.is_worked() {100} else {1000};
         let interval_log = if self.is_worked() {100} else {10000};
         Subscription::batch(vec![
@@ -133,36 +149,47 @@ impl Application for App {
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
             ]).map(Message::MessageUpdate),
-            self.dozator.subscription().map(Message::DozatorUI),
+            
+            Subscription::from_recipe(
+                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
+            ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
+            Subscription::from_recipe(
+                PropertyAnimation::new("Steps", props.step.subscribe())
+            ).map(|step| Message::MelnMessage(MelnMessage::NextStep(step))),
+            
+            self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
+            self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
         ])
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
-    
+        let meln = &self.meln.values;
         match message {
         Message::ButtonExit => self.has_exit = true,
         Message::EmergencyStop => {
-            self.top.invertor.stop();
-            self.low.invertor.stop();
+            self.meln.values.stop();
         },
-        Message::LowHalfComplectUI(m) => self.low.update(m),
-        Message::TopHalfComplectUI(m) => self.top.update(m),
+        Message::LowHalfComplectUI(m) => self.low.update(m, &meln.half_bottom),
+        Message::TopHalfComplectUI(m) => self.top.update(m, &meln.half_top),
         Message::DozatorUI(m) => {
-            let res = self.dozator.update(m, vec![self.logic.digit_o.device().clone()])
+            let res = self.dozator.update(m, &meln.material.dozator)
                 .map(Message::DozatorUI);
             self.logic.update_new_values();
             return res;
         },
         Message::OilStation(m) => {
-            self.oil_station.update(m);
+            self.oil_station.update(m, &meln.oil);
             self.logic.update_new_values();
         },
         Message::KlapansUI(m) => {
-            self.klapans.update(m);
+            self.klapans.update_material(m.clone(), &meln.material);
+            self.klapans.update_vacuum(m.clone(), &meln.vacuum);
+            self.klapans.update(m, &meln.klapans);
             self.logic.update_new_values();
         }
         Message::InfoPane(m) => self.info_pane.update(m),
         Message::MessageUpdate(m) => return self.modbus_update(m),
+        Message::MelnMessage(m) => self.meln_update(m),
         }
         Command::none()
     }
@@ -209,7 +236,7 @@ impl Application for App {
                 .style(ui::style::Button::Exit));
 //         col.into()
 
-        let txt_status = Text::new(format!("Status: {}", self.txt_status));
+        let txt_status = Text::new(format!("Step: {}", self.txt_status));
         let row_exit = Row::new()
             .push(txt_status)
             .push(Space::with_width(Length::Fill))
@@ -240,9 +267,10 @@ impl App {
                 self.logic.update();
 
                 self.proccess_values();
-                self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
+                self.meln.properties.update_property(&self.meln.values);
+                
                 let device_futures = self.logic.update_async(UpdateReq::ReadOnly);
 
                 return Command::batch(device_futures.into_iter()
@@ -261,7 +289,7 @@ impl App {
             MessageMudbusUpdate::ModbusConnect => {
                 println!("MessageMudbusUpdate::ModbusConnect ");
 //                 self.save_invertor();
-                let mut device_futures = self.logic.reconnect_devices();
+                let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res)))
@@ -288,45 +316,34 @@ impl App {
     //             dbg!(&d);
                 if res.is_ok() {
     //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
-                    if !d.is_connect() {
-    //                     println!("\tis not connect");
-                    } else {
-//                         self.proccess_values();
-//                         self.proccess_speed();
-                    }
-                    if d.name() == "4) МУ210-410" {
-                        self.klapans.update_klapans();
-                    }
+                    self.meln.properties.update_property(&self.meln.values);
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
             MessageMudbusUpdate::LogUpdate => {
                 self.proccess_values();
-                match self.get_proc_speed() {
-                Some(half_complect::SpeedChange::Up) => {
-                    self.oil_station.oil_station(true);
-                    self.logic.update_new_values();
-                },
-                Some(half_complect::SpeedChange::Down) => {
-                    self.oil_station.oil_station(false);
-                    self.klapans.davl_dis();
-                    self.logic.update_new_values();
-                },_ => {},
-                }
-                self.proccess_speed();
             },
         }
         Command::none()
     }
     
-    fn is_started(&self) -> bool {
-        self.low.is_started() | self.top.is_started()
+    fn meln_update(&mut self, message: MelnMessage) {
+        use MelnMessage::*;
+        match message {
+        IsStartedChanged(is_started) => {
+            self.dvij_is_started = is_started;
+            if is_started {
+                self.reset_values();
+            } else {
+                self.log_save();
+            }
+        }
+        NextStep(step) => {
+            self.txt_status = format!("{:?}",step);
+        }
+        }
     }
-    fn is_worked(&self) -> bool {
-        self.low.is_started() | self.top.is_started()
-        | self.logic.get_bit("Двигатель маслостанции М4").unwrap()
-    }
-
+    
     fn proccess_values(&mut self) {
         use std::convert::TryFrom;
         let values = self.logic.get_values();
@@ -344,36 +361,9 @@ impl App {
         let warn = values.iter().map(|(_,v)| v)
             .map(|v| v.is_error())
             .any(|err| err);
-        self.txt_status = if warn {"Ошибка значений"} else {""}.into();
+//         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
     
-    fn get_proc_speed(&self) -> Option<half_complect::SpeedChange> {
-        let changed_low = self.low.get_proc_speed();
-        changed_low
-    }
-    fn proccess_speed(&mut self)  {
-        use half_complect::SpeedChange::*;
-        let is_started_1 = self.is_started();
-        let changed_low = self.low.proccess_speed();
-        match changed_low {
-        Some(Up) => {
-            self.dvij_is_started = true;
-            self.reset_values();
-        }
-        Some(Down) => {
-            self.dvij_is_started = false;
-            self.log_save();
-        },_ => {},
-        };
-//         let changed_top = self.top.proccess_speed();
-//         let is_started_2 = self.is_started();
-//         let _change = changed_low.or(changed_top);
-//         match (is_started_1, is_started_2) {
-//         (false, true) => self.reset_values(),
-//         (true, false) => self.log_save(),
-//         _ => {}
-//         };
-    }
     fn log_save(&mut self) {
         if self.log_values.len() > 0 {
             self.log.new_session(&self.log_values);
@@ -433,22 +423,24 @@ impl App {
     fn reset_values(&mut self) {
         self.log_values = Vec::new();
     }
+    fn is_started(&self) -> bool {
+        self.meln.properties.is_started.get()
+    }
+    fn is_worked(&self) -> bool {
+        self.meln.properties.is_worked.get()
+    }
 }
 
-use half_complect::{HalfComplect, HalfPart};
+use half_complect::{HalfComplect};
 mod half_complect {
     use super::*;
+    pub use meln_logic::values::HalfPart;
     
     pub struct HalfComplect {
         pub invertor: ui::Invertor,
-        values: ModbusValues,
         
         values_list: Vec<ui::ValuesList>,
         part: HalfPart,
-    }
-    pub enum HalfPart {
-        Top, // Верхняя часть
-        Low, // Нижняя часть
     }
 
     #[derive(Default)]
@@ -461,63 +453,41 @@ mod half_complect {
         InvertorUI(ui::invertor::Message),
         UpdateValues,
     }
-    
-    pub enum SpeedChange {
-        Up, 
-        Down,
-    }
 
     impl HalfComplect {
-//         pub fn new_by_name(values: ModbusValues
-        pub fn new(part: HalfPart, values: ModbusValues, invertor: modbus::Invertor) -> Self {
-//             dbg!(values.keys());
-            let values: HashMap<_,_> = values.iter()
-                .filter(|(k,_)| k.matches("/").count()<=1)
-                .map(|(k,v)| (k.clone(), v.clone()))
-                .collect();
-            let mut values = ModbusValues::from(values);
-            let inv_values = invertor.device().values_map()
-                .get_values_by_name_contains(&["Выходной ток (A)","Скорость двигателя",]);
-            values.extend(inv_values.into_iter());
-//             dbg!(values.get_values_by_name_ends(&["value", "bit"]).keys());
-            
+        pub fn new(values: &meln_logic::values::HalfMeln) -> Self {
+
             HalfComplect {
-                invertor: ui::Invertor::new(invertor),
+                invertor: ui::Invertor::new(),
                 
-                values_list: ui::make_value_lists_start(&values,
-                match part {
-                HalfPart::Low => map!{BTreeMap,
-                        "Температуры" => [
-                            "Температура статора",
-                            "Температура ротора Пирометр",
-                            "Температура масла на верхн. выходе дв. М1",
-                            "Температура масла на нижн. выходе дв. М1",
-                            "Виброскорость",
-                            "Выходной ток (A)",
-                            "Скорость двигателя",
-                        ]
-                    },
-                HalfPart::Top => map!{BTreeMap,
-                        "Температуры" => [
-                            "Температура статора",
-                            "Температура ротора Пирометр",
-                            "Температура верх подшипника дв. М2",
-                            "Температура нижн подшипника дв. М2",
-                            "Виброскорость",
-                            "Выходной ток (A)",
-                            "Скорость двигателя",
-                        ]
+                values_list: vec![
+                    ui::ValuesList {
+                        name: "Температуры".into(),
+                        values: vec![
+                            values.motor.температура_статора.clone(),
+                            values.motor.температура_ротора.clone(),
+                            
+                            // "Температура масла на верхн. выходе дв. М1",
+                            // "Температура верх подшипника дв. М2",
+                            values.температура_верх.clone(),
+                            // "Температура масла на нижн. выходе дв. М1",
+                            // "Температура нижн подшипника дв. М2",
+                            values.температура_нижн.clone(),
+                            
+                            values.vibro.clone(),
+                            values.invertor.get_amper_out_value().into(),
+                            values.invertor.get_speed_out_value().into(),
+                        ],
                     }
-                }
-                ),
-                values: values,
-                part: part,
+                ],
+                
+                part: values.get_part(),
             }
         }
         
-        pub fn update(&mut self, message: Message) {
+        pub fn update(&mut self, message: Message, values: &meln_logic::values::HalfMeln) {
             match message {
-            Message::InvertorUI(m) => self.invertor.update(m),
+            Message::InvertorUI(m) => self.invertor.update(m, &values.invertor),
             Message::UpdateValues => {},
             }
         }
@@ -539,51 +509,6 @@ mod half_complect {
             };
             column = column.width(Length::Fill);
             column.into()
-        }
-    }
-    
-    impl HalfComplect {
-        pub fn has_speed(&self) -> bool {
-            use std::convert::TryFrom;
-            let speed_value = self.invertor.get_hz_out_value();
-            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-            speed_value > 5.0
-        }
-        
-        pub fn is_started(&self) -> bool {
-            self.invertor.is_started
-        }
-//         pub fn has_vibra(&self) -> bool {
-//         
-//         }
-        
-        pub fn get_proc_speed(&self) -> Option<half_complect::SpeedChange> {
-            use std::convert::TryFrom;
-            let speed_value = self.invertor.get_hz_out_value();
-            let speed_value = f32::try_from(speed_value.as_ref()).unwrap();
-
-            let vibra_value = self.values.get_value_arc_starts("Виброскорость").unwrap();
-            let vibra_value = f32::try_from(&vibra_value as &modbus::Value).unwrap();
-            let tok_value = self.values.get_value_arc("Выходной ток (A)").unwrap(); // "Выходной ток (A)"
-            let tok_value = f32::try_from(&tok_value as &modbus::Value).unwrap();
-
-            if self.invertor.is_started == false && (speed_value > 1.0 || tok_value > 1.0) {
-                return Some(SpeedChange::Up);
-            } else if self.invertor.is_started == true
-                    && (speed_value < 2.0 && vibra_value<0.2 && tok_value < 2.0) {
-                return Some(SpeedChange::Down);
-            };
-            return None;
-        }
-
-        pub fn proccess_speed(&mut self) -> Option<SpeedChange> {
-            let change = self.get_proc_speed();
-            match change {
-            Some(SpeedChange::Up) => self.invertor.is_started = true,
-            Some(SpeedChange::Down) => self.invertor.is_started = false,
-            _ => {}
-            }
-            change
         }
     }
 }

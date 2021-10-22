@@ -300,15 +300,10 @@ impl ValueArc {
         }
     }
     pub fn sensor_name(&self) -> Option<&str> {
-        let mut parts = self.0.rsplit("/");
-        parts.skip(1).next()
+        ModbusValues::sensor_name(&self.0)
     }
     pub fn device_name(&self) -> Option<&str> {
-        let mut parts = self.0.rsplit("/");
-        let name_end = parts.skip(2).next()?;
-        let pos_end = name_end.as_ptr() as usize - self.0.as_ptr() as usize 
-            + name_end.len();
-        Some(&self.0[..pos_end])
+        ModbusValues::device_name(&self.0)
     }
     pub fn value_clone(&self) -> Arc<Value> {
         self.1.clone()
@@ -380,6 +375,13 @@ impl ModbusValues {
             }).map(|(k,v)|(k.clone(), v.clone())).collect()
         )
     }
+    pub fn get_values_by_name_start(&self, name: &str) -> ModbusValues {
+        ModbusValues (
+            self.0.iter().filter_map(|(k, v)|
+                Some((k.strip_prefix(name)?.to_owned(), v.clone()))
+            ).collect()
+        )
+    }
     pub fn get_values_by_name_ends(&self, names: &[&str]) -> ModbusValues {
         ModbusValues (
             self.0.iter().filter(|(k, v)| {
@@ -395,6 +397,44 @@ impl ModbusValues {
         )
     }
 
+    pub fn value_name(name: &str) -> Option<&str> {
+        let mut parts = name.rsplit("/");
+        parts.next()
+    }
+    pub fn sensor_name(name: &str) -> Option<&str> {
+        let mut parts = name.rsplit("/");
+        parts.skip(1).next()
+    }
+    pub fn sensor_full_name(name: &str) -> Option<&str> {
+        let mut parts = name.rsplit("/");
+        let sensor_name = parts.skip(1).next()?;
+        let pos_start = sensor_name.as_ptr() as usize - name.as_ptr() as usize ;
+        Some(&name[pos_start..])
+    }
+    pub fn device_name(name: &str) -> Option<&str> {
+        let mut parts = name.rsplit("/");
+        let name_end = parts.skip(2).next()?;
+        let pos_end = name_end.as_ptr() as usize - name.as_ptr() as usize 
+            + name_end.len();
+        Some(&name[..pos_end])
+    }
+    
+    pub fn convert_to_values(self) -> Self {
+        let map = self.0.into_iter()
+            .filter_map(|(k, v)| Some((
+                Self::value_name(&k)?.to_owned(), v
+            )) )
+            .collect();
+        Self(map)
+    }
+    pub fn convert_to_sensor(self) -> Self {
+        let map = self.0.into_iter()
+            .filter_map(|(k, v)| Some((
+                Self::sensor_full_name(&k)?.to_owned(), v
+            )) )
+            .collect();
+        Self(map)
+    }
     pub fn print_values(&self) -> String {
         use std::collections::BTreeMap;
         let b: BTreeMap<_,_> = self.0.iter().map(|(k, v)| (k.clone(), (v.address(), v.value()))).collect();

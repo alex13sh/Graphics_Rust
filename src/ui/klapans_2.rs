@@ -23,17 +23,17 @@ struct MyButton {
 pub struct Klapans {
     klapans: Vec<MyKlapan>,
     buttons: Vec<MyButton>,
-    values: modbus::ModbusValues,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     ToggleKlapan(String, bool),
+    ToggledKlapan(String, bool),
     PressButton(String),
 }
 
 impl Klapans {
-    pub fn new(values: modbus::ModbusValues) -> Self {
+    pub fn new() -> Self {
         let klapan_names = [
             ("ШК1", "Клапан нижнего контейнера"), // ШК1
             ("ШК3", "Клапан верхнего контейнера"), // ШК5
@@ -62,60 +62,78 @@ impl Klapans {
                     enb: false,
                     state: Default::default()
                 }).collect(),
-            values: values,
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn subscription(&self, props: &meln_logic::watcher::Klapans) -> iced::Subscription<Message> {
+        use super::animations::BroadcastAnimation;
+        iced::Subscription::from_recipe(
+            BroadcastAnimation {
+                name: "Клапана".into(), 
+                sub: props.klapans_шк_send.subscribe()
+            }
+        ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
+    }
+    
+    pub fn update_vacuum(&mut self, message: Message, values: &meln_logic::values::VacuumStation) {
         match message {
-        Message::ToggleKlapan(name, enb) => {
-//             self.klapans.iter_mut().find(|s| s.name==name).unwrap().enb = enb;
-//             self.values.set_bit(&name, enb).unwrap();
-            self.set_klapan(name.as_str(), enb);
-        }
         Message::PressButton(name) => {
             let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
             match (name.as_str(), pb.enb) {
             ("Уменьшить давление", false) => {
                 pb.enb = true;
-                self.davl_down();
-            }, ("Уменьшить давление", true) => {
-                pb.enb = false;
-//                 pb.0 = "Увеличить давление".into();
-                self.davl_dis();
-
+                values.davl_down();
             }, ("Увеличить давление", false) => {
                 pb.enb = true;
-
-                self.davl_up();
-            }, ("Увеличить давление", true) => {
+                values.davl_up();
+            }, ("Увеличить давление" | "Уменьшить давление", true) => {
                 pb.enb = false;
-//                 pb.0 = "Уменьшить давление".into();
-
-                self.davl_dis();
+                values.davl_dis();
             },
+            _ => {}
+            }
+        }
+        _ => {}
+        }
+    }
+    
+    pub fn update_material(&mut self, message: Message, values: &meln_logic::values::Material) {
+        match message {
+        Message::PressButton(name) => {
+            let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
+            match (name.as_str(), pb.enb) {
             ("ШК в рабочее положение", _) => {
                 pb.enb = !pb.enb;
-                let enb = pb.enb;
-                self.set_klapan("Клапан нижнего контейнера", enb); // ШК1
-                self.set_klapan("Клапан верхнего контейнера", enb); // ШК5
-//                 self.set_klapan("Клапан подачи материала", enb); // ШК2
-                self.set_klapan("Клапан помольной камеры", enb); // ШК3
+                values.ШК_в_рабочее_положение(pb.enb);
             },
+            _ => {}
+            }
+        }
+        _ => {}
+        }
+    }
+    
+    pub fn update(&mut self, message: Message, values: &meln_logic::values::Klapans) {
+        match message {
+        Message::ToggleKlapan(name, enb) => {
+            values.klapan_turn(name.as_str(), enb);
+        }
+        Message::ToggledKlapan(name, enb) => {
+            if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
+                v.enb = enb;
+            }
+        }
+        Message::PressButton(name) => {
+            let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
+            match (name.as_str(), pb.enb) {
             ("Двигатель компрессора воздуха", _) => {
                 pb.enb = !pb.enb;
-                let enb = pb.enb;
-                self.set_klapan("Двигатель компрессора воздуха", enb);
+                // values.двигатель_компрессора_воздуха_turn(pb.enb);
             },
-            _ => {}}
-//             match name {
-//             "Двигатель насоса вакуума" => {
-//                 self.values.set_bit("Двигатель насоса вакуума 1", enb).unwrap();
-//                 self.values.set_bit("Двигатель насоса вакуума 2", enb).unwrap();
-//             },
-//             _ => {}
-//             }
+            _ => {}
+            }
         }
+        _ => {}
         }
     }
 
@@ -138,69 +156,5 @@ impl Klapans {
             .push(controls_buttons)
             .push(controls_klapan)
             .into()
-    }
-}
-
-impl Klapans {
-    pub fn update_klapans(&mut self) {
-//         dbg!("update klapans");
-        for k in self.klapans.iter_mut() {
-//             dbg!(&k.shk);
-//             if let Ok(enb) = self.values.get_bit(&format!("Клапан {} открыт", k.shk)) {
-            if let Ok(enb) = self.values.get_bit(&k.name) {
-                k.enb = enb;
-//                 dbg!(enb);
-            }
-        }
-    }
-
-    fn set_klapan(&mut self, name: &str, enb: bool) {
-        pub use std::convert::TryFrom;
-        if self.values.get_value_arc("Давление воздуха компрессора")
-            .map(|v| v.is_error()).unwrap_or(true)
-        {
-            return;
-        }
-
-        // Если давление воздуха меньше 4, то клапана открываться не будут.
-        if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
-            v.enb = enb;
-        }
-        if let Err(e) = self.values.set_bit(name, enb) {
-            dbg!(e);
-        }
-    }
-
-    fn set_button(&mut self, name: &str, enb: bool) {
-        if let Some(v) = self.buttons.iter_mut().find(|s| s.name==name) {
-            v.enb = enb;
-        }
-    }
-
-    fn davl_down(&mut self) {
-        self.values.set_bit("Двигатель насоса вакуума 1", true).unwrap();
-        self.values.set_bit("Двигатель насоса вакуума 2", true).unwrap();
-
-        self.set_klapan("Клапан насоса М5", true);
-
-//         self.set_button("Уменьшить давление", true);
-    }
-    pub fn davl_dis(&mut self) {
-        self.values.set_bit("Клапан насоса М5", false).unwrap();
-        self.values.set_bit("Двигатель насоса вакуума 1", false).unwrap();
-        self.values.set_bit("Двигатель насоса вакуума 2", false).unwrap();
-
-        self.set_klapan("Клапан напуска", false);
-        self.set_button("Уменьшить давление", false);
-        self.set_button("Увеличить давление", false);
-    }
-    fn davl_up(&mut self) {
-        self.davl_dis();
-
-        self.set_klapan("Клапан напуска", true);
-    }
-
-    pub fn oil_station(&self, enb: bool) {
-
     }
 }

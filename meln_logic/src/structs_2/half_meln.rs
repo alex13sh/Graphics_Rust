@@ -8,6 +8,8 @@ pub struct HalfMeln {
     pub motor: Motor,
     pub vibro: ValueArc,
     part: HalfPartInner,
+    pub температура_верх: ValueArc,
+    pub температура_нижн: ValueArc,
 }
 
 enum HalfPartInner {
@@ -34,54 +36,64 @@ impl From<&HalfPartInner> for HalfPart {
 
 impl HalfMeln {
     pub fn low(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_ends(&["М1"]) 
-            + values.get_values_by_name_starts(&["5) Invertor"]);
+        let values = values.get_values_by_name_contains(&["М1/"]).convert_to_sensor()
+            + values.get_values_by_name_start("5) Invertor/");
         let температура_масла = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc("Виброскорость").unwrap(),
+            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
             part: HalfPartInner::Low{
                 температура_масла_values: values.get_values_by_name_contains(&температура_масла)
             },
+            температура_верх: values.get_value_arc(температура_масла[0]).unwrap(),
+            температура_нижн: values.get_value_arc(температура_масла[1]).unwrap(),
             values: values,
         }
     }
     pub fn top(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_ends(&["М2"]) 
-            + values.get_values_by_name_starts(&["6) Invertor"]);
-        // values.get_values_by_name_contains(
+        let values = values.get_values_by_name_contains(&["М2/"]).convert_to_sensor()
+            + values.get_values_by_name_start("6) Invertor/");
         let температура_подшибника = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc("Виброскорость").unwrap(),
+            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
             part: HalfPartInner::Top{
                 температура_подшибника_values: values.get_values_by_name_contains(&температура_подшибника)
             },
+            температура_верх: values.get_value_arc(температура_подшибника[0]).unwrap(),
+            температура_нижн: values.get_value_arc(температура_подшибника[1]).unwrap(),
             values: values,
         }
     }
     pub fn get_part(&self) -> HalfPart {
         HalfPart::from(&self.part)
     }
+    
+    pub fn stop(&self) {
+        self.invertor.stop();
+    }
 }
 
 pub type Invertor = modbus::InvertorValues;
 
 pub struct Motor {
-    speed: ValueArc,
+//     speed: ValueArc,
     // speed_changed: Signal<SpeedChange>,
     
-    // "Температура статора",
-    // "Температура ротора Пирометр",
+    pub температура_статора: ValueArc, // "Температура статора",
+    pub температура_ротора: ValueArc, // "Температура ротора Пирометр",
+    
     температуры_values: ModbusValues, // Значения температур
 }
 
 impl From<&ModbusValues> for Motor {
     fn from(values: &ModbusValues) -> Self {
         Motor {
-            speed: values.get_value_arc("Скорость двигателя").unwrap(),
+//             speed: values.get_value_arc("Скорость двигателя").unwrap(),
+            температура_статора: values.get_value_arc_starts("Температура статора").unwrap(),
+            температура_ротора: values.get_value_arc_starts("Температура ротора Пирометр").unwrap(),
             температуры_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
         }
     }
@@ -96,8 +108,17 @@ pub enum SpeedChange {
     Stop, // Остановка
 }
 
+impl Default for SpeedChange {
+    fn default() -> Self {
+        SpeedChange::Stop
+    }
+}
+
 pub mod watcher {
-    use crate::Property;
+//     #[macro_use]
+    use crate::structs::{Property, changed_any};
+    
+    #[derive(Default)]
     pub struct HalfMeln {
         pub invertor: Invertor,
         pub motor: Motor,
@@ -113,8 +134,9 @@ pub mod watcher {
         pub(crate) fn update_property(&self, values: &super::HalfMeln) {
             use modbus::{Value, TryFrom};
             self.invertor.update_property(&values.invertor);
-            let vibro: f32 = f32::try_from(&values.vibro as &Value).unwrap(); // todo: Необходимо обработать ошибку
-            self.vibro.set(vibro);
+            if let Ok(vibro) = f32::try_from(&values.vibro as &Value) { // todo: Необходимо обработать ошибку
+                self.vibro.set(vibro);
+            }
         }
         
         pub(crate) async fn automation(&self) {
@@ -122,7 +144,7 @@ pub mod watcher {
             let mut hz = self.invertor.hz.subscribe();
             let mut amper = self.invertor.amper.subscribe();
             loop {
-                crate::changed_any!(vibro, hz, amper);
+                changed_any!(vibro, hz, amper);
                 {
                     let vibro = *vibro.borrow();
                     let hz = *hz.borrow();
@@ -141,6 +163,7 @@ pub mod watcher {
         }
     }
     
+    #[derive(Default)]
     pub struct Invertor {
         pub hz: Property<u32>,
         pub speed: Property<u32>,
@@ -158,6 +181,7 @@ pub mod watcher {
         }
     }
     
+    #[derive(Default)]
     pub struct Motor {
         pub speed: Property<u32>,
         

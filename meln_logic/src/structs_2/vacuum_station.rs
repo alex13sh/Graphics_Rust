@@ -3,7 +3,7 @@
 use modbus::{ValueArc, ModbusValues};
 
 pub struct VacuumStation {
-    vacuum: ValueArc,
+    pub vacuum: ValueArc,
     
     motor_1: ValueArc,
     motor_2: ValueArc,
@@ -50,7 +50,9 @@ impl VacuumStation {
 }
 
 pub mod watcher {
-    use crate::Property;
+    use crate::structs::Property;
+    
+    #[derive(Default)]
     pub struct VacuumStation {
         pub vacuum: Property<f32>,
         

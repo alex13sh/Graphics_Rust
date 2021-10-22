@@ -53,7 +53,7 @@ impl Complect {
         let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12)));
         let owen_mkon = Arc::new(Device::from(init::make_mkon("192.168.1.13", 1)));
 
-        let values = Self::init_values(&mut [&invertor_1.device(), &invertor_1.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
+        let values = Self::init_values(&mut [&invertor_1.device(), &invertor_2.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
         let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/", "Направление вращения двигателя ШД/"]);
         Complect {
             values: values,

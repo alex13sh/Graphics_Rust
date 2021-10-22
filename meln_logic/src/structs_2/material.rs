@@ -23,11 +23,20 @@ impl From<&ModbusValues> for Material {
     }
 }
 
+impl Material {
+    pub fn ШК_в_рабочее_положение(&self, enb: bool) {
+        self.клапан_нижнего_контейнера.set_bit(enb);
+        self.клапан_верхнего_контейнера.set_bit(enb);
+        //self.set_klapan("Клапан подачи материала", enb); // ШК2
+        self.клапан_помольной_камеры.set_bit(enb);
+    }
+}
+
 pub mod watcher {
-    use crate::Property;
-    use super::super::*;
+    use crate::structs::*;
     use dozator::watcher::Dozator;
     
+    #[derive(Default)]
     pub struct Material {
         pub dozator: Dozator,
     

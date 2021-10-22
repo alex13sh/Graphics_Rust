@@ -58,7 +58,7 @@ pub mod values {
 
 pub mod watcher {
     use super::*;
-    pub use meln::watcher::Meln;
+    pub use meln::watcher::{Meln, MelnStep};
     pub use half_meln::watcher::HalfMeln;
     pub use dozator::watcher::Dozator;
     pub use oil_station::watcher::OilStation;

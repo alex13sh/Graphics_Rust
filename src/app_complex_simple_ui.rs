@@ -73,7 +73,7 @@ pub enum MessageMudbusUpdate {
 #[derive(Debug, Clone)]
 pub enum MelnMessage {
     IsStartedChanged(bool),
-    
+    NextStep(meln_logic::watcher::MelnStep),
 }
 
 impl Application for App {
@@ -153,6 +153,10 @@ impl Application for App {
             Subscription::from_recipe(
                 PropertyAnimation::new("IsStarted", props.is_started.subscribe())
             ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
+            Subscription::from_recipe(
+                PropertyAnimation::new("Steps", props.step.subscribe())
+            ).map(|step| Message::MelnMessage(MelnMessage::NextStep(step))),
+            
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
         ])
@@ -232,7 +236,7 @@ impl Application for App {
                 .style(ui::style::Button::Exit));
 //         col.into()
 
-        let txt_status = Text::new(format!("Status: {}", self.txt_status));
+        let txt_status = Text::new(format!("Step: {}", self.txt_status));
         let row_exit = Row::new()
             .push(txt_status)
             .push(Space::with_width(Length::Fill))
@@ -334,6 +338,9 @@ impl App {
                 self.log_save();
             }
         }
+        NextStep(step) => {
+            self.txt_status = format!("{:?}",step);
+        }
         }
     }
     
@@ -354,7 +361,7 @@ impl App {
         let warn = values.iter().map(|(_,v)| v)
             .map(|v| v.is_error())
             .any(|err| err);
-        self.txt_status = if warn {"Ошибка значений"} else {""}.into();
+//         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
     
     fn log_save(&mut self) {

@@ -98,6 +98,7 @@ pub mod watcher {
                 }
             };
             let f_step = async {
+                self.step.send(self.step.get());
                 loop {
                     let next_step = self.step.get()
                         .check_next_step(self).await;

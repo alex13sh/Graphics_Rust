@@ -15,12 +15,10 @@ pub struct OilStation {
 #[derive(Default)]
 struct UI {
     pb_start_stop: button::State,
-
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-//     StartStop(bool),
     StartStopToggle,
 }
 
@@ -68,10 +66,8 @@ impl OilStation {
 
     pub fn update(&mut self, message: Message, values: &meln_logic::values::OilStation) {
         match message {
-//         Message::StartStop(enb) => self.is_started = enb;
         Message::StartStopToggle => {
             self.is_started = !self.is_started;
-//             dbg!(self.is_started);
             values.motor_turn(self.is_started);
         },
         }

@@ -86,9 +86,6 @@ impl Application for App {
         let meln = meln_logic::Meln::new(logic.get_values());
         let meln_fut = meln.clone();
 
-        let values_1 = logic.get_values().get_values_by_name_contains(&["М1"]);
-        let values_2 = logic.get_values().get_values_by_name_contains(&["М2"]);
-        
         (App {
             ui: Default::default(),
             has_exit: false,
@@ -154,7 +151,7 @@ impl Application for App {
             ]).map(Message::MessageUpdate),
             
             Subscription::from_recipe(
-                PropertyAnimation::new("ШИМ", props.is_started.subscribe())
+                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
             ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),

@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 pub struct Dozator {
     ui: UI,
-    shim_hz_ui: i32, shim_hz_cur: i32, shim_hz_new: i32,
+    shim_hz_ui: i32, shim_hz_new: i32,
     klapan_enb: bool,
     
 }
@@ -35,7 +35,7 @@ impl Dozator {
     pub fn new() -> Self {
         Dozator {
             ui: UI::default(),
-            shim_hz_ui: 0, shim_hz_cur: 0, shim_hz_new: 0,
+            shim_hz_ui: 0, shim_hz_new: 0,
             klapan_enb: false,
         }
     }
@@ -54,7 +54,6 @@ impl Dozator {
             self.shim_hz_new = hz;
         }
         Message::SetShimHz => {
-            println!("Set HZ: {}", self.shim_hz_ui);
             values.set_target_speed(self.shim_hz_new);
         },
         Message::ToggleKlapan(enb) => {

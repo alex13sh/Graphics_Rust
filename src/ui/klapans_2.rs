@@ -70,7 +70,7 @@ impl Klapans {
         iced::Subscription::from_recipe(
             BroadcastAnimation {
                 name: "Клапана".into(), 
-                sub: props.klapans_send.subscribe()
+                sub: props.klapans_шк_send.subscribe()
             }
         ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
     }
@@ -83,14 +83,10 @@ impl Klapans {
             ("Уменьшить давление", false) => {
                 pb.enb = true;
                 values.davl_down();
-            }, ("Уменьшить давление", true) => {
-                pb.enb = false;
-                values.davl_dis();
-
             }, ("Увеличить давление", false) => {
                 pb.enb = true;
                 values.davl_up();
-            }, ("Увеличить давление", true) => {
+            }, ("Увеличить давление" | "Уменьшить давление", true) => {
                 pb.enb = false;
                 values.davl_dis();
             },
@@ -161,13 +157,4 @@ impl Klapans {
             .push(controls_klapan)
             .into()
     }
-}
-
-impl Klapans {
-    fn set_button(&mut self, name: &str, enb: bool) {
-        if let Some(v) = self.buttons.iter_mut().find(|s| s.name==name) {
-            v.enb = enb;
-        }
-    }
-
 }

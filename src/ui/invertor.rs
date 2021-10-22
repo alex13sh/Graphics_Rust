@@ -41,8 +41,6 @@ impl Invertor {
         Message::ToggleStart(start) => {
             self.is_started = start;
             self.ui.start = Default::default();
-            // Invertor SetSpeed
-            // Invertor Start | Stop
             if start {
                 values.start();
             } else {
@@ -51,7 +49,6 @@ impl Invertor {
         },
         Message::SpeedChanged(speed) => {
             self.speed = speed;
-//             dbg!((10*speed)/6);
             values.set_speed(100*speed/60);
         },
         Message::SetSpeed(speed) => {},

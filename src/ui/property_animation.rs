@@ -2,8 +2,8 @@ use iced_futures::*;
 use async_stream::stream;
 
 pub struct PropertyAnimation<T> {
-    name: String,
-    sub: meln_logic::watcher::Subscription<T>,
+    pub name: String,
+    pub sub: meln_logic::watcher::Subscription<T>,
 }
 
 impl <T> PropertyAnimation<T> {

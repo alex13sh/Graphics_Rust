@@ -8,7 +8,7 @@ pub struct Dozator {
     speed: ValueArc, // скоость ШИМа
     direct: ValueArc, 
     
-    target_speed: Mutex<Option<(/*speed:*/ i32, /*delta:*/ i32)>>,
+    target_speed: Mutex<Option<(/*speed:*/ i32, /*delta:*/ i32, /*step:*/ u32)>>,
 }
 
 impl Dozator {
@@ -30,15 +30,15 @@ impl Dozator {
         let mut target_speed = self.target_speed.lock().unwrap();
         let current_speed = self.speed();
         let dlt: i32 = (speed - current_speed) / Self::STEPS as i32;
-        
-        *target_speed = Some((speed, dlt));
+        *target_speed = Some((speed, dlt, Self::STEPS));
     }
     fn get_next_step(&self) -> Option<i32> {
         let mut target = self.target_speed.lock().unwrap();
-        if let Some((target_speed, delta)) = *target {
+        if let Some((target_speed, delta, ref mut step)) = target.as_mut() {
             let current_speed = self.speed();
-            if current_speed != target_speed {
-                return Some(delta);
+            if *step>0 {
+                *step -= 1;
+                return Some(*delta);
             }
         }
         *target = None;
@@ -53,7 +53,7 @@ impl Dozator {
         use tokio::time::{sleep, Duration};
         loop {
             self.next_step();
-            sleep(Duration::from_millis(1000 / super::Dozator::STEPS as u64)).await;
+            sleep(Duration::from_millis(5_000 / super::Dozator::STEPS as u64)).await;
         }
     }
 }

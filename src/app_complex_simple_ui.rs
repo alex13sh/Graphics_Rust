@@ -149,7 +149,7 @@ impl Application for App {
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
             ]).map(Message::MessageUpdate),
-            self.dozator.subscription().map(Message::DozatorUI),
+            self.dozator.subscription(&self.meln.properties.material.dozator).map(Message::DozatorUI),
             
             self.klapans.subscription(&self.meln.properties.klapans).map(Message::KlapansUI),
         ])

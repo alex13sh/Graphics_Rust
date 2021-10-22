@@ -28,7 +28,7 @@ pub enum Message {
     ShimHzChanged(i32),
     SetShimHz, SetShimHzFinished,
     ToggleKlapan(bool),
-    AnimationPos(super::animations::Progress),
+    AnimationPos(i32),
 }
 
 impl Dozator {
@@ -40,35 +40,28 @@ impl Dozator {
         }
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Message> {
-//         if self.shim_hz_cur != self.shim_hz_new {
-            iced::Subscription::from_recipe(
-                LinerAnimation::from_to(self.shim_hz_cur as f32, self.shim_hz_new as f32)
-                    .steps(20).duration(5_000)
-            ).map(Message::AnimationPos)
-//         } else {
-//             iced::Subscription::none()
-//         }
+    pub fn subscription(&self, props: &meln_logic::watcher::Dozator) -> iced::Subscription<Message> {
+        use super::animations::PropertyAnimation;
+        iced::Subscription::from_recipe(
+            PropertyAnimation::new("ШИМ", props.speed.subscribe())
+        ).map(Message::AnimationPos)
     }
 
     pub fn update(&mut self, message: Message, values: &meln_logic::values::Dozator)  -> Command<Message> {
         match message {
-        Message::ShimHzChanged(hz) => self.shim_hz_ui = hz,
+        Message::ShimHzChanged(hz) => {
+            self.shim_hz_ui = hz;
+            self.shim_hz_new = hz;
+        }
         Message::SetShimHz => {
             println!("Set HZ: {}", self.shim_hz_ui);
-            self.shim_hz_new = self.shim_hz_ui;
+            values.set_target_speed(self.shim_hz_new);
         },
         Message::ToggleKlapan(enb) => {
             self.klapan_enb = enb;
         },
-        Message::AnimationPos(super::animations::Progress::Value(value)) => {
+        Message::AnimationPos(value) => {
             self.shim_hz_ui = value as i32;
-            self.shim_hz_cur = self.shim_hz_ui;
-//             dbg!(value);
-            values.set_speed(self.shim_hz_cur);
-        },
-        Message::AnimationPos(super::animations::Progress::Finished) => {
-//            self.anim.stop();
         },
         _ => {},
         }

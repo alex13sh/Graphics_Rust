@@ -150,6 +150,8 @@ impl Application for App {
 
             ]).map(Message::MessageUpdate),
             self.dozator.subscription().map(Message::DozatorUI),
+            
+            self.klapans.subscription(&self.meln.properties.klapans).map(Message::KlapansUI),
         ])
     }
     
@@ -260,6 +262,8 @@ impl App {
                 self.proccess_values();
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
+                self.meln.properties.update_property(&self.meln.values);
+                
                 let device_futures = self.logic.update_async(UpdateReq::ReadOnly);
 
                 return Command::batch(device_futures.into_iter()
@@ -305,6 +309,7 @@ impl App {
     //             dbg!(&d);
                 if res.is_ok() {
     //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
+                    self.meln.properties.update_property(&self.meln.values);
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

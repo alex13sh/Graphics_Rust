@@ -28,6 +28,7 @@ pub struct Klapans {
 #[derive(Debug, Clone)]
 pub enum Message {
     ToggleKlapan(String, bool),
+    ToggledKlapan(String, bool),
     PressButton(String),
 }
 
@@ -64,6 +65,13 @@ impl Klapans {
         }
     }
 
+    pub fn subscription(&self, props: &meln_logic::watcher::Klapans) -> iced::Subscription<Message> {
+        use super::animations::PropertyAnimation;
+        iced::Subscription::from_recipe(
+            PropertyAnimation::new("Клапана", props.klapans_send.subscribe())
+        ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
+    }
+    
     pub fn update_vacuum(&mut self, message: Message, values: &meln_logic::values::VacuumStation) {
         match message {
         Message::PressButton(name) => {
@@ -110,6 +118,11 @@ impl Klapans {
         match message {
         Message::ToggleKlapan(name, enb) => {
             values.klapan_turn(name.as_str(), enb);
+        }
+        Message::ToggledKlapan(name, enb) => {
+            if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
+                v.enb = enb;
+            }
         }
         Message::PressButton(name) => {
             let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();

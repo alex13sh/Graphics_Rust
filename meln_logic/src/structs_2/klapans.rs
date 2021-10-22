@@ -64,18 +64,18 @@ pub mod watcher {
         }
         
         pub(crate) async fn automation(&self) {
-            loop {
-                let futs = self.klapans.iter()
-                    .map(|(name, prop)| {
-                        let mut sub = prop.subscribe();
-                        async move {
+            let futs = self.klapans.iter()
+                .map(|(name, prop)| {
+                    let mut sub = prop.subscribe();
+                    async move {
+                        loop {
                             sub.changed().await;
                             let klapan = sub.borrow();
                             self.klapans_send.send((name.to_owned(), *klapan));
                         }
-                    });
-                futures_util::future::join_all(futs);
-            }
+                    }
+                });
+            futures_util::future::join_all(futs).await;
         }
     }
     

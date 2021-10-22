@@ -133,6 +133,9 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.6}
 
     fn subscription(&self) -> Subscription<Self::Message> {
+        use ui::animations::PropertyAnimation;
+        let props = &self.meln.properties;
+        
         let interval_update = if self.is_worked() {100} else {1000};
         let interval_log = if self.is_worked() {100} else {10000};
         Subscription::batch(vec![
@@ -150,8 +153,11 @@ impl Application for App {
 
             ]).map(Message::MessageUpdate),
             
-            self.dozator.subscription(&self.meln.properties.material.dozator).map(Message::DozatorUI),
-            self.klapans.subscription(&self.meln.properties.klapans).map(Message::KlapansUI),
+            Subscription::from_recipe(
+                PropertyAnimation::new("ШИМ", props.is_started.subscribe())
+            ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
+            self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
+            self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
         ])
     }
     

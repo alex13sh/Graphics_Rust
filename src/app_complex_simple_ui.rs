@@ -33,7 +33,6 @@ pub struct App {
     oil_station: ui::OilStation,
     info_pane: ui::InfoPane,
     
-    log: log::Logger,
     log_values: Vec<log::LogValue>,
 }
 
@@ -105,7 +104,6 @@ impl Application for App {
         
             logic: logic,
             meln: meln,
-            log: log::Logger::open_csv(),
             log_values: Vec::new(),
         },
         

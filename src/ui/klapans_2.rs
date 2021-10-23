@@ -123,7 +123,6 @@ impl Klapans {
                 v.enb = enb;
             }
         }
-        }
         _ => {}
         }
     }

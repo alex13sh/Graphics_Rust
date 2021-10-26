@@ -53,7 +53,8 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
+            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write)
+                .with_log(Log::hash(&format!("{}/write_bit", name))),
         ]
     }
     
@@ -63,7 +64,8 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::read()),
+            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::read())
+                .with_log(Log::hash(&format!("{}/read_bit", name))),
         ]
     }
     pub fn make_read_bit_51(pin: u8, name: &str) -> Vec<Value> {
@@ -72,7 +74,8 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
 //             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 51, ValueSize::Bit(bitn), ValueDirect::read()),
+            make_value(&prefix, "bit", 51, ValueSize::Bit(bitn), ValueDirect::read())
+                .with_log(Log::hash(&format!("{}/read_bit_51", name))),
         ]
     }
 
@@ -84,7 +87,8 @@ pub mod owen_digit {
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
 
             make_value(&prefix, "Период низкочастотного ШИМ", 308+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "Частота высокочастотного ШИМ", 506+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "Частота высокочастотного ШИМ", 506+pin, ValueSize::UINT16, ValueDirect::Write)
+                .with_log(Log::hash(&format!("{}/Частота высокочастотного ШИМ", name))),
             
             make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
         ]
@@ -95,7 +99,8 @@ pub mod owen_digit {
         let prefix = name;
         let bitn = pin as u8;
         vec![
-            make_value(prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::read().err_max(value_error.into())),
+            make_value(prefix, "value", 160 +pin*2, ValueSize::UINT32, ValueDirect::read().err_max(value_error.into()))
+                .with_log(Log::hash(&format!("{}/counter_value", name))),
             make_value(prefix, "interval", 128 +pin, ValueSize::UINT16, ValueDirect::Write),
             make_value(prefix, "type_input", 64 +pin, ValueSize::UINT16, ValueDirect::Write), // "Дополнительный режим"
             make_value(prefix, "reset_counter", 232 +pin*1, ValueSize::UINT16, ValueDirect::Write), // "Сброс значения счётчика импульсв"

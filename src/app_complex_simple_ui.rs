@@ -161,6 +161,7 @@ impl Application for App {
             
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
+            self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
         ])
     }
     

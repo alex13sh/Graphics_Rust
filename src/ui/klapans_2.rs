@@ -30,6 +30,7 @@ pub enum Message {
     ToggleKlapan(String, bool),
     ToggledKlapan(String, bool),
     PressButton(String),
+    StatusChanged(meln_logic::watcher::VacuumStatus),
 }
 
 impl Klapans {
@@ -74,6 +75,13 @@ impl Klapans {
             }
         ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
     }
+
+    pub fn subscription_vacuum(&self, props: &meln_logic::watcher::VacuumStation) -> iced::Subscription<Message> {
+        use super::animations::PropertyAnimation;
+        iced::Subscription::from_recipe(
+            PropertyAnimation::new("Vacuum_Status", props.status.subscribe())
+        ).map(Message::StatusChanged)
+    }
     
     pub fn update_vacuum(&mut self, message: Message, values: &meln_logic::values::VacuumStation) {
         match message {
@@ -91,6 +99,22 @@ impl Klapans {
                 values.davl_dis();
             },
             _ => {}
+            }
+        }
+        Message::StatusChanged(status) => {
+            use meln_logic::watcher::VacuumStatus::*;
+            let pb_name = match status {
+            Уменьшение_давления => "Уменьшить давление",
+            Увеличение_давления => "Увеличить давление",
+            Насосы_отключены => "",
+            };
+
+            for pb in &mut self.buttons {
+                if pb.name == pb_name {
+                    pb.enb = true;
+                } else {
+                    pb.enb = false;
+                }
             }
         }
         _ => {}

@@ -62,7 +62,7 @@ pub mod watcher {
     pub use half_meln::watcher::HalfMeln;
     pub use dozator::watcher::Dozator;
     pub use oil_station::watcher::OilStation;
-    pub use vacuum_station::watcher::VacuumStation;
+    pub use vacuum_station::watcher::{VacuumStation, Status as VacuumStatus};
     pub use material::watcher::Material;
     pub use klapans::watcher::Klapans;
     

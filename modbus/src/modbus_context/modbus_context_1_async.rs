@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 
 use super::device::{
     DeviceError,
-    get_ranges_value, convert_modbusvalues_to_hashmap_address,
+    UpdateReq, get_ranges_value, convert_modbusvalues_to_hashmap_address,
 };
 
 type Values = HashMap<u16, Arc<Value>>;
@@ -38,7 +38,7 @@ impl ModbusContext {
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(block_on(tcp::connect_slave(socket_addr,  num.into())).ok()?)),
 //                 ctx: tcp::connect(socket_addr).await.ok()?,
-                ranges_address: get_ranges_value(&values, 8, true),
+                ranges_address: get_ranges_value(UpdateReq::ReadOnly.filter_values(&values), 8),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
         } _ => None,
@@ -60,7 +60,7 @@ impl ModbusContext {
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),
 //                 ctx: tcp::connect(socket_addr).await.ok()?,
-                ranges_address: get_ranges_value(&values, 8, true),
+                ranges_address: get_ranges_value(UpdateReq::ReadOnly.filter_values(&values), 8),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
         } _ => None,

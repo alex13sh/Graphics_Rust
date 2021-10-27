@@ -28,8 +28,49 @@ use log::{info, trace, warn};
 #[derive(Copy, Clone)]
 pub enum UpdateReq {
     ReadOnly,
+    // Логируемые значения (не только read only)
+    Logable,
+    // Все read only и все логируемые
+    ReadOnlyOrLogable,
     Vibro,
     All,
+}
+
+impl UpdateReq {
+    pub(crate) fn filter_values(&self, values: &ModbusValues) -> Vec<Arc<Value>> {
+        match self {
+        Self::ReadOnly => {
+            values.iter()
+                .filter(|v| v.1.is_read_only())
+                .map(|(_, v)| v.clone())
+                .collect()
+        }
+        Self::Logable => {
+            values.iter()
+                .filter(|v| v.1.is_log())
+                .map(|(_, v)| v.clone())
+                .collect()
+        }
+        Self::ReadOnlyOrLogable => {
+            values.iter()
+                .filter(|v| v.1.is_read_only() || v.1.is_log())
+                .map(|(_, v)| v.clone())
+                .collect()
+        }
+        Self::Vibro => {
+            values.get_values_by_name_starts(&["Виброскорость дв. "])
+                .into_iter()
+                .filter(|v| v.1.is_read_only())
+                .map(|(_, v)| v)
+                .collect()
+        }
+        Self::All => {
+            values.iter()
+                .map(|(_, v)| v.clone())
+                .collect()
+        }
+        }
+    }
 }
 
 impl Device {
@@ -42,7 +83,8 @@ impl Device {
         Ok(())
     }
     pub fn update_all(&self) -> DeviceResult {
-        self.context()?.update(Some(&get_ranges_value(&self.values, 0, false)))?;
+        let req = UpdateReq::All;
+        self.context()?.update(Some(&get_ranges_value(req.filter_values(&self.values), 0)))?;
         Ok(())
     }
     
@@ -77,15 +119,7 @@ impl Device {
             return Err(DeviceError::ContextBusy);
         }
 //         info!("Device: {} - {:?}", self.name, self.address);
-        let res = match req {
-        UpdateReq::ReadOnly => ctx.update_async(Some(&get_ranges_value(&self.values, 1, true))).await,
-        UpdateReq::Vibro => {
-            let values = self.values.get_values_by_name_starts(&["Виброскорость дв. "]);
-            let r = get_ranges_value(&values, 1, true);
-            ctx.update_async(Some(&r)).await
-        },
-        UpdateReq::All => ctx.update_async(Some(&get_ranges_value(&self.values, 1, false))).await,
-        };
+        let res = ctx.update_async(Some(&get_ranges_value(req.filter_values(&self.values), 1))).await;
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
@@ -243,13 +277,9 @@ pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> 
     values.iter().map(|v| (v.1.address(), v.1.clone())).collect()
 }
 
-pub(super) fn get_ranges_value(values: &ModbusValues, empty_space: u8, read_only: bool) -> Vec<std::ops::RangeInclusive<u16>> {
+pub(super) fn get_ranges_value(mut values: Vec<Arc<Value>>, empty_space: u8) -> Vec<std::ops::RangeInclusive<u16>> {
     let empty_space = empty_space as u16;
     
-//         let mut adrs: Vec<_> = values.iter().filter(|v| v.1.is_read_only() || !read_only ).map(|v| v.1.address()).collect();
-    let mut values: Vec<_> = values.iter()
-        .filter(|v| v.1.is_read_only() || !read_only )
-        .map(|(_, v)| v.clone()).collect();
     values.sort_by(|a, b| a.address().cmp(&b.address()));
     if values.len() == 0 {
         return Vec::new();

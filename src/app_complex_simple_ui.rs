@@ -274,7 +274,7 @@ impl App {
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
                 
-                let device_futures = self.logic.update_async(UpdateReq::ReadOnly);
+                let device_futures = self.logic.update_async(UpdateReq::ReadOnlyOrLogable);
 
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(

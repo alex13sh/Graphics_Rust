@@ -33,7 +33,7 @@ pub struct App {
     oil_station: ui::OilStation,
     info_pane: ui::InfoPane,
     
-    log_values: Vec<log::LogValue>,
+    log_values: Vec<logger::LogValue>,
 }
 
 
@@ -56,7 +56,7 @@ pub enum Message {
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
     InfoPane(ui::info_pane::Message),
-//     InfoPaneUpdate(Option<(log::structs::TableState, PathBuf)>),
+//     InfoPaneUpdate(Option<(logger::structs::TableState, PathBuf)>),
     
     MessageUpdate(MessageMudbusUpdate),
     MelnMessage(MelnMessage),
@@ -291,7 +291,7 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
-                println!("MessageMudbusUpdate::ModbusConnect ");
+                log::trace!("MessageMudbusUpdate::ModbusConnect ");
 //                 self.save_invertor();
                 let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
@@ -300,6 +300,7 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
+                log::trace!("MessageMudbusUpdate::ModbusConnectAnswer d: {}, res: {:?}", d.name(), &res);
                 let dc = d.clone();
                 let f = async move {dc.update_async(UpdateReq::All).await};
                 return Command::perform(f, move |res| Message::MessageUpdate(
@@ -359,7 +360,7 @@ impl App {
                 .map(|(_k, v)| v)
                 .filter(|v| v.is_log())
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
+                .map(|(v, vf)| logger::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
             };
             // Разницу записывать
             self.log_values.append(&mut log_values);
@@ -371,10 +372,10 @@ impl App {
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
-    async fn log_save(values: Vec<log::LogValue>) -> Option<(log::structs::TableState, PathBuf)> {
+    async fn log_save(values: Vec<logger::LogValue>) -> Option<(logger::structs::TableState, PathBuf)> {
         if values.is_empty() { return None; }
             
-        log::new_csv_raw(&values);
+        logger::new_csv_raw(&values);
 
         let vec_map = vec![
         ("Скорость", "4bd5c4e0a9"),
@@ -388,23 +389,23 @@ impl App {
         ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
         ];
         
-        let res = log::new_table_fields(values, 1, vec_map);
+        let res = logger::new_table_fields(values, 1, vec_map);
         return res;
     }
 
     fn save_invertor(invertor_values: &ModbusValues) {
-        let dt = log::date_time_now();
+        let dt = logger::date_time_now();
         dbg!(&dt);
-        let dt = log::date_time_to_string_name_short(&dt);
-        let path = log::get_file_path("tables/log/").join(dt).with_extension(".csv");
+        let dt = logger::date_time_to_string_name_short(&dt);
+        let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
         dbg!(&path);
         let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, n)| log::InvertorParametr {
+            .map(|(adr, v, n)| logger::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
                 value: v,
                 name: n,
             }).collect();
-        if let Err(e) = log::csv::write_invertor_parametrs(&path, parametrs) {
+        if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
             dbg!(e);
         }
     }

@@ -288,7 +288,7 @@ impl Application for App {
 // modbus update
 impl App {
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
-        log::trace!("modbus_update message: {:?}", &message);
+        log::trace!("modbus_update \n\tmessage: {:?}", &message);
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {

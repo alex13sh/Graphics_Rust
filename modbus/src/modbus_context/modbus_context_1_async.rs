@@ -17,7 +17,7 @@ type RangeAddress = std::ops::RangeInclusive<u16>;
 
 pub(crate) struct ModbusContext {
     ctx: Arc<Mutex<Context>>,
-//     ctx: Context,
+    is_rtu: bool,
     pub(crate) values: Values,
     ranges_address: Vec<RangeAddress>,
 }
@@ -37,7 +37,7 @@ impl ModbusContext {
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(block_on(tcp::connect_slave(socket_addr,  num.into())).ok()?)),
-//                 ctx: tcp::connect(socket_addr).await.ok()?,
+                is_rtu: num != 1,
                 ranges_address: get_ranges_value(UpdateReq::ReadOnly.filter_values(&values), 8),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
@@ -59,7 +59,7 @@ impl ModbusContext {
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),
-//                 ctx: tcp::connect(socket_addr).await.ok()?,
+                is_rtu: num != 1,
                 ranges_address: get_ranges_value(UpdateReq::ReadOnly.filter_values(&values), 8),
                 values: convert_modbusvalues_to_hashmap_address(values),
             })
@@ -109,7 +109,9 @@ impl ModbusContext {
                 let mut ctx = self.ctx.lock().await;
                 let buff = ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1);
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-                let timeout = sleep(Duration::from_millis(100));
+                let timeout = sleep(Duration::from_millis(
+                    if self.is_rtu {300} else {100}
+                ));
                 let res = tokio::select! {
                 buff = buff => Ok(buff),
                 _ = timeout => Err(DeviceError::TimeOut),

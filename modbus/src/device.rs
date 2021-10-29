@@ -108,7 +108,7 @@ impl Device {
     }
     
     pub async fn update_async(&self, req: UpdateReq) -> DeviceResult {
-//         info!("pub async fn update_async");
+//         trace!("pub async fn update_async");
         if self.ctx.is_poisoned()  {
 //             info!(" <- device is busy");
             return Err(DeviceError::ContextBusy);
@@ -124,7 +124,7 @@ impl Device {
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
-//             info!("update_async TimeOut");
+            trace!("update_async TimeOut; {:?}", self);
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}
@@ -148,7 +148,7 @@ impl Device {
         &self.values
     }
     pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
-        trace!("device get context");
+//         trace!("device get context");
         if let Some(ref ctx) = *self.ctx.try_lock()? {
             Ok(ctx.clone())
         } else {

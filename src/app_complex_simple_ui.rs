@@ -8,19 +8,18 @@ use iced::{
 fn log_init() {
     use simplelog::*;
     use std::fs::File;
-    let conf = ConfigBuilder::new()
-        .add_filter_allow_str("app_complex_simple_ui")
-        .add_filter_allow_str("modbus")
+    let dt = logger::date_time_to_string_name_short(&logger::date_time_now());
+    let conf_modbus_update = ConfigBuilder::new()
+//         .add_filter_allow_str("app_complex_simple_ui")
+        .add_filter_allow_str("modbus::update")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
     CombinedLogger::init(
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            WriteLogger::new(LevelFilter::Trace, conf,
+            WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/modbus_update [{}].log",
-                        logger::date_time_to_string_name_short(&logger::date_time_now())
-                    )
+                    &format!("simplelog/modbus_update [{}].log", dt)
                 )).unwrap()
             ),
         ]
@@ -288,7 +287,7 @@ impl Application for App {
 // modbus update
 impl App {
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
-        log::trace!("modbus_update \n\tmessage: {:?}", &message);
+        log::trace!(target: "modbus::update", "modbus_update \n\tmessage: {:?}", &message);
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {

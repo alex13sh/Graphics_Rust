@@ -90,7 +90,7 @@ impl Device {
     }
     
     pub async fn connect(&self) -> DeviceResult {
-        trace!("device connect");
+        trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
         
         *self.ctx.try_lock()? = super::ModbusContext
@@ -124,7 +124,7 @@ impl Device {
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
-            trace!("update_async TimeOut; {:?}", self);
+            trace!(target: "modbus::update::update_async", "TimeOut; {:?}", self);
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}

@@ -5,7 +5,30 @@ use iced::{
     Settings, Clipboard,
 };
 
+fn log_init() {
+    use simplelog::*;
+    use std::fs::File;
+    let conf = ConfigBuilder::new()
+        .add_filter_allow_str("app_complex_simple_ui")
+        .add_filter_allow_str("modbus")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    CombinedLogger::init(
+        vec![
+//             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+            WriteLogger::new(LevelFilter::Trace, conf,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/modbus_update [{}].log",
+                        logger::date_time_to_string_name_short(&logger::date_time_now())
+                    )
+                )).unwrap()
+            ),
+        ]
+    ).unwrap();
+}
+
 fn main() {
+    log_init();
     App::run(Settings::default());
 } 
 
@@ -265,6 +288,7 @@ impl Application for App {
 // modbus update
 impl App {
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
+        log::trace!("modbus_update message: {:?}", &message);
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
@@ -291,7 +315,6 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
-                log::trace!("MessageMudbusUpdate::ModbusConnect ");
 //                 self.save_invertor();
                 let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
@@ -300,7 +323,6 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
-                log::trace!("MessageMudbusUpdate::ModbusConnectAnswer d: {}, res: {:?}", d.name(), &res);
                 let dc = d.clone();
                 let f = async move {dc.update_async(UpdateReq::All).await};
                 return Command::perform(f, move |res| Message::MessageUpdate(

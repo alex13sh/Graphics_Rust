@@ -14,12 +14,21 @@ fn log_init() {
         .add_filter_allow_str("modbus::update")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
+    let conf_meln_logic = ConfigBuilder::new()
+        .add_filter_allow_str("meln_logic")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
     CombinedLogger::init(
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
             WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
                 File::create(logger::get_file_path(
                     &format!("simplelog/modbus_update [{}].log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/meln_logic [{}].log", dt)
                 )).unwrap()
             ),
         ]

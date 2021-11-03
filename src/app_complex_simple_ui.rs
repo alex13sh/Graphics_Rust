@@ -128,6 +128,7 @@ pub enum MessageMudbusUpdate {
 pub enum MelnMessage {
     IsStartedChanged(bool),
     IsWorkedChanged(bool),
+    OilMotorChanged(bool),
     NextStep(meln_logic::watcher::MelnStep),
 }
 
@@ -392,6 +393,10 @@ impl App {
             Subscription::from_recipe(
                 PropertyAnimation::new("Steps", props.step.subscribe())
             ).map(MelnMessage::NextStep),
+
+            Subscription::from_recipe(
+                PropertyAnimation::new("OilMotor", props.oil.motor.subscribe())
+            ).map(MelnMessage::OilMotorChanged),
         ])
     }
 
@@ -413,6 +418,8 @@ impl App {
         NextStep(step) => {
             self.txt_status = format!("{:?}",step);
         }
+
+        OilMotorChanged(_) => {}
         }
         Command::none()
     }

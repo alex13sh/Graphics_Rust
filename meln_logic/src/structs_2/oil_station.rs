@@ -56,6 +56,7 @@ pub mod watcher {
             self.температура.set(values.температура());
             self.давление_масла.set(values.давление_масла());
             self.уровень_масла.set(values.уровень_масла.value());
+//             log::trace!("motor get_bit: {}", values.motor.get_bit());
             self.motor.set(values.motor.get_bit());
         }
     }

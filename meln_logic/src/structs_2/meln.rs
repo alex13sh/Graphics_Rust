@@ -100,6 +100,7 @@ pub mod watcher {
                     self.is_started.set(start_top || start_bottom);
                 }
             };
+
             let f_step = async {
                 self.step.send(self.step.get());
                 loop {

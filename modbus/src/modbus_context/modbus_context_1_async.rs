@@ -33,7 +33,7 @@ impl ModbusContext {
         DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
-            dbg!(&socket_addr);
+            log::trace!("ModbusContext::new: {:?}", &socket_addr);
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(block_on(tcp::connect_slave(socket_addr,  num.into())).ok()?)),
@@ -55,7 +55,7 @@ impl ModbusContext {
         DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
-            dbg!(&socket_addr, num);
+            log::trace!("ModbusContext::new: adr: {:?}, num: {:?}", &socket_addr, num);
             
             Some(ModbusContext {
                 ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),
@@ -121,7 +121,7 @@ impl ModbusContext {
             if let Ok(buff) = buff {
                 Self::update_impl(&self.values, r.clone(), buff);
             } else {
-                println!("-> Range ({:?})", r);
+                log::error!("Range ({:?})", r);
             }
         }
         Ok(())

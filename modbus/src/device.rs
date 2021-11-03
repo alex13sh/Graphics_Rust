@@ -124,7 +124,7 @@ impl Device {
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
-            trace!(target: "modbus::update::update_async", "TimeOut; {:?}", self);
+            log::error!(target: "modbus::update::update_async", "TimeOut; {:?}", self);
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}

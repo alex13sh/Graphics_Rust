@@ -12,10 +12,19 @@ fn log_init() {
     let conf_modbus_update = ConfigBuilder::new()
 //         .add_filter_allow_str("app_complex_simple_ui")
         .add_filter_allow_str("modbus::update")
+        .add_filter_allow_str("modbus::modbus_context")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
     let conf_meln_logic = ConfigBuilder::new()
         .add_filter_allow_str("meln_logic")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    let conf_app = ConfigBuilder::new()
+        .add_filter_allow_str("app_complex_simple_ui")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    let conf_app_update = ConfigBuilder::new()
+        .add_filter_allow_str("app::update")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
     CombinedLogger::init(
@@ -29,6 +38,16 @@ fn log_init() {
             WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
                 File::create(logger::get_file_path(
                     &format!("simplelog/meln_logic [{}].log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_app,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/app_complex_simple_ui [{}].log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_app_update,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/app_update [{}].log", dt)
                 )).unwrap()
             ),
         ]
@@ -197,6 +216,11 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+        if let Message::MessageUpdate(_) = &message {
+
+        } else {
+            log::trace!(target: "app::update", "update message:\n\t{:?}", &message);
+        }
         let meln = &self.meln.values;
         match message {
         Message::ButtonExit => self.has_exit = true,
@@ -396,9 +420,9 @@ impl App {
             self.log_values.append(&mut log_values);
         }
 
-        let warn = values.iter().map(|(_,v)| v)
-            .map(|v| v.is_error())
-            .any(|err| err);
+//         let warn = values.iter().map(|(_,v)| v)
+//             .map(|v| v.is_error())
+//             .any(|err| err);
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
@@ -425,10 +449,10 @@ impl App {
 
     fn save_invertor(invertor_values: &ModbusValues) {
         let dt = logger::date_time_now();
-        dbg!(&dt);
+        log::trace!("save_invertor date_time: {:?}", &dt);
         let dt = logger::date_time_to_string_name_short(&dt);
         let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
-        dbg!(&path);
+        log::trace!("path: {:?}", &path);
         let parametrs: Vec<_> = invertor_values.iter_values()
             .map(|(adr, v, n)| logger::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
@@ -436,7 +460,7 @@ impl App {
                 name: n,
             }).collect();
         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
-            dbg!(e);
+            log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
         }
     }
 

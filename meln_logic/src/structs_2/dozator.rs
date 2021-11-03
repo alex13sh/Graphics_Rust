@@ -8,12 +8,21 @@ pub struct Dozator {
     speed: ValueArc, // скоость ШИМа
     direct: ValueArc, 
     
-    target_speed: Mutex<Option<(/*speed:*/ i32, /*delta:*/ i32, /*step:*/ u32)>>,
+    target_speed: Mutex<Option<TargetSpeedState>>,
+}
+
+#[derive(Debug)]
+struct TargetSpeedState {
+    target_speed: i32,
+    current_speed: i32,
+    delta: i32,
+    step: u32,
 }
 
 impl Dozator {
     const STEPS: u32 = 20;
     pub fn set_speed(&self, speed: i32) {
+        log::trace!("set_speed: {}", speed);
         self.direct.set_bit(speed >= 0);
         self.speed.set_value(speed.abs() as u32);
     }
@@ -26,27 +35,33 @@ impl Dozator {
         }
     }
     
-    pub fn set_target_speed(&self, speed: i32) {
-        let mut target_speed = self.target_speed.lock().unwrap();
+    pub fn set_target_speed(&self, target_speed: i32) {
+        let mut target_speed_lock = self.target_speed.lock().unwrap();
         let current_speed = self.speed();
-        let dlt: i32 = (speed - current_speed) / Self::STEPS as i32;
-        *target_speed = Some((speed, dlt, Self::STEPS));
+        let delta: i32 = (target_speed - current_speed) / Self::STEPS as i32;
+        let tg = TargetSpeedState {
+            target_speed, current_speed, delta,
+            step: Self::STEPS
+        };
+        log::trace!("set_target_speed: tg: {:?}", &tg);
+        *target_speed_lock = Some(tg);
     }
     fn get_next_step(&self) -> Option<i32> {
         let mut target = self.target_speed.lock().unwrap();
-        if let Some((target_speed, delta, ref mut step)) = target.as_mut() {
-            let current_speed = self.speed();
-            if *step>0 {
-                *step -= 1;
-                return Some(*delta);
+        if let Some(ref mut tg) = target.as_mut() {
+            if tg.step>0 {
+                tg.step -= 1;
+                tg.current_speed += tg.delta;
+                log::trace!("get_next_step: tg: {:?}", tg);
+                return Some(tg.current_speed);
             }
         }
         *target = None;
         None
     }
     fn next_step(&self) {
-        if let Some(step) = self.get_next_step() {
-            self.set_speed(self.speed() + step);
+        if let Some(current_speed) = self.get_next_step() {
+            self.set_speed(current_speed);
         }
     }
     pub async fn animation(&self) {
@@ -63,7 +78,7 @@ impl From<&ModbusValues> for Dozator {
         Dozator {
             speed: values.get_value_arc("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ").unwrap(),
             direct: values.get_value_arc("Направление вращения двигателя ШД").unwrap(),
-            
+
             target_speed: Mutex::new(None),
         }
     }

@@ -141,20 +141,21 @@ pub mod watcher {
         
         pub(crate) async fn automation(&self) {
             let mut vibro = self.vibro.subscribe();
-            let mut hz = self.invertor.hz.subscribe();
+            let mut speed = self.invertor.speed.subscribe();
             let mut amper = self.invertor.amper.subscribe();
             loop {
-                changed_any!(vibro, hz, amper);
+                changed_any!(vibro, speed, amper);
                 {
                     let vibro = *vibro.borrow();
-                    let hz = *hz.borrow();
+                    let speed = *speed.borrow();
                     let amper = *amper.borrow();
-                    if self.is_started.get() == false 
-                            && (hz > 1 || amper > 1) {
+                    let is_started = self.is_started.get();
+                    if is_started  == false
+                            && (speed > 1 || amper > 1) {
                         self.speed_changed.set(super::SpeedChange::Acel);
                         self.is_started.set(true);
-                    } else if self.is_started.get() == true 
-                            && hz < 2 && vibro < 0.2 && amper < 2 {
+                    } else if is_started  == true
+                            && speed < 2 && vibro < 0.15 && amper < 2 {
                         self.speed_changed.set(super::SpeedChange::Stop);
                         self.is_started.set(false);
                     }
@@ -176,6 +177,8 @@ pub mod watcher {
         fn update_property(&self, values: &super::Invertor) {
             let hz: u32 = values.get_hz_out_value().value();
             self.hz.set(hz);
+            let speed: u32 = values.get_speed_out_value().value();
+            self.speed.set(speed);
             let amper: u32 = values.get_amper_out_value().value();
             self.amper.set(amper);
         }

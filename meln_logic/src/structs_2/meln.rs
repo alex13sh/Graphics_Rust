@@ -124,10 +124,20 @@ pub mod watcher {
         use tokio::time::{sleep, Duration};
         let mut sub_is_started = props.is_started.subscribe();
         let f_stop = async move {
-            let _ = sub_is_started.changed().await;
-            values.vacuum.davl_dis();
-            sleep(Duration::from_millis(10_000)).await;
-            values.oil.stop();
+            loop {
+                let _ = sub_is_started.changed().await;
+                let is_started = *sub_is_started.borrow();
+                match is_started {
+                false => {
+                    values.vacuum.davl_dis();
+                    sleep(Duration::from_millis(10_000)).await;
+                    values.oil.stop();
+                }
+                true => {
+                    values.oil.start();
+                }
+                }
+            }
         };
     
         tokio::join!(

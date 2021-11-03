@@ -117,7 +117,7 @@ impl InvertorValues {
         self.get_speed_out_value()
     }
     pub fn get_speed_out_value(&self) -> Arc<Value> {
-        self.скорость_двигателя.value_clone()
+        self.индикация_скорости.value_clone()
     }
 }
 

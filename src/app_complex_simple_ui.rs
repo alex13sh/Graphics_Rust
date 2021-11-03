@@ -73,6 +73,7 @@ pub struct App {
     has_exit: bool,
     logic: meln_logic::init::Complect,
     meln: meln_logic::Meln,
+    is_worked: bool,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -126,6 +127,7 @@ pub enum MessageMudbusUpdate {
 #[derive(Debug, Clone)]
 pub enum MelnMessage {
     IsStartedChanged(bool),
+    IsWorkedChanged(bool),
     NextStep(meln_logic::watcher::MelnStep),
 }
 
@@ -154,6 +156,7 @@ impl Application for App {
         
             logic: logic,
             meln: meln,
+            is_worked: false,
             log_values: Vec::new(),
         },
         
@@ -182,9 +185,7 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.45}
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        use ui::animations::PropertyAnimation;
         let props = &self.meln.properties;
-        
         let interval_update = if self.is_worked() {100} else {1000};
         let interval_log = if self.is_worked() {100} else {10000};
         Subscription::batch(vec![
@@ -202,12 +203,7 @@ impl Application for App {
 
             ]).map(Message::MessageUpdate),
             
-            Subscription::from_recipe(
-                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
-            ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
-            Subscription::from_recipe(
-                PropertyAnimation::new("Steps", props.step.subscribe())
-            ).map(|step| Message::MelnMessage(MelnMessage::NextStep(step))),
+            Self::sub_meln(&self.meln.properties).map(Message::MelnMessage),
             
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
@@ -372,9 +368,7 @@ impl App {
 //                 self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
-    //             dbg!(&d);
                 if res.is_ok() {
-    //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
                     self.meln.properties.update_property(&self.meln.values);
                 }
             },
@@ -386,7 +380,24 @@ impl App {
         Command::none()
     }
     
+    fn sub_meln(props: &meln_logic::watcher::Meln) -> Subscription<MelnMessage> {
+        use ui::animations::PropertyAnimation;
+        Subscription::batch(vec![
+            Subscription::from_recipe(
+                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
+            ).map(MelnMessage::IsStartedChanged),
+            Subscription::from_recipe(
+                PropertyAnimation::new("IsWorked", props.is_worked.subscribe())
+            ).map(MelnMessage::IsWorkedChanged),
+            Subscription::from_recipe(
+                PropertyAnimation::new("Steps", props.step.subscribe())
+            ).map(MelnMessage::NextStep),
+        ])
+    }
+
     fn meln_update(&mut self, message: MelnMessage) -> Command<Message> {
+        log::trace!(target: "meln_logic::update", "meln_update:\n\t{:?}", &message);
+
         use MelnMessage::*;
         match message {
         IsStartedChanged(is_started) => {
@@ -398,6 +409,7 @@ impl App {
                 return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
             }
         }
+        IsWorkedChanged(enb) => self.is_worked = enb,
         NextStep(step) => {
             self.txt_status = format!("{:?}",step);
         }
@@ -427,6 +439,7 @@ impl App {
     }
 
     async fn log_save(values: Vec<logger::LogValue>) -> Option<(logger::structs::TableState, PathBuf)> {
+        log::trace!("log_save: values len: {}", values.len());
         if values.is_empty() { return None; }
             
         logger::new_csv_raw(&values);
@@ -471,7 +484,7 @@ impl App {
         self.meln.properties.is_started.get()
     }
     fn is_worked(&self) -> bool {
-        self.meln.properties.is_worked.get()
+        self.is_worked
     }
 }
 

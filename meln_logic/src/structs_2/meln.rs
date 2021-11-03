@@ -23,6 +23,7 @@ pub struct Meln {
 
 impl From<&ModbusValues> for Meln {
     fn from(values: &ModbusValues) -> Self {
+        log::trace!("Meln Init");
         Meln {
             material: values.into(),
             
@@ -72,6 +73,8 @@ pub mod watcher {
     
     impl Meln {
         pub fn update_property(&self, values: &super::Meln) {
+//             log::trace!("Meln update_property");
+
             self.material.update_property(&values.material);
             
             self.half_top.update_property(&values.half_top);
@@ -93,7 +96,7 @@ pub mod watcher {
                     changed_any!(start_top, start_bottom);
                     let start_top = *start_top.borrow();
                     let start_bottom = *start_bottom.borrow();
-                    
+                    log::trace!("Meln is started: {:?}", start_top || start_bottom);
                     self.is_started.set(start_top || start_bottom);
                 }
             };
@@ -102,6 +105,7 @@ pub mod watcher {
                 loop {
                     let next_step = self.step.get()
                         .check_next_step(self).await;
+                    log::trace!("Next Step: {:?}", &next_step);
                     self.step.set(next_step);
                 }
             };
@@ -149,6 +153,8 @@ pub mod watcher {
         Завершение_работы_мельницы,
         Стартовое_положение,
         
+//         Тестовый_запуск_на_воздухе,
+//         Тестовый_запуск_в_вакууме,
         ErrorStep,
     }
     

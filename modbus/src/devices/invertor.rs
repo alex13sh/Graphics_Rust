@@ -45,9 +45,8 @@ impl InvertorValues {
             выходной_ток: values.get_value_arc("Выходной ток (A)").unwrap(),
             скорость_двигателя: values.get_value_arc("Скорость двигателя").unwrap(),
 
-            индикация_скорости: values.get_value_arc("Индикация рассчитанной или измеренной (с PG) скорости в
-об/мин").unwrap(),
-            индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности в кВт (P)").unwrap(),
+            индикация_скорости: values.get_value_arc("Индикация рассчитанной (с PG) скорости").unwrap(),
+            индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности (P)").unwrap(),
 
             values: values.get_values_by_name_starts(&values_str),
         }

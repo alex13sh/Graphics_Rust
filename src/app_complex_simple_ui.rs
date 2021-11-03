@@ -32,22 +32,22 @@ fn log_init() {
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
             WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/modbus_update [{}].log", dt)
+                    &format!("simplelog/[{}] modbus_update.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/meln_logic [{}].log", dt)
+                    &format!("simplelog/[{}] meln_logic.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/app_complex_simple_ui [{}].log", dt)
+                    &format!("simplelog/[{}] app_complex_simple_ui.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app_update,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/app_update [{}].log", dt)
+                    &format!("simplelog/[{}] app_update.log", dt)
                 )).unwrap()
             ),
         ]

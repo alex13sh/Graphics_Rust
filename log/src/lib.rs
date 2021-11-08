@@ -46,7 +46,7 @@ pub fn get_file_path(file_name: &str) -> PathBuf {
     } else {
         std::env::current_dir().unwrap_or(PathBuf::new())
     };
-    path = std::path::Path::new("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log/").into();
+//     path = std::path::Path::new("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log/").into();
     path.push(file_name);
     path
 }

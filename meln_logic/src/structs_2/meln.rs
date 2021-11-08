@@ -111,6 +111,7 @@ pub mod watcher {
                 self.half_top.automation(),
                 self.half_bottom.automation(),
                 self.klapans.automation(),
+                self.vacuum.automation(),
             );
         }
     }

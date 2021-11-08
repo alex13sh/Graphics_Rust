@@ -50,7 +50,7 @@ impl VacuumStation {
 }
 
 pub mod watcher {
-    use crate::structs::Property;
+    use crate::structs::{Property, changed_any};
     
     #[derive(Default)]
     pub struct VacuumStation {
@@ -60,6 +60,8 @@ pub mod watcher {
         
         pub клапан_напуска: Property<bool>,
         pub клапан_насоса: Property<bool>,
+
+        pub status: Property<Status>,
     }
     
     impl VacuumStation {
@@ -73,6 +75,44 @@ pub mod watcher {
             );
             self.клапан_напуска.set(values.клапан_напуска.get_bit());
             self.клапан_насоса.set(values.клапан_насоса.get_bit());
+        }
+
+        pub(crate) async fn automation(&self) {
+            let mut motor = self.motor.subscribe();
+            let mut клапан_насоса = self.клапан_насоса.subscribe();
+            let mut клапан_напуска = self.клапан_напуска.subscribe();
+
+            loop {
+                // Проверка отрабатывает несколько раз из-за того, что мотор и клапан одновременно меняется.
+                changed_any!(motor, клапан_насоса, клапан_напуска);
+                // Более тонкая настройка ожиданий избавляет от лишних проверок.
+                tokio::select! {
+                _ = futures_util::future::join_all(vec![motor.changed(), клапан_насоса.changed()]) => {},
+                _ = клапан_напуска.changed() => {},
+                };
+                let status = match (motor.borrow().clone(), клапан_насоса.borrow().clone(), клапан_напуска.borrow().clone()) {
+                (false, false, false) => Status::Насосы_отключены,
+                (true, true, false) => Status::Уменьшение_давления,
+                (false, false, true) => Status::Увеличение_давления,
+                _ => self.status.get(),
+                };
+                dbg!(&status);
+                self.status.set(status);
+            }
+        }
+    }
+
+    #[derive(Debug, PartialEq, Clone)]
+    #[allow(non_camel_case_types)]
+    pub enum Status {
+        Насосы_отключены,
+        Уменьшение_давления,
+        Увеличение_давления,
+    }
+
+    impl Default for Status {
+        fn default() -> Self {
+            Status::Насосы_отключены
         }
     }
 }

@@ -45,10 +45,10 @@ async-stream = "*"
 
 chrono = "0.4"
 coarse-prof = {version = "0.2.4"}
-# log = "0.4.0"
-env_logger = "0.8.2"
+log = "0.4.14"
+simplelog = "0.10"
 
-log = {path = "./log"}
+logger = {path = "./log", package = "log"}
 modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
 graphic = {path = "./graphic"}

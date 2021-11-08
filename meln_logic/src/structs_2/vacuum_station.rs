@@ -27,6 +27,9 @@ impl From<&ModbusValues> for VacuumStation {
 impl VacuumStation {
     // Уменьшить давление
     pub fn davl_down(&self) {
+        // Если включён клапан напуска
+        self.davl_dis();
+
         self.motor_1.set_bit(true);
         self.motor_2.set_bit(true);
         // Добавить задержку
@@ -43,6 +46,7 @@ impl VacuumStation {
     }
     // Увеличить давление
     pub fn davl_up(&self) {
+        // Если включёны насосы
         self.davl_dis();
         
         self.клапан_напуска.set_bit(true);
@@ -78,26 +82,11 @@ pub mod watcher {
         }
 
         pub(crate) async fn automation(&self) {
-            let mut motor = self.motor.subscribe();
-            let mut клапан_насоса = self.клапан_насоса.subscribe();
-            let mut клапан_напуска = self.клапан_напуска.subscribe();
-
             loop {
-                // Проверка отрабатывает несколько раз из-за того, что мотор и клапан одновременно меняется.
-                changed_any!(motor, клапан_насоса, клапан_напуска);
-                // Более тонкая настройка ожиданий избавляет от лишних проверок.
-                tokio::select! {
-                _ = futures_util::future::join_all(vec![motor.changed(), клапан_насоса.changed()]) => {},
-                _ = клапан_напуска.changed() => {},
-                };
-                let status = match (motor.borrow().clone(), клапан_насоса.borrow().clone(), клапан_напуска.borrow().clone()) {
-                (false, false, false) => Status::Насосы_отключены,
-                (true, true, false) => Status::Уменьшение_давления,
-                (false, false, true) => Status::Увеличение_давления,
-                _ => self.status.get(),
-                };
-                dbg!(&status);
-                self.status.set(status);
+                self.status.set(
+                    Status::new(self).await
+                        .unwrap_or(self.status.get())
+                );
             }
         }
     }
@@ -113,6 +102,29 @@ pub mod watcher {
     impl Default for Status {
         fn default() -> Self {
             Status::Насосы_отключены
+        }
+    }
+
+    impl Status {
+        async fn new(vacuum: &VacuumStation) -> Option<Self> {
+            let mut motor = vacuum.motor.subscribe();
+            let mut клапан_насоса = vacuum.клапан_насоса.subscribe();
+            let mut клапан_напуска = vacuum.клапан_напуска.subscribe();
+            // Проверка отрабатывает несколько раз из-за того, что мотор и клапан одновременно меняется.
+//             changed_any!(motor, клапан_насоса, клапан_напуска);
+            // Более тонкая настройка ожиданий избавляет от лишних проверок.
+            tokio::select! {
+            _ = futures_util::future::join_all(vec![motor.changed(), клапан_насоса.changed()]) => {},
+            _ = клапан_напуска.changed() => {},
+            };
+            let status = match (motor.borrow().clone(), клапан_насоса.borrow().clone(), клапан_напуска.borrow().clone()) {
+            (false, false, false) => Some(Status::Насосы_отключены),
+            (true, true, false) => Some(Status::Уменьшение_давления),
+            (false, false, true) => Some(Status::Увеличение_давления),
+            _ => None,
+            };
+            log::trace!("new status: {:?}", &status);
+            status
         }
     }
 }

@@ -5,7 +5,57 @@ use iced::{
     Settings, Clipboard,
 };
 
+fn log_init() {
+    use simplelog::*;
+    use std::fs::File;
+    let dt = logger::date_time_to_string_name_short(&logger::date_time_now());
+    let conf_modbus_update = ConfigBuilder::new()
+//         .add_filter_allow_str("app_complex_simple_ui")
+        .add_filter_allow_str("modbus::update")
+        .add_filter_allow_str("modbus::modbus_context")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    let conf_meln_logic = ConfigBuilder::new()
+        .add_filter_allow_str("meln_logic")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    let conf_app = ConfigBuilder::new()
+        .add_filter_allow_str("app_complex_simple_ui")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    let conf_app_update = ConfigBuilder::new()
+        .add_filter_allow_str("app::update")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
+    CombinedLogger::init(
+        vec![
+//             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+            WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}] modbus_update.log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}] meln_logic.log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_app,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}] app_complex_simple_ui.log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_app_update,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}] app_update.log", dt)
+                )).unwrap()
+            ),
+        ]
+    ).unwrap();
+}
+
 fn main() {
+    log_init();
     App::run(Settings::default());
 } 
 
@@ -23,6 +73,7 @@ pub struct App {
     has_exit: bool,
     logic: meln_logic::init::Complect,
     meln: meln_logic::Meln,
+    is_worked: bool,
     txt_status: String,
     
     dvij_is_started: bool,
@@ -33,7 +84,7 @@ pub struct App {
     oil_station: ui::OilStation,
     info_pane: ui::InfoPane,
     
-    log_values: Vec<log::LogValue>,
+    log_values: Vec<logger::LogValue>,
 }
 
 
@@ -56,7 +107,7 @@ pub enum Message {
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
     InfoPane(ui::info_pane::Message),
-//     InfoPaneUpdate(Option<(log::structs::TableState, PathBuf)>),
+//     InfoPaneUpdate(Option<(logger::structs::TableState, PathBuf)>),
     
     MessageUpdate(MessageMudbusUpdate),
     MelnMessage(MelnMessage),
@@ -76,6 +127,7 @@ pub enum MessageMudbusUpdate {
 #[derive(Debug, Clone)]
 pub enum MelnMessage {
     IsStartedChanged(bool),
+    IsWorkedChanged(bool),
     NextStep(meln_logic::watcher::MelnStep),
 }
 
@@ -104,6 +156,7 @@ impl Application for App {
         
             logic: logic,
             meln: meln,
+            is_worked: false,
             log_values: Vec::new(),
         },
         
@@ -132,9 +185,7 @@ impl Application for App {
     fn scale_factor(&self) -> f64 {0.45}
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        use ui::animations::PropertyAnimation;
         let props = &self.meln.properties;
-        
         let interval_update = if self.is_worked() {100} else {1000};
         let interval_log = if self.is_worked() {100} else {10000};
         Subscription::batch(vec![
@@ -152,12 +203,7 @@ impl Application for App {
 
             ]).map(Message::MessageUpdate),
             
-            Subscription::from_recipe(
-                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
-            ).map(|enb| Message::MelnMessage(MelnMessage::IsStartedChanged(enb))),
-            Subscription::from_recipe(
-                PropertyAnimation::new("Steps", props.step.subscribe())
-            ).map(|step| Message::MelnMessage(MelnMessage::NextStep(step))),
+            Self::sub_meln(&self.meln.properties).map(Message::MelnMessage),
             
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
@@ -166,6 +212,11 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
+        if let Message::MessageUpdate(_) = &message {
+
+        } else {
+            log::trace!(target: "app::update", "update message:\n\t{:?}", &message);
+        }
         let meln = &self.meln.values;
         match message {
         Message::ButtonExit => self.has_exit = true,
@@ -265,6 +316,7 @@ impl Application for App {
 // modbus update
 impl App {
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
+        log::trace!(target: "modbus::update", "modbus_update \n\tmessage: {:?}", &message);
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
@@ -291,7 +343,6 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
-                println!("MessageMudbusUpdate::ModbusConnect ");
 //                 self.save_invertor();
                 let device_futures = self.logic.reconnect_devices();
                 return Command::batch(device_futures.into_iter()
@@ -317,9 +368,7 @@ impl App {
 //                 self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
-    //             dbg!(&d);
                 if res.is_ok() {
-    //                 println!("Message::ModbusUpdateAsyncAnswerDevice {}", d.name());
                     self.meln.properties.update_property(&self.meln.values);
                 }
             },
@@ -331,7 +380,24 @@ impl App {
         Command::none()
     }
     
+    fn sub_meln(props: &meln_logic::watcher::Meln) -> Subscription<MelnMessage> {
+        use ui::animations::PropertyAnimation;
+        Subscription::batch(vec![
+            Subscription::from_recipe(
+                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
+            ).map(MelnMessage::IsStartedChanged),
+            Subscription::from_recipe(
+                PropertyAnimation::new("IsWorked", props.is_worked.subscribe())
+            ).map(MelnMessage::IsWorkedChanged),
+            Subscription::from_recipe(
+                PropertyAnimation::new("Steps", props.step.subscribe())
+            ).map(MelnMessage::NextStep),
+        ])
+    }
+
     fn meln_update(&mut self, message: MelnMessage) -> Command<Message> {
+        log::trace!(target: "meln_logic::update", "meln_update:\n\t{:?}", &message);
+
         use MelnMessage::*;
         match message {
         IsStartedChanged(is_started) => {
@@ -343,6 +409,7 @@ impl App {
                 return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
             }
         }
+        IsWorkedChanged(enb) => self.is_worked = enb,
         NextStep(step) => {
             self.txt_status = format!("{:?}",step);
         }
@@ -359,22 +426,23 @@ impl App {
                 .map(|(_k, v)| v)
                 .filter(|v| v.is_log())
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| log::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
+                .map(|(v, vf)| logger::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
             };
             // Разницу записывать
             self.log_values.append(&mut log_values);
         }
 
-        let warn = values.iter().map(|(_,v)| v)
-            .map(|v| v.is_error())
-            .any(|err| err);
+//         let warn = values.iter().map(|(_,v)| v)
+//             .map(|v| v.is_error())
+//             .any(|err| err);
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
-    async fn log_save(values: Vec<log::LogValue>) -> Option<(log::structs::TableState, PathBuf)> {
+    async fn log_save(values: Vec<logger::LogValue>) -> Option<(logger::structs::TableState, PathBuf)> {
+        log::trace!("log_save: values len: {}", values.len());
         if values.is_empty() { return None; }
             
-        log::new_csv_raw(&values);
+        logger::new_csv_raw(&values);
 
         let vec_map = vec![
         ("Скорость", "4bd5c4e0a9"),
@@ -388,24 +456,24 @@ impl App {
         ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
         ];
         
-        let res = log::new_table_fields(values, 1, vec_map);
+        let res = logger::new_table_fields(values, 1, vec_map);
         return res;
     }
 
     fn save_invertor(invertor_values: &ModbusValues) {
-        let dt = log::date_time_now();
-        dbg!(&dt);
-        let dt = log::date_time_to_string_name_short(&dt);
-        let path = log::get_file_path("tables/log/").join(dt).with_extension(".csv");
-        dbg!(&path);
+        let dt = logger::date_time_now();
+        log::trace!("save_invertor date_time: {:?}", &dt);
+        let dt = logger::date_time_to_string_name_short(&dt);
+        let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
+        log::trace!("path: {:?}", &path);
         let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, n)| log::InvertorParametr {
+            .map(|(adr, v, n)| logger::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
                 value: v,
                 name: n,
             }).collect();
-        if let Err(e) = log::csv::write_invertor_parametrs(&path, parametrs) {
-            dbg!(e);
+        if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
+            log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
         }
     }
 
@@ -416,7 +484,7 @@ impl App {
         self.meln.properties.is_started.get()
     }
     fn is_worked(&self) -> bool {
-        self.meln.properties.is_worked.get()
+        self.is_worked
     }
 }
 

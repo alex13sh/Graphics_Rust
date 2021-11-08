@@ -102,13 +102,14 @@ impl Klapans {
             }
         }
         Message::StatusChanged(status) => {
+            log::trace!(target: "meln_logic::vacuum","status: {:?}", &status);
             use meln_logic::watcher::VacuumStatus::*;
             let pb_name = match status {
             Уменьшение_давления => "Уменьшить давление",
             Увеличение_давления => "Увеличить давление",
             Насосы_отключены => "",
             };
-
+            log::trace!(target: "meln_logic::vacuum","pb_name: {}", pb_name);
             for pb in &mut self.buttons {
                 if pb.name == pb_name {
                     pb.enb = true;

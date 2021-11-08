@@ -23,6 +23,7 @@ pub struct Meln {
 
 impl From<&ModbusValues> for Meln {
     fn from(values: &ModbusValues) -> Self {
+        log::trace!("Meln Init");
         Meln {
             material: values.into(),
             
@@ -72,6 +73,8 @@ pub mod watcher {
     
     impl Meln {
         pub fn update_property(&self, values: &super::Meln) {
+//             log::trace!("Meln update_property");
+
             self.material.update_property(&values.material);
             
             self.half_top.update_property(&values.half_top);
@@ -93,7 +96,7 @@ pub mod watcher {
                     changed_any!(start_top, start_bottom);
                     let start_top = *start_top.borrow();
                     let start_bottom = *start_bottom.borrow();
-                    
+                    log::trace!("Meln is started: {:?}", start_top || start_bottom);
                     self.is_started.set(start_top || start_bottom);
                 }
             };
@@ -102,6 +105,7 @@ pub mod watcher {
                 loop {
                     let next_step = self.step.get()
                         .check_next_step(self).await;
+                    log::trace!("Next Step: {:?}", &next_step);
                     self.step.set(next_step);
                 }
             };
@@ -149,6 +153,8 @@ pub mod watcher {
         Завершение_работы_мельницы,
         Стартовое_положение,
         
+//         Тестовый_запуск_на_воздухе,
+//         Тестовый_запуск_в_вакууме,
         ErrorStep,
     }
     
@@ -164,42 +170,58 @@ pub mod watcher {
             #[allow(unused_must_use)]
             match self {
             Начало_работы => {
-                let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
-                let mut клапан_верхнего_контейнера = meln.material.клапан_верхнего_контейнера.subscribe();
-                let mut клапан_нижнего_контейнера = meln.material.клапан_нижнего_контейнера.subscribe();
-                
-                changed_all!(
-                    клапан_помольной_камеры,
-                    клапан_верхнего_контейнера,
-                    клапан_нижнего_контейнера
-                );
-                Step_3
+//                 let mut клапан_верхнего_контейнера = meln.material.клапан_верхнего_контейнера.subscribe();
+
+                if meln.material.клапан_помольной_камеры.get() == false {
+                   let _ = meln.material.клапан_помольной_камеры.subscribe().changed().await;
+                }
+                if meln.material.клапан_нижнего_контейнера.get() == false {
+                   let _ = meln.material.клапан_нижнего_контейнера.subscribe().changed().await;
+                }
+                if meln.material.клапан_помольной_камеры.get()
+                        && meln.material.клапан_нижнего_контейнера.get() {
+                    Step_3
+                } else {self}
             }
             Step_3 => {
-                let mut motor = meln.vacuum.motor.subscribe();
-                changed_all!(motor);
-                Откачка_воздуха_из_вакуумной_системы
+                if meln.vacuum.motor.get() == false {
+                   let _ = meln.vacuum.motor.subscribe().changed().await;
+                   Откачка_воздуха_из_вакуумной_системы
+                } else {self}
             }
             Откачка_воздуха_из_вакуумной_системы => {
-                let mut meln_motor = meln.is_started.subscribe();
-                let mut oil_motor = meln.oil.motor.subscribe();
-                let _klapan = meln.material.клапан_подачи_материала.get();
+//                 let _klapan = meln.material.клапан_подачи_материала.get();
                 // klapan == false; // Проверить закрыт ли клапан, если нет, то ошибка!
-                changed_all!(meln_motor, oil_motor);
-                Запуск_маслостанции_и_основных_двигателей
+                if meln.is_started.get()
+                        && meln.oil.motor.get() {
+                    Запуск_маслостанции_и_основных_двигателей
+                } else {
+                    let mut meln_motor = meln.is_started.subscribe();
+                    let mut oil_motor = meln.oil.motor.subscribe();
+                    changed_any!(meln_motor, oil_motor);
+                    self
+                }
             }
             Запуск_маслостанции_и_основных_двигателей => {
-                let mut motor = meln.material.dozator.motor.subscribe();
-                changed_all!(motor);
-                // *motor.borrow() == true
-                Подача_материала
+                if meln.material.dozator.motor.get() {
+                    Подача_материала
+                } else {
+                    let mut motor = meln.material.dozator.motor.subscribe();
+                    let _ = motor.changed().await;
+                    Подача_материала
+                }
             }
             Подача_материала => {
-                let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
-                let mut клапан_нижнего_контейнера = meln.material.клапан_помольной_камеры.subscribe();
-                changed_all!(клапан_помольной_камеры, клапан_нижнего_контейнера);
-                
-                Измельчение_материала
+                let mat = &meln.material;
+                if mat.клапан_помольной_камеры.get()
+                        && mat.клапан_помольной_камеры.get() {
+                    Измельчение_материала
+                } else {
+                    let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
+                    let mut клапан_нижнего_контейнера = meln.material.клапан_помольной_камеры.subscribe();
+                    changed_any!(клапан_помольной_камеры, клапан_нижнего_контейнера);
+                    self
+                }
             }
             Измельчение_материала => {
                 // ...

@@ -17,6 +17,7 @@ type ModbusContext = Arc<super::ModbusContext>;
 pub struct Device {
     name: String,
     address: DeviceAddress,
+    #[derivative(Debug="ignore")]
     pub(super) values: ModbusValues,
     pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
@@ -89,7 +90,7 @@ impl Device {
     }
     
     pub async fn connect(&self) -> DeviceResult {
-        info!("device connect");
+        trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
         
         *self.ctx.try_lock()? = super::ModbusContext
@@ -107,7 +108,7 @@ impl Device {
     }
     
     pub async fn update_async(&self, req: UpdateReq) -> DeviceResult {
-//         info!("pub async fn update_async");
+//         trace!("pub async fn update_async");
         if self.ctx.is_poisoned()  {
 //             info!(" <- device is busy");
             return Err(DeviceError::ContextBusy);
@@ -123,7 +124,7 @@ impl Device {
 
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
-//             info!("update_async TimeOut");
+            log::error!(target: "modbus::update::update_async", "TimeOut; {:?}", self);
             self.disconnect()?;
             Err(DeviceError::ContextNull)
         } else {res}
@@ -147,7 +148,7 @@ impl Device {
         &self.values
     }
     pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
-        info!("-> device get context");
+//         trace!("device get context");
         if let Some(ref ctx) = *self.ctx.try_lock()? {
             Ok(ctx.clone())
         } else {
@@ -232,7 +233,7 @@ impl From<DeviceInit> for Device {
             }
         }
         
-        info!("Device from {}", d.name);
+        trace!("Device from {}", d.name);
         
         Device {
             name: d.name,

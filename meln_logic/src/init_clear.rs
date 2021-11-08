@@ -185,7 +185,7 @@ impl Complect {
         &self.owen_analog_1,
         &self.owen_analog_2,
         &self.digit_i.device(), &self.digit_o.device(),
-        &self.invertor_1.device(), &self.invertor_2.device()
+        &self.invertor_1.device(), //&self.invertor_2.device()
         ]
         .iter().map(|&d| d.clone()).collect()
     }

@@ -636,10 +636,13 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                     ])),
             ]);
             
+            let prefix = if num == 6 {
+                format!("{}) Invertor/", num)
+            } else {String::new()};
             let add_simple_value_read = |hash: &str, adr: u16, name: &str|
                 Value::new(adr, name)
                 .direct(ValueDirect::read())
-                .with_log(Log::hash(hash));
+                .with_log(Log::hash(&format!("{}{}", prefix, hash)));
             let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str|
                 add_simple_value_read(hash, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32));

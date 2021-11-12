@@ -673,7 +673,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
                 add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("об./мин"), // fix me
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
-                add_simple_value_read_100("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
+                add_simple_value_read_10("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
                 add_simple_value_read_10("5369886757", 0x2106, "Выходное напряжение (E)"),
                 add_simple_value_read_10("2206H", 0x2206, "Индикация текущей выходной мощности (P)").with_suffix("кВт"),
                 add_simple_value_read("2207H", 0x2207, "Индикация рассчитанной (с PG) скорости").with_suffix("об./мин"),

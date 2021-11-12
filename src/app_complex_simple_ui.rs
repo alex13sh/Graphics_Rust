@@ -455,6 +455,9 @@ impl App {
         ("Скорость", "4bd5c4e0a9"),
         ("Ток", "5146ba6795"),
         ("Напряжение", "5369886757"),
+        ("Скорость", "6) Invertor/4bd5c4e0a9"),
+        ("Ток", "6) Invertor/5146ba6795"),
+        ("Напряжение", "6) Invertor/5369886757"),
         ("Вибродатчик", "Виброскорость дв. М1/value"),
         ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
         ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
@@ -540,7 +543,7 @@ mod half_complect {
                             
                             values.vibro.clone(),
                             values.invertor.get_amper_out_value().into(),
-                            values.invertor.get_speed_out_value().into(),
+                            values.invertor.get_hz_out_value().into(),
                         ],
                     }
                 ],

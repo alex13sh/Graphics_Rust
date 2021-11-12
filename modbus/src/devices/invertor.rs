@@ -59,6 +59,13 @@ impl From<&ModbusValues> for InvertorValues {
     }
 }
 
+impl std::ops::Deref for InvertorValues {
+    type Target = ModbusValues;
+    fn deref(&self) -> &ModbusValues {
+        &self.values
+    }
+}
+
 impl Invertor {
     pub fn new(device: Device) -> Self {
         Invertor {

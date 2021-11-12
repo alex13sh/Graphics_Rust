@@ -197,7 +197,7 @@ impl Application for App {
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
                 time::every(std::time::Duration::from_millis(5000))
                 .map(|_| MessageMudbusUpdate::ModbusConnect),
-                time::every(std::time::Duration::from_millis(5000))
+                time::every(std::time::Duration::from_millis(60000))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
@@ -358,7 +358,8 @@ impl App {
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
-                let d = self.logic.invertor_1.device();
+                let d = self.logic.invertor_2.device();
+                Self::save_invertor(d.values_map());
                 let dc = d.clone();
                 let f = async move {dc.update_async(UpdateReq::All).await};
                 return Command::perform(f, move |res| Message::MessageUpdate(

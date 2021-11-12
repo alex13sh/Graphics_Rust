@@ -130,6 +130,8 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
         values: Some(vec![
+            // От 85 до 150 мм -- растояние в 75 мм
+            // Или от 60 до 135
             make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into()))
                 .with_log(Log::hash("Значение уровня масла")), // <<---
             make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---

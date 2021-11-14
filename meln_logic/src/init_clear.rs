@@ -2,7 +2,7 @@ pub mod init {
 use modbus::{Value, ModbusValues, /*ValueError*/};
 use modbus::init;
 use modbus::invertor::{Invertor, /*DvijDirect*/}; // Device
-use modbus::{Device, DeviceResult, DeviceError, UpdateReq, DigitIO};
+use modbus::{Device as MDevice, DeviceResult, DeviceError, UpdateReq, DigitIO};
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -20,54 +20,32 @@ macro_rules! map(
 );
 
 use crate::devices::{Dozator};
-
+type Device = Arc<MDevice>;
 pub struct Complect {
-        
-    pub invertor_1: Invertor,
-    pub invertor_2: Invertor,
-    pub digit_i: DigitIO,
-    pub digit_o: DigitIO,
-    pub owen_analog_1: Arc<Device>,
-
-    pub owen_analog_2: Arc<Device>,
-    pub analog_pdu_rs: Arc<Device>,
-    pub owen_mkon: Arc<Device>,
-    
+    devices: Vec<Device>,
     values: ModbusValues,
-
-    pub dozator: Dozator,
 }
 
 // Инициализация
 impl Complect {
     pub fn new() -> Self {
-        let invertor = init::make_invertor("192.168.1.5".into()).with_id(5);
-        let invertor_1 = Invertor::new(invertor.into());
-        let invertor = init::make_invertor("192.168.1.6".into()).with_id(6);
-        let invertor_2 = Invertor::new(invertor.into());
+        let devices: Vec<_> = vec![
+            init::make_invertor("192.168.1.5".into()).with_id(5),
+            init::make_invertor("192.168.1.6".into()).with_id(6),
         
-        let digit_i = DigitIO::new(init::make_i_digit("192.168.1.10".into()).with_id(3).into());
-        let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).with_id(4).into());
-        let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11").with_id(1)));
-        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11).with_id(2)));
-        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12).with_id(7)));
-        let owen_mkon = Arc::new(Device::from(init::make_mkon("192.168.1.13", 1)));
-
-        let values = Self::init_values(&mut [&invertor_1.device(), &invertor_2.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);
-        let values_dozator = values.get_values_by_name_starts(&["Двигатель подачи материала в камеру/", "Направление вращения двигателя ШД/"]);
+            init::make_i_digit("192.168.1.10".into()).with_id(3), 
+            init::make_o_digit("192.168.1.12".into()).with_id(4),
+            init::make_owen_analog_1("192.168.1.11").with_id(1),
+            init::make_owen_analog_2("192.168.1.13", 11).with_id(2),
+            init::make_pdu_rs("192.168.1.13", 12).with_id(7),
+            init::make_mkon("192.168.1.13", 1),
+        ].into_iter().map(MDevice::from).map(Arc::new).collect();
+        
+        let values = Self::init_values(&devices);
+        
         Complect {
             values: values,
-            
-            invertor_1: invertor_1,
-            invertor_2: invertor_2,
-            digit_i: digit_i,
-            digit_o: digit_o,
-            owen_analog_1: analog_1,
-            owen_analog_2: analog_2,
-            analog_pdu_rs: pdu_rs,
-            owen_mkon: owen_mkon,
-
-            dozator: Dozator::new(values_dozator).unwrap(),
+            devices: devices,
         }
     }
     pub fn make_values(&self, read_only: bool) -> BTreeMap<String, Arc<Value>> {
@@ -90,7 +68,7 @@ impl Complect {
         &self.values
     }
     
-    fn init_values(devices: &mut [&Device]) -> ModbusValues {
+    fn init_values(devices: &[Device]) -> ModbusValues {
         let mut map = HashMap::new();
         for d in devices.iter() {
             for (name, v) in d.values_map().iter() {
@@ -109,50 +87,38 @@ impl Complect {
 impl Complect {
     
     pub fn update(&self) {
-        for d in &self.get_devices() {
+        for d in self.get_devices() {
             d.update();
         }
     }
     pub fn update_all(&self) {
-        for d in &self.get_devices() {
+        for d in self.get_devices() {
             if let Err(err) = d.update_all() {
                 println!("Device {} update error: {:?}", d.name(), err);
             }
         }
     }
     
-    pub fn update_async(&self, req: UpdateReq) -> Vec<(Arc<modbus::Device>,
-    impl std::future::Future<Output = DeviceResult>)> {
+    pub fn update_async(&self, req: UpdateReq) -> Vec<(/*device_id,*/ impl std::future::Future<Output = DeviceResult>)> {
         let mut device_futures = Vec::new();
-        for d in &self.get_devices() {
+        for d in self.get_devices() {
             if !d.is_connecting() && d.is_connect() {
-                let  dc = d.clone();
+                let d = d.clone();
                 let upd = async move {
-//                     if !dc.is_connect() {
-//                         let res = dc.connect().await;
-//                         if res.is_err() {
-//                             return res;
-//                         }
-//                     }
-//                     if dc.is_connect() {
-                        dc.update_async(req).await
-//                     }
+                    d.update_async(req).await
                 };
-                let dc = d.clone();
-                device_futures.push((dc, upd));
+                device_futures.push((upd));
             }
         }
         device_futures
     }
-    pub fn reconnect_devices(&self) -> Vec<(Arc<modbus::Device>,
-    impl std::future::Future<Output = DeviceResult> )> {
+    pub fn reconnect_devices(&self) -> Vec<( impl std::future::Future<Output = DeviceResult>)> {
         let mut device_futures = Vec::new();
-        for d in &self.get_devices() {
+        for d in self.get_devices() {
             if !d.is_connecting() && !d.is_connect() {
-                let dc = d.clone();
-                let upd = async move {dc.connect().await};
-                let dc = d.clone();
-                device_futures.push((dc, upd));
+                let d = d.clone();
+                let upd = async move {d.connect().await};
+                device_futures.push((upd));
             }
         }
         device_futures
@@ -178,16 +144,8 @@ impl Complect {
 //         device_futures
 //     }
     
-    pub fn get_devices(&self) -> Vec<Arc<Device>> {
-        [
-//         &self.owen_mkon,
-        &self.analog_pdu_rs,
-        &self.owen_analog_1,
-        &self.owen_analog_2,
-        &self.digit_i.device(), &self.digit_o.device(),
-        &self.invertor_1.device(), &self.invertor_2.device()
-        ]
-        .iter().map(|&d| d.clone()).collect()
+    pub fn get_devices(&self) -> &[Device] {
+        &self.devices
     }
     
     pub fn update_new_values(&self) -> DeviceResult {

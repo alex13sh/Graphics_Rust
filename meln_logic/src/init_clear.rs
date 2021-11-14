@@ -99,26 +99,23 @@ impl Complect {
         }
     }
     
-    pub fn update_async(&self, req: UpdateReq) -> Vec<(/*device_id,*/ impl std::future::Future<Output = DeviceResult>)> {
+    /*device_id, -- вместо Arc<Device>*/ 
+    pub fn update_async(&self, req: UpdateReq) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
         let mut device_futures = Vec::new();
         for d in self.get_devices() {
             if !d.is_connecting() && d.is_connect() {
-                let d = d.clone();
-                let upd = async move {
-                    d.update_async(req).await
-                };
-                device_futures.push((upd));
+                let upd = d.clone().update_async(req);
+                device_futures.push((d.clone(), upd));
             }
         }
         device_futures
     }
-    pub fn reconnect_devices(&self) -> Vec<( impl std::future::Future<Output = DeviceResult>)> {
+    pub fn reconnect_devices(&self) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
         let mut device_futures = Vec::new();
         for d in self.get_devices() {
             if !d.is_connecting() && !d.is_connect() {
-                let d = d.clone();
-                let upd = async move {d.connect().await};
-                device_futures.push((upd));
+                let upd = d.clone().connect();
+                device_futures.push((d.clone(), upd));
             }
         }
         device_futures

@@ -384,8 +384,7 @@ impl App {
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
                 if res.is_ok() {
-                    let dc = d.clone();
-                    let f = async move {dc.update_async(UpdateReq::All).await};
+                    let f = d.clone().update_async(UpdateReq::All);
                     return Command::perform(f, move |res| Message::MessageUpdate(
                             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
                 }

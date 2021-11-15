@@ -352,7 +352,7 @@ impl App {
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
-                self.logic.update();
+//                 self.logic.update();
 
                 self.proccess_values();
             },

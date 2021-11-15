@@ -54,7 +54,7 @@ impl VacuumStation {
 }
 
 pub mod watcher {
-    use crate::structs::{Property, changed_any};
+    use crate::watcher::{Property, changed_any};
     
     #[derive(Default)]
     pub struct VacuumStation {

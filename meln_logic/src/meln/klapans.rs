@@ -57,7 +57,7 @@ impl Klapans {
 }
 
 pub mod watcher {
-    use crate::structs::Property;
+    use crate::watcher::Property;
     use std::collections::HashMap;
     use tokio::sync::broadcast;
     

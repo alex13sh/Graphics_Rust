@@ -41,7 +41,7 @@ impl OilStation {
 }
 
 pub mod watcher {
-    use crate::structs::Property;
+    use crate::watcher::Property;
     
     #[derive(Default)]
     pub struct OilStation {

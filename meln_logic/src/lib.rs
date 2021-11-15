@@ -28,3 +28,15 @@ impl Meln {
         meln::watcher::automation_mut(&self.values, &self.properties).await
     }
 }
+
+pub mod values {
+    pub use super::meln::{
+        Meln,
+        half_meln::{HalfMeln, HalfPart, Invertor},
+        dozator::Dozator,
+        oil_station::OilStation,
+        vacuum_station::VacuumStation,
+        material::Material,
+        klapans::Klapans,
+    };
+}

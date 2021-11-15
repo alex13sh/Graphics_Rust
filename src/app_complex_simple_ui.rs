@@ -82,7 +82,7 @@ use std::path::PathBuf;
 pub struct App {
     ui: UI,
     has_exit: bool,
-    logic: meln_logic::init::Complect,
+    logic: meln_logic::init::Devices,
     meln: meln_logic::Meln,
     is_worked: bool,
     txt_status: String,
@@ -152,7 +152,7 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let logic = meln_logic::init::Complect::new();
+        let logic = meln_logic::init::Devices::new();
         let meln = meln_logic::Meln::new(logic.get_values());
         let meln_fut = meln.clone();
 

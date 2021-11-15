@@ -390,12 +390,11 @@ impl App {
                 }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
-                let d = self.logic.invertor_2.device();
-                Self::save_invertor(d.values_map());
-                let dc = d.clone();
-                let f = async move {dc.update_async(UpdateReq::All).await};
-                return Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+//                 let d = self.logic.invertor_2.device();
+//                 Self::save_invertor(d.values_map());
+//                 let f = d.update_async(UpdateReq::All);
+//                 return Command::perform(f, move |res| Message::MessageUpdate(
+//                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();

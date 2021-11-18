@@ -7,7 +7,7 @@ use std::sync::Mutex;
 pub struct Dozator {
     speed: ValueArc, // скоость ШИМа
     direct: ValueArc, 
-    
+    procent: ValueArc, // Коэффициент заполнения ШИМ
     target_speed: Mutex<Option<TargetSpeedState>>,
 }
 
@@ -24,7 +24,14 @@ impl Dozator {
     pub fn set_speed(&self, speed: i32) {
         log::trace!("set_speed: {}", speed);
         self.direct.set_bit(speed >= 0);
-        self.speed.set_value(speed.abs() as u32);
+
+        if speed == 0 {
+            self.procent.set_value(0);
+            self.speed.set_value(1);
+        } else {
+            self.procent.set_value(500);
+            self.speed.set_value(speed.abs() as u32);
+        }
     }
     fn speed(&self) -> i32 {
         let speed: i32 = self.speed.value() as i32;
@@ -50,9 +57,14 @@ impl Dozator {
     fn get_next_step(&self) -> Option<i32> {
         let mut target = self.target_speed.lock().unwrap();
         if let Some(ref mut tg) = target.as_mut() {
-            if tg.step>0 {
+            if tg.step>1 {
                 tg.step -= 1;
                 tg.current_speed += tg.delta;
+                log::trace!("get_next_step: tg: {:?}", tg);
+                return Some(tg.current_speed);
+            } else if tg.step==1 {
+                tg.step -= 1;
+                tg.current_speed = tg.target_speed;
                 log::trace!("get_next_step: tg: {:?}", tg);
                 return Some(tg.current_speed);
             }
@@ -80,6 +92,7 @@ impl From<&ModbusValues> for Dozator {
             speed: values.get_value_arc("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ").unwrap(),
             direct: values.get_value_arc("Направление вращения двигателя ШД").unwrap(),
 
+            procent: values.get_value_arc("Двигатель подачи материала в камеру/Коэффициент заполнения ШИМ").unwrap(),
             target_speed: Mutex::new(None),
         }
     }

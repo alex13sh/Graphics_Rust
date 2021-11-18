@@ -90,7 +90,7 @@ pub mod owen_digit {
             make_value(&prefix, "Частота высокочастотного ШИМ", 506+pin, ValueSize::UINT16, ValueDirect::Write)
                 .with_log(Log::hash(&format!("{}/Частота высокочастотного ШИМ", name))),
             
-            make_value(&prefix, "Коэффициент заполнения ШИМ", 341+pin, ValueSize::UINT16, ValueDirect::Write),
+            make_value(&prefix, "Коэффициент заполнения ШИМ", 340+pin, ValueSize::UINT16, ValueDirect::Write),
         ]
     }
     

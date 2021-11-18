@@ -28,6 +28,7 @@ impl Dozator {
     }
     fn speed(&self) -> i32 {
         let speed: i32 = self.speed.value() as i32;
+        log::trace!("get_speed: {}", speed);
         if self.direct.get_bit() == false {
             -speed
         } else {

@@ -229,18 +229,18 @@ impl Application for App {
         Message::DozatorUI(m) => {
             let res = self.dozator.update(m, &meln.material.dozator)
                 .map(Message::DozatorUI);
-            self.logic.update_new_values();
+//             self.logic.update_new_values();
             return res;
         },
         Message::OilStation(m) => {
             self.oil_station.update(m, &meln.oil);
-            self.logic.update_new_values();
+//             self.logic.update_new_values();
         },
         Message::KlapansUI(m) => {
             self.klapans.update_material(m.clone(), &meln.material);
             self.klapans.update_vacuum(m.clone(), &meln.vacuum);
             self.klapans.update(m, &meln.klapans);
-            self.logic.update_new_values();
+//             self.logic.update_new_values();
         }
         Message::InfoPane(m) => self.info_pane.update(m),
         Message::MessageUpdate(m) => return self.modbus_update(m),
@@ -327,7 +327,7 @@ impl App {
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
-                
+                self.logic.update_new_values();
                 let device_futures = self.logic.update_async(UpdateReq::ReadOnlyOrLogable);
 
                 return Command::batch(device_futures.into_iter()
@@ -371,7 +371,7 @@ impl App {
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
                 if res.is_ok() {
-                    self.meln.properties.update_property(&self.meln.values);
+//                     self.meln.properties.update_property(&self.meln.values);
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

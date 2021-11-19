@@ -20,6 +20,7 @@ struct UI {
 #[derive(Debug, Clone)]
 pub enum Message {
     StartStopToggle,
+    OilMotor(bool),
 }
 
 impl OilStation {
@@ -66,12 +67,20 @@ impl OilStation {
         }
     }
 
+    pub fn subscription(&self, props: &meln_logic::watcher::OilStation) -> iced::Subscription<Message> {
+        use super::animations::PropertyAnimation;
+        iced::Subscription::from_recipe(
+            PropertyAnimation::new("МаслоСтанция", props.motor.subscribe())
+        ).map(Message::OilMotor)
+    }
+
     pub fn update(&mut self, message: Message, values: &meln_logic::values::OilStation) {
         match message {
         Message::StartStopToggle => {
             self.is_started = !self.is_started;
             values.motor_turn(self.is_started);
         },
+        Message::OilMotor(enb) => self.is_started = enb,
         }
     }
 

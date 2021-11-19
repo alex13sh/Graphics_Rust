@@ -95,15 +95,18 @@ impl Value {
     }
     
     pub(super) fn update_value(&self, value: u32) {
-        if value >= std::u32::MAX/2 {
-//             dbg!(value);
+//         if value >= std::u32::MAX/2 {
+// //             dbg!(value);
+// //             return;
+//         }
+//         if value == std::u16::MAX as u32 {
+// //             dbg!(value);
 //             return;
+//         }
+        let mut l = self.value.lock().unwrap();
+        if !(self.is_log() && l.1 == true) {
+            (*l).0 = value;
         }
-        if value == std::u16::MAX as u32 {
-//             dbg!(value);
-            return;
-        }
-        (*self.value.lock().unwrap()).0 = value;
     }
     
     pub fn new_value(&self, value: u32) -> Self {

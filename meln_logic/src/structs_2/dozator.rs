@@ -22,7 +22,7 @@ struct TargetSpeedState {
 impl Dozator {
     const STEPS: u32 = 20;
     pub fn set_speed(&self, speed: i32) {
-        log::trace!("set_speed: {}", speed);
+        log::trace!(target: "dozator", "set_speed: {}", speed);
         self.direct.set_bit(speed >= 0);
 
         if speed == 0 {
@@ -35,7 +35,7 @@ impl Dozator {
     }
     fn speed(&self) -> i32 {
         let speed: i32 = self.speed.value() as i32;
-        log::trace!("get_speed: {}", speed);
+        log::trace!(target: "dozator", "get_speed: {}", speed);
         if self.direct.get_bit() == false {
             -speed
         } else {
@@ -51,7 +51,7 @@ impl Dozator {
             target_speed, current_speed, delta,
             step: Self::STEPS
         };
-        log::trace!("set_target_speed: tg: {:?}", &tg);
+        log::trace!(target: "dozator", "set_target_speed: tg: {:?}", &tg);
         *target_speed_lock = Some(tg);
     }
     fn get_next_step(&self) -> Option<i32> {
@@ -60,12 +60,12 @@ impl Dozator {
             if tg.step>1 {
                 tg.step -= 1;
                 tg.current_speed += tg.delta;
-                log::trace!("get_next_step: tg: {:?}", tg);
+                log::trace!(target: "dozator", "get_next_step: tg: {:?}", tg);
                 return Some(tg.current_speed);
             } else if tg.step==1 {
                 tg.step -= 1;
                 tg.current_speed = tg.target_speed;
-                log::trace!("get_next_step: tg: {:?}", tg);
+                log::trace!(target: "dozator", "get_next_step: tg: {:?}", tg);
                 return Some(tg.current_speed);
             }
         }

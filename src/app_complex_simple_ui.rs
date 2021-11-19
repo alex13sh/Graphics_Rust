@@ -9,6 +9,7 @@ fn log_init() {
     use simplelog::*;
     use std::fs::File;
     let dt = logger::date_time_to_string_name_short(&logger::date_time_now());
+    std::fs::create_dir(logger::get_file_path(&format!("./simplelog/[{}]/", dt))).unwrap();
     let conf_modbus_update = ConfigBuilder::new()
 //         .add_filter_allow_str("app_complex_simple_ui")
         .add_filter_allow_str("modbus::update")
@@ -27,27 +28,36 @@ fn log_init() {
         .add_filter_allow_str("app::update")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
+    let conf_dozator = ConfigBuilder::new()
+        .add_filter_allow_str("dozator")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
     CombinedLogger::init(
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
             WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/[{}] modbus_update.log", dt)
+                    &format!("simplelog/[{}]/modbus_update.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/[{}] meln_logic.log", dt)
+                    &format!("simplelog/[{}]/meln_logic.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/[{}] app_complex_simple_ui.log", dt)
+                    &format!("simplelog/[{}]/app_complex_simple_ui.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app_update,
                 File::create(logger::get_file_path(
-                    &format!("simplelog/[{}] app_update.log", dt)
+                    &format!("simplelog/[{}]/app_update.log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_dozator,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}]/dozator.log", dt)
                 )).unwrap()
             ),
         ]
@@ -213,11 +223,14 @@ impl Application for App {
     }
     
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
-        if let Message::MessageUpdate(_) = &message {
-
-        } else {
-            log::trace!(target: "app::update", "update message:\n\t{:?}", &message);
+        match &message {
+        Message::MessageUpdate(_) => {},
+        Message::DozatorUI(_) => {
+            log::trace!(target: "dozator", "update message:\n\t{:?}", &message);
         }
+        _ => log::trace!(target: "app::update", "update message:\n\t{:?}", &message),
+        }
+
         let meln = &self.meln.values;
         match message {
         Message::ButtonExit => self.has_exit = true,

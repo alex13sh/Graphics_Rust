@@ -532,9 +532,21 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_invertor_value( "Постоянная времени НЧ-фильтра FOC",  10, 27),
 
                 add_invertor_value( "Коэффициент усиления времени нарастания тока возбуждения",  10, 28),
+                add_float_invertor_value( "Верхний предел отклонения частоты",      10,29, 2),
+
+                add_float_invertor_value( "Число пар полюсов резольвера",      10,30, 0),
+                add_float_invertor_value( "IF режим, задание тока",      10,31, 0),
+
+                add_float_invertor_value( "PM в бессенсорном режиме. Пропускная способность для зоны высоких скоростей.",      10,32, 2),
+                add_float_invertor_value( "PM в бессенсорном режиме. Фильтр прпускная полоса низких частот.",      10,34, 2),
 
                 add_float_invertor_value( "Коэффициент усиление Интегральный",      10,35, 2),
                 add_float_invertor_value( "Коэффициент усиление Пропорциональный",  10,36, 2),
+                add_float_invertor_value( "Частота перехода с IF режима на PM ",  10,39, 2),
+                add_float_invertor_value( "PM в бессенсорном режиме. Частота перехода с IF без датчика на VF ",  10,40, 2),
+                add_float_invertor_value( "IF-режим постоянная времени фильтра низких частот",  10,41, 1),
+                add_float_invertor_value( "Время обнаружения начального отклонения",  10,42, 0),
+                add_float_invertor_value( "Длительность нулевого напряжения при старте",  10,49, 3),
 
             ]);
             // Part 11

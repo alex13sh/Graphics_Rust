@@ -122,7 +122,7 @@ pub mod watcher {
     }
     pub async fn automation_mut(values: &super::Meln, props: &Meln) {
         use tokio::time::{sleep, Duration};
-        let mut sub_is_started = props.is_started.subscribe();
+        let mut sub_is_started = props.half_bottom.is_started.subscribe();
         let f_stop = async move {
             loop {
                 let _ = sub_is_started.changed().await;

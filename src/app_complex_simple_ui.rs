@@ -423,7 +423,9 @@ impl App {
             self.dvij_is_started = is_started;
             if is_started {
                 self.reset_values();
+                self.is_worked = true;
             } else {
+                self.is_worked = false;
                 let f = Self::log_save(std::mem::take(&mut self.log_values));
                 return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
             }

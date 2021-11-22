@@ -72,12 +72,12 @@ impl Dozator {
         let slider = {
             let slider = Slider::new(
                 &mut self.ui.shim_hz,
-                -500..=60_000,
+                -500..=5_000,
                 self.shim_hz_ui,
                 Message::ShimHzChanged
             )
             .on_release(Message::SetShimHz)
-            .step(500);
+            .step(100);
 
             let pb = Button::new(&mut self.ui.pb_klapan_enb,
                                 Text::new("Подать материал"))

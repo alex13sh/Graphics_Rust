@@ -279,7 +279,7 @@ impl OutputValues {
 //                 step_hz: step_hz,
                 count: cnt,
             },
-            fields: vec!["Скорость".into(), "Вибродатчик".into()],
+            fields: vec!["Скорость 1".into(), "Вибродатчик".into()],
             values: values_f32,
         }
     }
@@ -346,8 +346,8 @@ impl OutputValues {
         
 //         let sht = book.new_sheet("Инфо")?;
         
-        let state = self.get_state();
-        sht.write_state((14,2), state);
+//         let state = self.get_state();
+//         sht.write_state((14,2), state);
         
         let _ = umya_spreadsheet::writer::xlsx::write(&book, &new_path);
         Ok(new_path)

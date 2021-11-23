@@ -125,8 +125,12 @@ impl Device {
 //         info!("-> res");
         if let Err(DeviceError::TimeOut) = res {
             log::error!(target: "modbus::update::update_async", "TimeOut; {:?}", self);
-            self.disconnect()?;
-            Err(DeviceError::ContextNull)
+            if self.address.is_tcp_ip() {
+                self.disconnect()?;
+                Err(DeviceError::ContextNull)
+            } else {
+                Err(DeviceError::TimeOut)
+            }
         } else {res}
     }
     

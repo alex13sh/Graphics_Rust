@@ -117,7 +117,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
             vec![
                 make_value("Адрес датчика", 0x50, ValueSize::UINT16, ValueDirect::Write),
                 make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
+//                 make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
             ]
         ].into_iter().flatten().collect()),
     }
@@ -136,10 +136,10 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
                 .with_log(Log::hash("Значение уровня масла"))
                 .with_suffix("%")
                 .size(ValueSize::UInt16Map(|v| (v - 60) as f32 *100.0/80.0)), // <<---
-            make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read()) // <<---
-                .with_log(Log::hash("Верхний предел уровня масла")),
-            make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read()) // <<---
-                .with_log(Log::hash("Нижний предел уровня масла")),
+//             make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read()) // <<---
+//                 .with_log(Log::hash("Верхний предел уровня масла")),
+//             make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read()) // <<---
+//                 .with_log(Log::hash("Нижний предел уровня масла")),
             make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
             make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
             make_value("Применить новые сетевые параметры", 0x15EB, ValueSize::UINT16, ValueDirect::Write),

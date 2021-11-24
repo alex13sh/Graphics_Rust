@@ -205,9 +205,9 @@ impl Application for App {
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
 //                 time::every(std::time::Duration::from_millis(100))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
-                time::every(std::time::Duration::from_millis(5000))
+                time::every(std::time::Duration::from_secs(20))
                 .map(|_| MessageMudbusUpdate::ModbusConnect),
-                time::every(std::time::Duration::from_millis(60000))
+                time::every(std::time::Duration::from_secs(30*60))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
@@ -365,10 +365,12 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
-                let dc = d.clone();
-                let f = async move {dc.update_async(UpdateReq::All).await};
-                return Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+                if res.is_ok() {
+                    let dc = d.clone();
+                    let f = async move {dc.update_async(UpdateReq::All).await};
+                    return Command::perform(f, move |res| Message::MessageUpdate(
+                            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+                }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
                 let d = self.logic.invertor_2.device();
@@ -383,8 +385,15 @@ impl App {
 //                 self.proccess_speed();
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
-                if res.is_ok() {
-//                     self.meln.properties.update_property(&self.meln.values);
+                if res.is_err() && !d.address().is_tcp_ip() {
+                    if !d.is_connecting() && !d.is_connect() {
+                        let dc = d.clone();
+                        let upd = async move {dc.connect().await};
+//                     return async{ Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect)}.into();
+                        return Command::perform(upd, move |res| Message::MessageUpdate(
+                            MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res))
+                        );
+                    }
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

@@ -121,7 +121,8 @@ impl ModbusContext {
             if let Ok(buff) = buff {
                 Self::update_impl(&self.values, r.clone(), buff);
             } else {
-                log::error!("Range ({:?})", r);
+                log::error!("Range ({:?})\nRanges: {:?}", r, &ranges_address);
+                return Err(DeviceError::ValueOut);
             }
         }
         Ok(())

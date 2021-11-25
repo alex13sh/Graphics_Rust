@@ -278,10 +278,10 @@ impl Application for App {
     }
     fn view(&mut self) -> Element<Self::Message> {
 //         Text::new("Complex View").into()
-        let ba_1 = self.logic.owen_analog_1.is_connect();
-        let ba_2 = self.logic.owen_analog_2.is_connect();
-        let bd_1 = self.logic.digit_i.device().is_connect();
-        let bd_2 = self.logic.digit_o.device().is_connect();
+        let ba_1 = true;
+        let ba_2 = true;
+        let bd_1 = true;
+        let bd_2 = true;
 
         let low = self.low.view()
             .map(Message::LowHalfComplectUI);

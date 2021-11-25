@@ -112,7 +112,7 @@ pub mod watcher {
             };
             tokio::join!(
                 f_is_started,
-                f_step,
+//                 f_step,
                 self.half_top.automation(),
                 self.half_bottom.automation(),
                 self.klapans.automation(),

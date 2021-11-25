@@ -26,7 +26,7 @@ impl Dozator {
         self.direct.set_bit(speed >= 0);
 
         if speed == 0 {
-            self.procent.set_value(0);
+//             self.procent.set_value(0);
             self.speed.set_value(1);
         } else {
             self.procent.set_value(500);

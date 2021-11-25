@@ -70,6 +70,7 @@ fn main() {
 } 
 
 mod ui;
+use ui::style;
 
 use modbus::{ModbusValues, Device, DeviceError};
 use std::collections::HashMap;
@@ -95,6 +96,7 @@ pub struct App {
     info_pane: ui::InfoPane,
     
     log_values: Vec<logger::LogValue>,
+    is_logging: bool,
 }
 
 
@@ -103,6 +105,7 @@ pub struct App {
 struct UI {
     pb_exit: button::State,
     pb_stop: button::State,
+    pb_log_turn: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -119,6 +122,7 @@ pub enum Message {
     InfoPane(ui::info_pane::Message),
 //     InfoPaneUpdate(Option<(logger::structs::TableState, PathBuf)>),
     
+    LoggingTurn(bool),
     MessageUpdate(MessageMudbusUpdate),
     MelnMessage(MelnMessage),
     ResultEmpty,
@@ -169,6 +173,7 @@ impl Application for App {
             meln: meln,
             is_worked: false,
             log_values: Vec::new(),
+            is_logging: false,
         },
         
             Command::batch(vec![
@@ -197,8 +202,8 @@ impl Application for App {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
-        let interval_update = if self.is_worked() {100} else {1000};
-        let interval_log = if self.is_worked() {100} else {10000};
+        let interval_update = if self.is_logging {100} else {200};
+        let interval_log = if self.is_logging {100} else {1000};
         Subscription::batch(vec![
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
@@ -259,6 +264,15 @@ impl Application for App {
         Message::MessageUpdate(m) => return self.modbus_update(m),
         Message::MelnMessage(m) => return self.meln_update(m),
         Message::ResultEmpty => {},
+        Message::LoggingTurn(enb) => {
+            self.is_logging = enb;
+            if enb {
+                self.reset_values();
+            } else {
+                let f = Self::log_save(std::mem::take(&mut self.log_values));
+                return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
+            }
+        }
         }
         Command::none()
     }
@@ -306,8 +320,12 @@ impl Application for App {
 //         col.into()
 
         let txt_status = Text::new(format!("Step: {}", self.txt_status));
+        let pb_log_turn = Button::new(&mut self.ui.pb_log_turn, Text::new("Логи включены"))
+                .style(style::Button::Check{checked: self.is_logging})
+                .on_press(Message::LoggingTurn(!self.is_logging));
         let row_exit = Row::new()
             .push(txt_status)
+            .push(pb_log_turn)
             .push(Space::with_width(Length::Fill))
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
@@ -430,14 +448,15 @@ impl App {
         match message {
         IsStartedChanged(is_started) => {
             self.dvij_is_started = is_started;
-            if is_started {
-                self.reset_values();
-                self.is_worked = true;
-            } else {
-                self.is_worked = false;
-                let f = Self::log_save(std::mem::take(&mut self.log_values));
-                return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
-            }
+//             if is_started {
+//                 self.reset_values();
+//                 self.is_worked = true;
+//             } else {
+//                 self.is_worked = false;
+//                 let f = Self::log_save(std::mem::take(&mut self.log_values));
+//                 return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
+//             }
+            return async move{Message::LoggingTurn(is_started)}.into();
         }
         IsWorkedChanged(enb) => self.is_worked = enb,
         NextStep(step) => {
@@ -452,7 +471,7 @@ impl App {
     fn proccess_values(&mut self) {
         use std::convert::TryFrom;
         let values = self.logic.get_values();
-        if self.is_started() {
+        if self.is_logging {
             let mut log_values: Vec<_> = {
                 values.iter()
                 .map(|(_k, v)| v)

@@ -9,19 +9,32 @@ pub use device::*;
 
 
 // #[test]
-pub(crate) fn tst() {
+pub fn print_devices() {
     let d = init_devices();
-    dbg!(d);
+    dbg!(&d);
+}
+
+pub fn print_values() {
+    for d in init_devices() {
+        if let Some(values) = d.values {
+            for v in values {
+                if let Some(log) = v.log {
+                    println!("{}", log.full_name);
+                }
+            }
+        }
+    }
 }
 
 pub(crate) fn init_devices() -> Vec<Device> {    
     vec![
-    make_owen_analog_1("192.168.1.11"),
-    make_owen_analog_2("192.168.1.13", 11),
-    make_i_digit("192.168.1.10".into()),
-    make_o_digit("192.168.1.12".into()),
-    make_invertor("192.168.1.5".into(), 5),
-    make_invertor("192.168.1.6".into(), 6),
+    make_owen_analog_1("192.168.1.11").with_full_name_values(),
+    make_owen_analog_2("192.168.1.13", 11).with_full_name_values(),
+    make_i_digit("192.168.1.10".into()).with_full_name_values(),
+    make_o_digit("192.168.1.12".into()).with_full_name_values(),
+    make_pdu_rs("192.168.1.13", 10).with_full_name_values(),
+    make_invertor("192.168.1.5".into(), 5).with_full_name_values(),
+    make_invertor("192.168.1.6".into(), 6).with_full_name_values(),
     ]
 }
 

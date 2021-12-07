@@ -18,7 +18,7 @@ pub fn print_values() {
     for d in init_devices() {
         for v in d.values {
             if let Some(log) = v.log {
-                println!("{}", log.print_full_name());
+                println!("{};{};{}", log.device_name, log.sensor_name, log.value_name);
             }
         }
     }
@@ -136,7 +136,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
 
 pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
     Device {
-        name: "Уровень масла".into(),
+        name: "7) Уровень масла".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
@@ -144,9 +144,13 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
             // От 85 до 150 мм -- растояние в 75 мм
             // Или от 60 до 135
             make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((90, 80).into()))
-                .with_log(Log::value("Значение уровня масла"))
+                .with_log(Log::value("Процентное значение уровня масла"))
                 .with_suffix("%")
                 .size(ValueSize::UInt16Map(|v| (v - 60) as f32 *100.0/80.0)), // <<---
+            make_value("value_mm", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((70, 60).into()))
+                .with_log(Log::value("Абсолютное значение уровня масла"))
+                .with_suffix("мм")
+                .size(ValueSize::UINT16),
 //             make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read()) // <<---
 //                 .with_log(Log::value("Верхний предел уровня масла")),
 //             make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read()) // <<---
@@ -282,11 +286,11 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 .size(ValueSize::UInt16Dot(dot));
             let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
                 add_float_invertor_value(name, p, adr, 1);
-            let add_simple_value_read = |value: &str, p: u16, adr: u16, name: &str|
+            let add_simple_value_read = |_value: &str, p: u16, adr: u16, name: &str|
                 Value::new(p*256+adr, name)
                 .direct(ValueDirect::read())
                 .size(ValueSize::UInt16Map(|v| v as f32/10_f32))
-                .with_log(Log::value(value));
+                .with_log(Log::value(name));
 
             // P0
             let mut reg = vec![
@@ -666,10 +670,10 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             let prefix = if num == 6 {
                 format!("{}) Invertor/", num)
             } else {String::new()};
-            let add_simple_value_read = |value: &str, adr: u16, name: &str|
+            let add_simple_value_read = |_value: &str, adr: u16, name: &str|
                 Value::new(adr, name)
                 .direct(ValueDirect::read())
-                .with_log(Log::value(&format!("{}{}", prefix, value)));
+                .with_log(Log::value(name));
             let add_simple_value_read_speed = |value: &str, adr: u16, name: &str|
                 add_simple_value_read(value, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32));

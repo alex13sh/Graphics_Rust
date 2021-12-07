@@ -166,24 +166,29 @@ pub struct Log {
     pub device_name: String,
     pub sensor_name: String,
     pub value_name: String,
+//     pub value_address: u16,
+    pub device_id: u16,
 }
 
 impl Log {
-    pub fn value(name: &str) -> Self {
+    pub fn value(self,/* adr: u16,*/ name: &str) -> Self {
         Self {
-            device_name: String::new(),
-            sensor_name: String::new(),
+//             address: adr,
             value_name: name.into(),
-        }
-    }
-    pub fn sensor(self, name: &str) -> Self {
-        Self {
-            sensor_name: name.into(),
             .. self
         }
     }
-    pub fn device(self, name: &str) -> Self {
+    pub fn sensor(name: &str) -> Self {
         Self {
+            device_id: 0,
+            device_name: String::new(),
+            sensor_name: name.into(),
+            value_name: String::new(),
+        }
+    }
+    pub fn device(self, id:u16, name: &str) -> Self {
+        Self {
+            device_id: id,
             device_name: name.into(),
             .. self
         }

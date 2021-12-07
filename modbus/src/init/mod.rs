@@ -16,11 +16,9 @@ pub fn print_devices() {
 
 pub fn print_values() {
     for d in init_devices() {
-        if let Some(values) = d.values {
-            for v in values {
-                if let Some(log) = v.log {
-                    println!("{}", log.full_name);
-                }
+        for v in d.values {
+            if let Some(log) = v.log {
+                println!("{}", log.full_name);
             }
         }
     }
@@ -61,7 +59,7 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
         name: "1) МВ210-101".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIP(ip_addres.into()),
-        values: Some(vec![
+        values: vec![
             make_values(1, "Температура статора дв. М2", (60, 85)),
             make_values(2, "Температура верх подшипника дв. М2", (60, 80)),
             make_values(3, "Температура нижн подшипника дв. М2", (60, 80)),
@@ -70,7 +68,7 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
             make_values(6, "Температура масла на нижн. выходе дв. М1", (100, 120)), // <<-- ValueError
             make_values(7, "Температура масла на выходе маслостанции", (100, 120)), // <<-- ValueError
             
-        ].into_iter().flatten().collect()),
+        ].into_iter().flatten().collect(),
     }
 }
 
@@ -116,7 +114,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
-        values: Some(vec![
+        values: vec![
             make_sensor_err_min_max(1, "Давление масла на выходе маслостанции", "атм", (1.45, 1.37), (8.0, 10.0)), // <<-- ??
             make_sensor_err_min_max(3, "Давление воздуха компрессора", "атм", (6.0, 5.0), (8.0, 9.0)),
             make_sensor_davl(4, "Разрежение воздуха в системе", (40.0, 50.0)),
@@ -132,7 +130,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
                 make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
 //                 make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
             ]
-        ].into_iter().flatten().collect()),
+        ].into_iter().flatten().collect(),
     }
 }
 
@@ -142,7 +140,7 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
-        values: Some(vec![
+        values: vec![
             // От 85 до 150 мм -- растояние в 75 мм
             // Или от 60 до 135
             make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((90, 80).into()))
@@ -156,7 +154,7 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
             make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
             make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
             make_value("Применить новые сетевые параметры", 0x15EB, ValueSize::UINT16, ValueDirect::Write),
-        ]),
+        ],
     }
 }
 
@@ -166,11 +164,11 @@ pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
-        values: Some(vec![
+        values: vec![
             make_value("Скорость обмена", 0x0209, ValueSize::UINT16, ValueDirect::Write),
             make_value("Кол. стоп-битов", 0x020B, ValueSize::UINT16, ValueDirect::Write),
 //             make_value("IP Address", 0x001A, ValueSize::UINT16, ValueDirect::read()),
-        ]),
+        ],
     }
 }
 
@@ -183,7 +181,7 @@ pub fn make_i_digit(ip_address: String) -> Device {
         name: "3) МК210-302".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
-        values: Some(vec![
+        values: vec![
             vec![
                 Value::new(468, &format!("{}/{}", prefix,"Битовая маска состояния выходов")) // DO1 - DO8
                     .direct(ValueDirect::read())
@@ -204,7 +202,7 @@ pub fn make_i_digit(ip_address: String) -> Device {
             make_klapan(1, "Двигатель насоса вакуума 1"),
             make_klapan(2, "Двигатель насоса вакуума 2"),
 
-        ].into_iter().flatten().collect()),    
+        ].into_iter().flatten().collect(),
     }
 }
 
@@ -236,7 +234,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
         name: "4) МУ210-410".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
-        values: Some(vec![
+        values: vec![
             vec![
                 Value::new(468, &format!("{}/{}", prefix,"Битовая маска состояния выходов")) // DO1 - DO8
                     .direct(ValueDirect::read())
@@ -257,7 +255,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
             make_klapan(11, "Клапан верхнего контейнера"), //"Клапан подачи материала в камеру" ),
 //             make_klapan(14, "Клапан выгрузки материала из камеры" ),
             make_klapan(14, "Клапан насоса М5"),//"Клапан дозатора" ),
-        ].into_iter().flatten().collect()),
+        ].into_iter().flatten().collect(),
     }
 }
 
@@ -711,7 +709,7 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_value_read_10("5b28faeb8d", 0x220F, "Температура радиатора"),
             ]);
             
-            Some(reg)
+            reg
         }
     }
 }

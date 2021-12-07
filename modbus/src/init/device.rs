@@ -5,7 +5,7 @@ use super::Value;
 #[derive(Debug)]
 pub struct Device {
     pub name: String,
-    pub values: Option<Vec<Value>>,
+    pub values: Vec<Value>,
     pub device_type: DeviceType<Device>, 
     pub address: DeviceAddress,
 }
@@ -48,11 +48,9 @@ impl DeviceAddress {
 
 impl Device {
     pub(super) fn with_full_name_values(mut self) -> Self {
-        if let Some(values) = &mut self.values {
-            for v in values {
-                if let Some(log) = &mut v.log {
-                    log.full_name = format!("{}/{}", self.name, v.name);
-                }
+        for v in &mut self.values {
+            if let Some(log) = &mut v.log {
+                log.full_name = format!("{}/{}", self.name, v.name);
             }
         }
         self

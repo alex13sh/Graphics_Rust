@@ -18,7 +18,7 @@ pub fn print_values() {
     for d in init_devices() {
         for v in d.values {
             if let Some(log) = v.log {
-                println!("{}", log.full_name);
+                println!("{}", log.print_full_name());
             }
         }
     }
@@ -144,13 +144,13 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
             // От 85 до 150 мм -- растояние в 75 мм
             // Или от 60 до 135
             make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((90, 80).into()))
-                .with_log(Log::hash("Значение уровня масла"))
+                .with_log(Log::value("Значение уровня масла"))
                 .with_suffix("%")
                 .size(ValueSize::UInt16Map(|v| (v - 60) as f32 *100.0/80.0)), // <<---
 //             make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read()) // <<---
-//                 .with_log(Log::hash("Верхний предел уровня масла")),
+//                 .with_log(Log::value("Верхний предел уровня масла")),
 //             make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read()) // <<---
-//                 .with_log(Log::hash("Нижний предел уровня масла")),
+//                 .with_log(Log::value("Нижний предел уровня масла")),
             make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
             make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
             make_value("Применить новые сетевые параметры", 0x15EB, ValueSize::UINT16, ValueDirect::Write),
@@ -186,11 +186,11 @@ pub fn make_i_digit(ip_address: String) -> Device {
                 Value::new(468, &format!("{}/{}", prefix,"Битовая маска состояния выходов")) // DO1 - DO8
                     .direct(ValueDirect::read())
                     .size(ValueSize::UINT8)
-                    .with_log(Log::hash("Битовая маска состояния выходов")),
+                    .with_log(Log::value("Битовая маска состояния выходов")),
                 Value::new(51, &format!("{}/{}", prefix,"Битовая маска состояния входов")) // DO1 - DO8
                     .direct(ValueDirect::read())
                     .size(ValueSize::UINT8)
-                    .with_log(Log::hash("Битовая маска состояния входов")),
+                    .with_log(Log::value("Битовая маска состояния входов")),
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
             (0..12).map(|i| {
@@ -239,7 +239,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
                 Value::new(468, &format!("{}/{}", prefix,"Битовая маска состояния выходов")) // DO1 - DO8
                     .direct(ValueDirect::read())
                     .size(ValueSize::UINT8)
-                    .with_log(Log::hash("Битовая маска состояния выходов")),
+                    .with_log(Log::value("Битовая маска состояния выходов")),
                 make_value(&prefix, "Битовая маска установки состояния выходов", 470, ValueSize::UINT8, ValueDirect::Write),
             ],
             make_shim(1, "Двигатель подачи материала в камеру"),
@@ -282,11 +282,11 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 .size(ValueSize::UInt16Dot(dot));
             let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
                 add_float_invertor_value(name, p, adr, 1);
-            let add_simple_value_read = |hash: &str, p: u16, adr: u16, name: &str|
+            let add_simple_value_read = |value: &str, p: u16, adr: u16, name: &str|
                 Value::new(p*256+adr, name)
                 .direct(ValueDirect::read())
                 .size(ValueSize::UInt16Map(|v| v as f32/10_f32))
-                .with_log(Log::hash(hash));
+                .with_log(Log::value(value));
 
             // P0
             let mut reg = vec![
@@ -666,18 +666,18 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
             let prefix = if num == 6 {
                 format!("{}) Invertor/", num)
             } else {String::new()};
-            let add_simple_value_read = |hash: &str, adr: u16, name: &str|
+            let add_simple_value_read = |value: &str, adr: u16, name: &str|
                 Value::new(adr, name)
                 .direct(ValueDirect::read())
-                .with_log(Log::hash(&format!("{}{}", prefix, hash)));
-            let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str|
-                add_simple_value_read(hash, adr, name)
+                .with_log(Log::value(&format!("{}{}", prefix, value)));
+            let add_simple_value_read_speed = |value: &str, adr: u16, name: &str|
+                add_simple_value_read(value, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32));
-            let add_simple_value_read_100 = |hash: &str, adr: u16, name: &str|
-                add_simple_value_read(hash, adr, name)
+            let add_simple_value_read_100 = |value: &str, adr: u16, name: &str|
+                add_simple_value_read(value, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32));
-            let add_simple_value_read_10 = |hash: &str, adr: u16, name: &str|
-                add_simple_value_read(hash, adr, name)
+            let add_simple_value_read_10 = |value: &str, adr: u16, name: &str|
+                add_simple_value_read(value, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/10_f32));
             // Part 21 ReadOnly
             reg.append(&mut vec![

@@ -73,7 +73,7 @@ impl Value {
     }
     pub fn hash(&self) -> String {
         if let Some(ref log) = self.log {
-            log.hash.clone()
+            log.print_full_name()
         } else {
             "".into()
         }

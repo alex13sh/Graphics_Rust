@@ -163,15 +163,32 @@ pub struct ValueBit {
 
 #[derive(Debug, Clone)]
 pub struct Log {
-    pub hash: String,       // HEX
-    pub full_name: String, // DeviceName/SensorName/ValueName
+    pub device_name: String,
+    pub sensor_name: String,
+    pub value_name: String,
 }
 
 impl Log {
-    pub fn hash(hash: &str) -> Self {
-        Log {
-            hash: hash.into(),
-            full_name: "".into(),
+    pub fn value(name: &str) -> Self {
+        Self {
+            device_name: String::new(),
+            sensor_name: String::new(),
+            value_name: name.into(),
         }
+    }
+    pub fn sensor(self, name: &str) -> Self {
+        Self {
+            sensor_name: name.into(),
+            .. self
+        }
+    }
+    pub fn device(self, name: &str) -> Self {
+        Self {
+            device_name: name.into(),
+            .. self
+        }
+    }
+    pub fn print_full_name(&self) -> String {
+        format!("{}/{}/{}", self.device_name, self.sensor_name, self.value_name)
     }
 }

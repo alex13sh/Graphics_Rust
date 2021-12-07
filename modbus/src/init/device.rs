@@ -49,9 +49,9 @@ impl DeviceAddress {
 impl Device {
     pub(super) fn with_full_name_values(mut self) -> Self {
         for v in &mut self.values {
-            if let Some(log) = &mut v.log {
-                log.full_name = format!("{}/{}", self.name, v.name);
-            }
+            v.log = if let Some(log) = v.log.take() {
+                Some(log.device(&self.name))
+            } else {v.log.take()};
         }
         self
     }

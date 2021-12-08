@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use serde_json::{Result, Value};
 use serde::{Deserialize, Serialize};
-use super::LogValue;
+use super::LogValueRaw as LogValue;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct SourceJsonLog {
@@ -55,7 +55,7 @@ pub mod convert {
             values: source_log.v_dt.into_iter()
                 .zip(source_log.v_hash.into_iter())
                 .zip(source_log.v_value.into_iter())
-                .map(|((dt, hash), value)| log::LogValue{
+                .map(|((dt, hash), value)| log::LogValueRaw {
                     date_time: crate::DateTime::parse_from_str(&dt, "%Y-%m-%dT%H:%M:%S%.f").unwrap(),
                     hash: hash, 
                     value: f32::from_bits(value as u32)}

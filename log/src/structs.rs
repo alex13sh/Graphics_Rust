@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
+use super::LogValueRaw as LogValue;
 
 use std::fs::File;
 pub use std::path::PathBuf;
@@ -16,7 +17,7 @@ pub struct Converter {
 pub struct InputValues {
     pub(crate) converter: Option<Converter>,
     name_hash: Vec<(String, String)>,
-    values: Vec<crate::LogValue>
+    values: Vec<LogValue>
 }
 
 #[derive(Clone)]
@@ -54,13 +55,13 @@ impl Converter {
         }
     }
 
-    pub fn from_log_values(self, values: Vec<crate::LogValue>) -> InputValues {
+    pub fn from_log_values(self, values: Vec<LogValue>) -> InputValues {
         InputValues {
             converter: Some(self),
             .. InputValues::from_log_values(values)
         }
     }
-    pub fn read_file(mut self, file_name: &str, reader: fn(&PathBuf) -> Vec<crate::LogValue>) -> InputValues {
+    pub fn read_file(mut self, file_name: &str, reader: fn(&PathBuf) -> Vec<LogValue>) -> InputValues {
         self.file_name = file_name.to_owned();
         let cur_path = self.input_path_csv.join(file_name.to_owned()+".csv");
         InputValues {
@@ -68,7 +69,7 @@ impl Converter {
             .. InputValues::from_log_values(reader(&cur_path))
         }
     }
-    pub fn read_file_opt(mut self, file_name: &str, reader: fn(&PathBuf) -> Option<Vec<crate::LogValue>>) -> Option<InputValues> {
+    pub fn read_file_opt(mut self, file_name: &str, reader: fn(&PathBuf) -> Option<Vec<LogValue>>) -> Option<InputValues> {
         self.file_name = file_name.to_owned();
         let cur_path = self.input_path_csv.join(file_name.to_owned()+".csv");
         let v = InputValues {
@@ -90,7 +91,7 @@ impl Converter {
 }
 
 impl InputValues {
-    pub fn from_log_values(values: Vec<crate::LogValue>) -> InputValues {
+    pub fn from_log_values(values: Vec<LogValue>) -> InputValues {
         InputValues {
             converter: None,
             values: values,

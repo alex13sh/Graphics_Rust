@@ -48,7 +48,7 @@ impl DeviceAddress {
 
 impl Device {
     pub(super) fn with_id(mut self, id: u16) -> Self {
-        self.name = format!("{}) {}", id, self.name);
+//         self.name = format!("{}) {}", id, self.name);
         for v in &mut self.values {
             v.log = if let Some(log) = v.log.take() {
                 Some(log.device(id, &self.name))

@@ -20,7 +20,7 @@ pub struct SessionTime {
     pub file_name: Option<String>,
     
     #[serde(skip)]
-    pub values: Option<Vec<crate::LogValue>>,
+    pub values: Option<Vec<crate::LogValueRaw>>,
 }
  
 impl SessionTime {
@@ -58,7 +58,9 @@ pub fn write_invertor_parametrs(file_name: &PathBuf, values: Vec<crate::Invertor
     Ok(())
 }
 
-pub fn write_values(file_name: &PathBuf, values: &Vec<crate::LogValue>) -> crate::MyResult {
+pub fn write_values<T>(file_name: &PathBuf, values: &Vec<T>) -> crate::MyResult 
+where T: serde::Serialize
+{
     let file = File::create(file_name)?;
     let mut wrt = csv::WriterBuilder::new()
         .has_headers(true)
@@ -72,7 +74,9 @@ pub fn write_values(file_name: &PathBuf, values: &Vec<crate::LogValue>) -> crate
     Ok(())
 }
 
-pub fn read_values(file_name: &PathBuf) -> Option<Vec<crate::LogValue>> {
+pub fn read_values< T>(file_name: &PathBuf) -> Option<Vec<T>> 
+where T:  for<'de> serde::Deserialize<'de>
+{
     let file = File::open(file_name).ok()?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)

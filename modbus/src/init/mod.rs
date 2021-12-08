@@ -18,7 +18,7 @@ pub fn print_values() {
     for d in init_devices() {
         for v in d.values {
             if let Some(log) = v.log {
-                println!("{};{};{}", log.device_name, log.sensor_name, log.value_name);
+                println!("{};{};{}", log.device_id, log.device_name, log.sensor_name);
             }
         }
     }
@@ -235,7 +235,7 @@ pub fn make_o_digit(ip_address: String) -> Device {
         
     let prefix = format!("{}", "4) МУ210-410");
     Device {
-        name: "4) МУ210-410".into(),
+        name: "МУ210-410".into(),
         device_type: DeviceType::OwenDigitalIO,
         address: DeviceAddress::TcpIP(ip_address),
         values: vec![

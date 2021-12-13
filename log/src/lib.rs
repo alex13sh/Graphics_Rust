@@ -25,6 +25,10 @@ pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
     (*dt+Duration::hours(3)).format("%d_%m_%Y %H_%M_%S")
         .to_string()
 }
+pub fn date_time_to_string_name_hum(dt: &DateTime) -> String {
+    (*dt+Duration::hours(3)).format("%d.%m.%Y-%H:%M:%S")
+        .to_string()
+}
 
 pub mod structs;
 pub mod json;
@@ -181,6 +185,14 @@ pub fn new_csv_raw(values: &Vec<crate::LogValueRaw>) {
     
     let file_name = format!("value_{}.csv", date_time_to_string_name_short(&start));
     csv::write_values(&get_file_path("tables/csv/").join(file_name), values);
+}
+
+pub fn new_csv_hum(values: &Vec<crate::LogValueHum>) {
+    if values.len() < 2 {return;}
+    let start = values.first().unwrap().date_time;
+    
+    let file_name = format!("{}.csv", date_time_to_string_name_hum(&start));
+    csv::write_values(&get_file_path("log/values/csv/").join(file_name), values);
 }
 
 pub fn new_table_fields(values: Vec<crate::LogValueRaw>, step_sec: u16, name_hash: Vec<(&str, &str)>) -> Option<(structs::TableState, PathBuf)> {

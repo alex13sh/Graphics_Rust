@@ -110,7 +110,7 @@ impl ModbusContext {
                 let buff = ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1);
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
                 let timeout = sleep(Duration::from_millis(
-                    if self.is_rtu {300} else {100}
+                    if self.is_rtu {200} else {100}
                 ));
                 let res = tokio::select! {
                 buff = buff => Ok(buff),
@@ -121,7 +121,8 @@ impl ModbusContext {
             if let Ok(buff) = buff {
                 Self::update_impl(&self.values, r.clone(), buff);
             } else {
-                log::error!("Range ({:?})", r);
+                log::error!("Range ({:?})\nRanges: {:?}", r, &ranges_address);
+                return Err(DeviceError::ValueOut);
             }
         }
         Ok(())

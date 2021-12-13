@@ -6,23 +6,26 @@ use std::time::Duration;
 
 type MyResult = Result<(), Box<dyn std::error::Error>>;
 
-fn main_1() -> MyResult {
+fn main() -> MyResult {
 //     convert_json_old_new()?;
 //     convert_json2csv()?;
 //     test_read_csv_2()?;
 //     convert_session()?;
     let names = [
-        "value_23_04_2021__14_10_44_951678936",
-        "value_27_04_2021__12_48_14_722166742",
-        "value_27_04_2021__13_36_14_460047525",
-        "value_27_04_2021__13_37_46_459645663",
-        "value_27_04_2021__13_38_46_459439921",
-        "value_27_04_2021__13_39_32_958736343",
-        "value_27_04_2021__13_43_35_959273451",
-        
+//         "value_22_11_2021 17_26_38",
+//         "value_22_11_2021 17_33_41",
+        "value_22_11_2021 18_10_03",
     ];
     for name in &names {
-        if let Err(txt) = filter_values(name) {
+        if let Err(txt) = filter_values_top(name) {
+            println!("Error: {:?}", txt);
+        }
+
+        if let Err(txt) = filter_values_bottom(name) {
+            println!("Error: {:?}", txt);
+        }
+
+        if let Err(txt) = filter_values_all(name) {
             println!("Error: {:?}", txt);
         }
     }
@@ -32,27 +35,27 @@ fn main_1() -> MyResult {
     Ok(())
 }
 
-fn main() -> MyResult {
+fn main_2() -> MyResult {
 //     calc_hz()
 //     compare_vibro()
 //     test_group_path()
     compare_vibro_month()
 }
 
-fn filter_values(file_name: &str) -> crate::MyResult {
+fn filter_values_top(file_name: &str) -> crate::MyResult {
     let hashs = vec![
-        ("Скорость", "4bd5c4e0a9"),
-        ("Ток", "5146ba6795"),
-        ("Напряжение", "5369886757"),
-        ("Вибродатчик", "Виброскорость дв. М1/value"),
-        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
-        ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
-        ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
-        ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Скорость", "6) Invertor/4bd5c4e0a9"),
+        ("Ток", "6) Invertor/5146ba6795"),
+        ("Мощность", "6) Invertor/2206H"),
+        ("Вибродатчик", "Виброскорость дв. М2/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М2/value"),
+        ("Температура статора", "Температура статора дв. М2/value"),
+        ("Температура верхн.", "Температура верх подшипника дв. М2/value"),
+        ("Температура нижн", "Температура нижн подшипника дв. М2/value"),
         ("Давление масла на выходе маслостанции", "Давление масла на выходе маслостанции/value"),
         ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
     ];
-    structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/"))
+    structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/Верхний двигатель/"))
         .read_file_opt(file_name, csv::read_values).ok_or("Ошибка чтения файла")?
         .fields(hashs)
         .make_values_3(Duration::from_millis(100))
@@ -63,6 +66,58 @@ fn filter_values(file_name: &str) -> crate::MyResult {
     Ok(())
 }
 
+fn filter_values_bottom(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "2207H"),
+        ("Ток", "5146ba6795"),
+        ("Мощность", "2206H"),
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+        ("Температура статора", "Температура статора двигатель М1/value"),
+        ("Температура верхн.", "Температура масла на верхн. выходе дв. М1/value"),
+        ("Температура нижн", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Давление масла на выходе маслостанции", "Давление масла на выходе маслостанции/value"),
+        ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
+    ];
+    structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/Нижний двигатель/"))
+        .read_file_opt(file_name, csv::read_values).ok_or("Ошибка чтения файла")?
+        .fields(hashs)
+        .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .shift_vibro()
+            .insert_time_f32()
+        .write_excel()?;
+    Ok(())
+}
+
+fn filter_values_all(file_name: &str) -> crate::MyResult {
+    let hashs = vec![
+        ("Скорость", "2207H"),
+        ("Ток", "5146ba6795"),
+        ("Мощность", "2206H"),
+        ("Скорость 2", "6) Invertor/4bd5c4e0a9"),
+        ("Ток 2", "6) Invertor/5146ba6795"),
+        ("Мощность 2", "6) Invertor/2206H"),
+
+        ("Вибродатчик", "Виброскорость дв. М1/value"),
+        ("Вибродатчик 2", "Виброскорость дв. М2/value"),
+        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
+        ("Температура ротора 2", "Температура ротора Пирометр дв. М2/value"),
+        ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
+        ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
+        ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
+        ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
+    ];
+    structs::Converter::new(crate::get_file_path("tables/csv/"), crate::get_file_path("tables/excel/Оба двигателя/"))
+        .read_file_opt(file_name, csv::read_values).ok_or("Ошибка чтения файла")?
+        .fields(hashs)
+        .make_values_3(Duration::from_millis(100))
+            .fill_empty()
+            .shift_vibro()
+            .insert_time_f32()
+        .write_excel()?;
+    Ok(())
+}
 // Подсчёт времени работы на частотах.
 fn calc_hz() -> crate::MyResult {
     let hashs = vec![

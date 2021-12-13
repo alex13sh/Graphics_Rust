@@ -45,9 +45,8 @@ impl InvertorValues {
             выходной_ток: values.get_value_arc("Выходной ток (A)").unwrap(),
             скорость_двигателя: values.get_value_arc("Скорость двигателя").unwrap(),
 
-            индикация_скорости: values.get_value_arc("Индикация рассчитанной или измеренной (с PG) скорости в
-об/мин").unwrap(),
-            индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности в кВт (P)").unwrap(),
+            индикация_скорости: values.get_value_arc("Индикация рассчитанной (с PG) скорости").unwrap(),
+            индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности (P)").unwrap(),
 
             values: values.get_values_by_name_starts(&values_str),
         }
@@ -57,6 +56,13 @@ impl InvertorValues {
 impl From<&ModbusValues> for InvertorValues {
     fn from(values: &ModbusValues) -> Self {
         InvertorValues::from_values(values)
+    }
+}
+
+impl std::ops::Deref for InvertorValues {
+    type Target = ModbusValues;
+    fn deref(&self) -> &ModbusValues {
+        &self.values
     }
 }
 
@@ -115,10 +121,10 @@ impl InvertorValues {
     pub fn get_hz_out_value(&self) -> Arc<Value> {
 //         let vm = &self.values;
 //         vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
-        self.get_speed_out_value()
+        self.скорость_двигателя.value_clone()
     }
     pub fn get_speed_out_value(&self) -> Arc<Value> {
-        self.скорость_двигателя.value_clone()
+        self.индикация_скорости.value_clone()
     }
 }
 

@@ -37,3 +37,11 @@ pub enum DeviceAddress {
     Rtu(u8), // String device_convertor_name
     TcpIp2Rtu(String, u8), // String device_convertor_name
 }
+
+impl DeviceAddress {
+    pub fn is_tcp_ip(&self) -> bool {
+        if let DeviceAddress::TcpIP(_) = self {
+            true
+        } else {false}
+    }
+}

@@ -117,7 +117,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
             vec![
                 make_value("Адрес датчика", 0x50, ValueSize::UINT16, ValueDirect::Write),
                 make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
+//                 make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
             ]
         ].into_iter().flatten().collect()),
     }
@@ -125,17 +125,21 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
 
 pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
     Device {
-        name: "PDU-RS".into(),
+        name: "Уровень масла".into(),
         device_type: DeviceType::OwenAnalog,
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
         values: Some(vec![
-            make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into()))
-                .with_log(Log::hash("Значение уровня масла")), // <<---
-            make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---
-                .with_log(Log::hash("Верхний предел уровня масла")),
-            make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read().err_max((100, 120).into())) // <<---
-                .with_log(Log::hash("Нижний предел уровня масла")),
+            // От 85 до 150 мм -- растояние в 75 мм
+            // Или от 60 до 135
+            make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((90, 80).into()))
+                .with_log(Log::hash("Значение уровня масла"))
+                .with_suffix("%")
+                .size(ValueSize::UInt16Map(|v| (v - 60) as f32 *100.0/80.0)), // <<---
+//             make_value("hight limit", 0x1486, ValueSize::UINT16, ValueDirect::read()) // <<---
+//                 .with_log(Log::hash("Верхний предел уровня масла")),
+//             make_value("low limit", 0x1487, ValueSize::UINT16, ValueDirect::read()) // <<---
+//                 .with_log(Log::hash("Нижний предел уровня масла")),
             make_value("Адрес датчика", 0x15E2, ValueSize::UINT16, ValueDirect::Write),
             make_value("Скорость обмена", 0x15E3, ValueSize::UINT16, ValueDirect::Write),
             make_value("Применить новые сетевые параметры", 0x15EB, ValueSize::UINT16, ValueDirect::Write),
@@ -528,9 +532,21 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_invertor_value( "Постоянная времени НЧ-фильтра FOC",  10, 27),
 
                 add_invertor_value( "Коэффициент усиления времени нарастания тока возбуждения",  10, 28),
+                add_float_invertor_value( "Верхний предел отклонения частоты",      10,29, 2),
+
+                add_float_invertor_value( "Число пар полюсов резольвера",      10,30, 0),
+                add_float_invertor_value( "IF режим, задание тока",      10,31, 0),
+
+                add_float_invertor_value( "PM в бессенсорном режиме. Пропускная способность для зоны высоких скоростей.",      10,32, 2),
+                add_float_invertor_value( "PM в бессенсорном режиме. Фильтр прпускная полоса низких частот.",      10,34, 2),
 
                 add_float_invertor_value( "Коэффициент усиление Интегральный",      10,35, 2),
                 add_float_invertor_value( "Коэффициент усиление Пропорциональный",  10,36, 2),
+                add_float_invertor_value( "Частота перехода с IF режима на PM ",  10,39, 2),
+                add_float_invertor_value( "PM в бессенсорном режиме. Частота перехода с IF без датчика на VF ",  10,40, 2),
+                add_float_invertor_value( "IF-режим постоянная времени фильтра низких частот",  10,41, 1),
+                add_float_invertor_value( "Время обнаружения начального отклонения",  10,42, 0),
+                add_float_invertor_value( "Длительность нулевого напряжения при старте",  10,49, 3),
 
             ]);
             // Part 11
@@ -636,10 +652,13 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                     ])),
             ]);
             
+            let prefix = if num == 6 {
+                format!("{}) Invertor/", num)
+            } else {String::new()};
             let add_simple_value_read = |hash: &str, adr: u16, name: &str|
                 Value::new(adr, name)
                 .direct(ValueDirect::read())
-                .with_log(Log::hash(hash));
+                .with_log(Log::hash(&format!("{}{}", prefix, hash)));
             let add_simple_value_read_speed = |hash: &str, adr: u16, name: &str|
                 add_simple_value_read(hash, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32));
@@ -670,11 +689,10 @@ pub fn make_invertor(ip_address: String, num: u8) -> Device {
                 add_simple_value_read_100("4c12e17ba3", 0x2102, "Заданная частота (F)").with_suffix("Герц"),
                 add_simple_value_read_speed("4bd5c4e0a9", 0x2103, "Скорость двигателя").with_suffix("об./мин"), // fix me
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
-                add_simple_value_read_100("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
+                add_simple_value_read_10("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
                 add_simple_value_read_10("5369886757", 0x2106, "Выходное напряжение (E)"),
-                add_simple_value_read_100("2206H", 0x2206, "Индикация текущей выходной мощности в кВт (P)"),
-                add_simple_value_read_100("2207H", 0x2207, "Индикация рассчитанной или измеренной (с PG) скорости в
-об/мин"),
+                add_simple_value_read_10("2206H", 0x2206, "Индикация текущей выходной мощности (P)").with_suffix("кВт"),
+                add_simple_value_read("2207H", 0x2207, "Индикация рассчитанной (с PG) скорости").with_suffix("об./мин"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),
                 add_simple_value_read_10("5b28faeb8d", 0x220F, "Температура радиатора"),

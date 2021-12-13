@@ -100,6 +100,7 @@ pub mod watcher {
                     self.is_started.set(start_top || start_bottom);
                 }
             };
+
             let f_step = async {
                 self.step.send(self.step.get());
                 loop {
@@ -111,7 +112,7 @@ pub mod watcher {
             };
             tokio::join!(
                 f_is_started,
-                f_step,
+//                 f_step,
                 self.half_top.automation(),
                 self.half_bottom.automation(),
                 self.klapans.automation(),
@@ -121,12 +122,22 @@ pub mod watcher {
     }
     pub async fn automation_mut(values: &super::Meln, props: &Meln) {
         use tokio::time::{sleep, Duration};
-        let mut sub_is_started = props.is_started.subscribe();
+        let mut sub_is_started = props.half_bottom.is_started.subscribe();
         let f_stop = async move {
-            let _ = sub_is_started.changed().await;
-            values.vacuum.davl_dis();
-            sleep(Duration::from_millis(10_000)).await;
-            values.oil.stop();
+            loop {
+                let _ = sub_is_started.changed().await;
+                let is_started = *sub_is_started.borrow();
+                match is_started {
+                false => {
+                    values.vacuum.davl_dis();
+                    sleep(Duration::from_millis(10_000)).await;
+                    values.oil.stop();
+                }
+                true => {
+                    values.oil.start();
+                }
+                }
+            }
         };
     
         tokio::join!(

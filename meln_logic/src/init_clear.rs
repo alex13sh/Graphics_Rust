@@ -181,7 +181,7 @@ impl Complect {
     pub fn get_devices(&self) -> Vec<Arc<Device>> {
         [
 //         &self.owen_mkon,
-//         &self.analog_pdu_rs,
+        &self.analog_pdu_rs,
         &self.owen_analog_1,
         &self.owen_analog_2,
         &self.digit_i.device(), &self.digit_o.device(),

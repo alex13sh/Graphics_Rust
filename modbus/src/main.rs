@@ -9,5 +9,5 @@
 // }
 
 fn main() {
-    modbus::tst();
+    modbus::init::print_values();
 }

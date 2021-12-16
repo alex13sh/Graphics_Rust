@@ -5,7 +5,7 @@ use super::Value;
 #[derive(Debug)]
 pub struct Device {
     pub name: String,
-    pub values: Option<Vec<Value>>,
+    pub values: Vec<Value>,
     pub device_type: DeviceType<Device>, 
     pub address: DeviceAddress,
 }
@@ -43,5 +43,17 @@ impl DeviceAddress {
         if let DeviceAddress::TcpIP(_) = self {
             true
         } else {false}
+    }
+}
+
+impl Device {
+    pub fn with_id(mut self, id: u16) -> Self {
+//         self.name = format!("{}) {}", id, self.name);
+        for v in &mut self.values {
+            v.log = if let Some(log) = v.log.take() {
+                Some(log.device(id, &self.name))
+            } else {v.log.take()};
+        }
+        self
     }
 }

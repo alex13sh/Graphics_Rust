@@ -6,7 +6,7 @@ use std::time::Duration;
 
 type MyResult = Result<(), Box<dyn std::error::Error>>;
 
-fn main() -> MyResult {
+fn main_1() -> MyResult {
 //     convert_json_old_new()?;
 //     convert_json2csv()?;
 //     test_read_csv_2()?;
@@ -35,11 +35,12 @@ fn main() -> MyResult {
     Ok(())
 }
 
-fn main_2() -> MyResult {
+fn main() -> MyResult {
 //     calc_hz()
 //     compare_vibro()
 //     test_group_path()
-    compare_vibro_month()
+//     compare_vibro_month()
+    convert_struct_csv()
 }
 
 fn filter_values_top(file_name: &str) -> crate::MyResult {
@@ -358,3 +359,17 @@ fn get_file_list(dir: &str) -> Vec<PathBuf> {
     res
 }
 
+fn convert_struct_csv() -> MyResult {
+    let paths = get_file_list("tables/csv");
+    dbg!(paths.len());
+    for path in paths {
+        dbg!(&path);
+        let values: Vec<LogValueRaw> = csv::read_values(&path).unwrap();
+        let values: Vec<LogValueHum> = values.into_iter().map(|v| v.into()).collect();
+        csv::write_values(&path.parent().unwrap()
+            .join("../csv_hum").join(path.file_name().unwrap())
+            , &values).unwrap();
+    }
+    
+    Ok(())
+}

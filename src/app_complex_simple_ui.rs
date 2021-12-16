@@ -95,7 +95,7 @@ pub struct App {
     oil_station: ui::OilStation,
     info_pane: ui::InfoPane,
     
-    log_values: Vec<logger::LogValue>,
+    log_values: Vec<logger::LogValueRaw>,
     is_logging: bool,
 }
 
@@ -477,7 +477,7 @@ impl App {
                 .map(|(_k, v)| v)
                 .filter(|v| v.is_log())
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| logger::LogValue::new(v.hash(), vf)).collect() // Избавиться от hash
+                .map(|(v, vf)| logger::LogValueRaw::new(v.hash(), vf)).collect() // Избавиться от hash
             };
             // Разницу записывать
             self.log_values.append(&mut log_values);
@@ -489,7 +489,7 @@ impl App {
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
-    async fn log_save(values: Vec<logger::LogValue>) -> Option<(logger::structs::TableState, PathBuf)> {
+    async fn log_save(values: Vec<logger::LogValueRaw>) -> Option<(logger::structs::TableState, PathBuf)> {
         log::trace!("log_save: values len: {}", values.len());
         if values.is_empty() { return None; }
             

@@ -218,7 +218,7 @@ impl std::convert::From<std::io::Error> for DeviceError {
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
         let typ: DeviceType<Device> = d.device_type.into();
-        let mut values: ModbusValues  = d.values.unwrap_or(Vec::new())
+        let mut values: ModbusValues  = d.values
             .into_iter().map(|v| Arc::new(Value::from(v)))
             .collect();
         

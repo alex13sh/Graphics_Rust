@@ -26,7 +26,7 @@ pub struct Graphic {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-//     AppendValues(log::LogValue ),
+//     AppendValues(log::LogValueRaw ),
     AppendValues(Vec<f32>),
     LoadLog()
 }
@@ -82,7 +82,7 @@ impl Graphic {
         _ => {}
         }
     }
-    pub fn append_log_value(&mut self, value: log::LogValue) {
+    pub fn append_log_value(&mut self, value: log::LogValueRaw) {
         let hash = value.hash;
         let dt: DateTime  = value.date_time.into();
         let dp = DatePoint{ dt: dt, value: value.value };
@@ -113,7 +113,7 @@ impl Graphic {
 //         dbg!(&self.view_port.start);
     }
 
-    pub fn set_log_values(&mut self, values: &Vec<log::LogValue>) {
+    pub fn set_log_values(&mut self, values: &Vec<log::LogValueRaw>) {
         if values.len()<2 {return;}
         use std::collections::HashMap;
 

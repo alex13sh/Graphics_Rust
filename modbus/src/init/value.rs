@@ -2,7 +2,7 @@
 
 #[derive(Debug, Clone)]
 pub struct Value {
-    pub name: String,
+    pub name: ValueID,
     pub suffix_name: Option<String>,
     pub address: u16,
     pub direct: ValueDirect,
@@ -31,7 +31,10 @@ impl Value {
             log: None,
         }
     }
-
+    pub fn with_sensor(mut self, sensor_name: &str) -> Self {
+        self.name.sensor_name = sensor_name.into();
+        self
+    }
     pub fn with_log(mut self, log: Log) -> Self {
         self.log = Some(log);
         self
@@ -47,6 +50,52 @@ impl Value {
     pub fn size(mut self, size: ValueSize) -> Self {
         self.size = size;
         self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ValueID {
+    pub device_id: u16,
+    pub device_name: String,
+    pub sensor_name: String,
+    pub value_name: String,
+}
+
+impl From<&str> for ValueID {
+    fn from(name: &str) -> Self {
+        ValueID::value(name)
+    }
+}
+
+impl std::fmt::Display for ValueID {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}) {}/{}/{}", self.device_id, self.device_name, self.sensor_name, self.value_name)
+    }
+}
+
+impl ValueID {
+    fn value(name: &str) -> Self {
+        Self {
+            value_name: name.into(),
+            .. Default::default()
+        }
+    }
+    pub fn sensor_bit(name: &str) -> Self {
+        Self {
+            sensor_name: name.into(),
+            value_name: "bit".into(),
+            .. Default::default()
+        }
+    }
+    pub fn sensor_value(name: &str) -> Self {
+        Self {
+            sensor_name: name.into(),
+            value_name: "value".into(),
+            .. Default::default()
+        }
+    }
+    pub fn sensor_value_name(&self) -> String {
+        format!("{}/{}", self.sensor_name, self.value_name)
     }
 }
 

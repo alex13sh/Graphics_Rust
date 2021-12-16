@@ -1,8 +1,9 @@
 use super::{Value, ValueSize, ValueDirect, ValueError};
 use super::Log;
 
-pub(super) fn make_value(prefix: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
-    super::make_value(&format!("{}/{}", prefix, name), address, size, direct)
+pub(super) fn make_value(sensor_name: &str, name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
+    Value::make_value(name, address, size, direct)
+        .with_sensor(sensor_name)
 }
 pub mod owen_analog {
     use super::*;

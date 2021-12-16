@@ -1,12 +1,12 @@
 // use std::hash::{Hash, Hasher};
-pub use super::init::{ValueDirect, ValueSize, Log};
+pub use super::init::{ValueID, ValueDirect, ValueSize, Log};
 pub use super::init::Value as ValueInit;
 
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct Value {
-    name: String,
+    id: ValueID,
     suffix_name: Option<String>,
     address: u16,
     value: Arc<Mutex<(u32, bool)>>,
@@ -19,7 +19,7 @@ pub struct Value {
 impl Value {
     pub fn new(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
         Value {
-            name: String::from(name),
+            id: name.into(),
             suffix_name: None,
             address: address,
             direct: direct,
@@ -29,8 +29,15 @@ impl Value {
         }
     }
     pub fn name(&self) -> &String {
-        &self.name
+        &self.id.sensor_name
     }
+    pub fn full_name(&self) -> String {
+        self.id.to_string()
+    }
+    pub fn id(&self) -> &ValueID {
+        &self.id
+    }
+    
     pub fn address(&self) -> u16 {
         self.address
     }
@@ -109,17 +116,12 @@ impl Value {
         }
     }
     
-    pub fn new_value(&self, value: u32) -> Self {
-        Self {
-            name: self.name.clone(),
-            suffix_name: None,
-            address: self.address,
-            value: Arc::new(Mutex::new((value,false))),
-            direct: self.direct,
-            size: self.size.clone(),
-            log: self.log.clone(),
-        }
-    }
+//     pub fn new_value(&self, value: u32) -> Self {
+//         Self {
+//             value: Arc::new(Mutex::new((value,false))),
+//             .. self.clone()
+//         }
+//     }
     pub fn value(&self) -> u32 {
         (*self.value.lock().unwrap()).0
     }
@@ -151,7 +153,7 @@ impl Value {
 //         (0..cnt).map(|i| 
         if let ValueSize::BitMap(ref bits) = self.size {
             bits.iter().map(|bit| Self {
-                name: bit.name.clone(),
+                id: ValueID::sensor_bit(&bit.name),
                 suffix_name: None,
                 address: self.address.clone(),
                 value: self.value.clone(),
@@ -180,7 +182,7 @@ impl ValueSize {
 impl From<ValueInit> for Value {
     fn from(v: ValueInit) -> Self {
         Value {
-            name: v.name,
+            id: v.name,
             suffix_name: v.suffix_name,
             address: v.address,
             direct: v.direct,
@@ -503,7 +505,7 @@ impl From<Vec<ValueInit>> for ModbusValues {
     fn from(values: Vec<ValueInit>) -> Self {
         ModbusValues(
             values.into_iter()
-                .map(|v| (v.name.clone(), Arc::new(Value::from(v))))
+                .map(|v| (v.name.sensor_value_name(), Arc::new(Value::from(v))))
                 .collect()
         )
     }

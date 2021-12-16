@@ -41,16 +41,16 @@ pub struct Complect {
 // Инициализация
 impl Complect {
     pub fn new() -> Self {
-        let invertor = init::make_invertor("192.168.1.5".into(), 5);
+        let invertor = init::make_invertor("192.168.1.5".into()).with_id(5);
         let invertor_1 = Invertor::new(invertor.into());
-        let invertor = init::make_invertor("192.168.1.6".into(), 6);
+        let invertor = init::make_invertor("192.168.1.6".into()).with_id(6);
         let invertor_2 = Invertor::new(invertor.into());
         
-        let digit_i = DigitIO::new(init::make_i_digit("192.168.1.10".into()).into());
-        let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).into());
-        let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11")));
-        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11)));
-        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12)));
+        let digit_i = DigitIO::new(init::make_i_digit("192.168.1.10".into()).with_id(3).into());
+        let digit_o = DigitIO::new(init::make_o_digit("192.168.1.12".into()).with_id(4).into());
+        let analog_1 = Arc::new(Device::from(init::make_owen_analog_1("192.168.1.11").with_id(1)));
+        let analog_2 = Arc::new(Device::from(init::make_owen_analog_2("192.168.1.13", 11).with_id(2)));
+        let pdu_rs = Arc::new(Device::from(init::make_pdu_rs("192.168.1.13", 12).with_id(7)));
         let owen_mkon = Arc::new(Device::from(init::make_mkon("192.168.1.13", 1)));
 
         let values = Self::init_values(&mut [&invertor_1.device(), &invertor_2.device(), &digit_i.device(), &digit_o.device(), &analog_1, &analog_2, &pdu_rs]);

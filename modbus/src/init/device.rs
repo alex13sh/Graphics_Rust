@@ -4,10 +4,31 @@ use super::Value;
 
 #[derive(Debug)]
 pub struct Device {
-    pub name: String,
+    pub name: DeviceID,
     pub values: Vec<Value>,
     pub device_type: DeviceType<Device>, 
     pub address: DeviceAddress,
+}
+
+#[derive(Debug)]
+pub struct DeviceID {
+    pub id: u16, // Индекс начинается с 1
+    pub name: String,
+}
+
+impl From<&str> for DeviceID {
+    fn from(name: &str) -> Self {
+        Self {
+            id: 0,
+            name: name.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for DeviceID {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}) {}", self.id, self.name)
+    }
 }
 
 #[derive(Debug)]
@@ -48,10 +69,10 @@ impl DeviceAddress {
 
 impl Device {
     pub fn with_id(mut self, id: u16) -> Self {
-//         self.name = format!("{}) {}", id, self.name);
+        self.name.id = id;
         for v in &mut self.values {
             v.log = if let Some(log) = v.log.take() {
-                Some(log.device(id, &self.name))
+                Some(log.device(id, &self.name.name))
             } else {v.log.take()};
         }
         self

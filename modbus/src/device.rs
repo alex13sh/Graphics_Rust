@@ -2,7 +2,7 @@
 
 use super::{Value, ModbusValues};
 
-use super::init::{DeviceType, DeviceAddress};
+use super::init::{DeviceType, DeviceAddress, DeviceID};
 use super::init::Device as DeviceInit;
 
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ type ModbusContext = Arc<super::ModbusContext>;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Device {
-    name: String,
+    name: DeviceID,
     address: DeviceAddress,
     #[derivative(Debug="ignore")]
     pub(super) values: ModbusValues,
@@ -81,8 +81,9 @@ impl UpdateReq {
 }
 
 impl Device {
-    pub fn name(&self) -> &String {
-        &self.name
+    // Для чего мне этот name нужен?? Для отображение полного имени, или только названия модуля?
+    pub fn name(&self) -> String {
+        self.name.to_string()
     }
     
     pub fn update(&self) -> DeviceResult {

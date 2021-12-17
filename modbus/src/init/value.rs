@@ -32,7 +32,7 @@ impl Value {
         }
     }
     pub fn with_sensor(mut self, sensor_name: &str) -> Self {
-        self.name.sensor_name = sensor_name.into();
+        self.name.sensor_name = Some(sensor_name.into());
         self
     }
     pub fn with_log(mut self, log: Log) -> Self {
@@ -55,10 +55,10 @@ impl Value {
 
 #[derive(Debug, Clone, Default)]
 pub struct ValueID {
-    pub device_id: u16,
-    pub device_name: String,
-    pub sensor_name: String,
-    pub value_name: String,
+    pub device_id: Option<u16>,
+    pub device_name: Option<String>,
+    pub sensor_name: Option<String>,
+    pub value_name: Option<String>,
 }
 
 impl From<&str> for ValueID {
@@ -67,35 +67,26 @@ impl From<&str> for ValueID {
     }
 }
 
-impl std::fmt::Display for ValueID {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}) {}/{}/{}", self.device_id, self.device_name, self.sensor_name, self.value_name)
-    }
-}
-
 impl ValueID {
     fn value(name: &str) -> Self {
         Self {
-            value_name: name.into(),
+            value_name: Some(name.into()),
             .. Default::default()
         }
     }
     pub fn sensor_bit(name: &str) -> Self {
         Self {
-            sensor_name: name.into(),
-            value_name: "bit".into(),
+            sensor_name: Some(name.into()),
+            value_name: Some("bit".into()),
             .. Default::default()
         }
     }
     pub fn sensor_value(name: &str) -> Self {
         Self {
-            sensor_name: name.into(),
-            value_name: "value".into(),
+            sensor_name: Some(name.into()),
+            value_name: Some("value".into()),
             .. Default::default()
         }
-    }
-    pub fn sensor_value_name(&self) -> String {
-        format!("{}/{}", self.sensor_name, self.value_name)
     }
 }
 

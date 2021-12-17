@@ -71,8 +71,8 @@ impl Device {
     pub fn with_id(mut self, id: u16) -> Self {
         self.name.id = id;
         for v in &mut self.values {
-            v.name.device_id = id;
-            v.name.device_name = self.name.name.clone();
+            v.name.device_id = Some(id);
+            v.name.device_name = Some(self.name.name.clone());
             
             v.log = if let Some(log) = v.log.take() {
                 Some(log.device(id, &self.name.name))

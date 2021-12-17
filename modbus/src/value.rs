@@ -1,6 +1,6 @@
 // use std::hash::{Hash, Hasher};
-pub use super::init::{ValueID, ValueDirect, ValueSize, Log};
-pub use super::init::Value as ValueInit;
+pub use super::init::{ValueDirect, ValueSize, Log};
+pub use super::init::{self, Value as ValueInit};
 
 use std::sync::{Arc, Mutex};
 
@@ -19,7 +19,7 @@ pub struct Value {
 impl Value {
     pub fn new(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
         Value {
-            id: name.into(),
+            id: init::ValueID::from(name).into(),
             suffix_name: None,
             address: address,
             direct: direct,
@@ -153,7 +153,7 @@ impl Value {
 //         (0..cnt).map(|i| 
         if let ValueSize::BitMap(ref bits) = self.size {
             bits.iter().map(|bit| Self {
-                id: ValueID::sensor_bit(&bit.name),
+                id: init::ValueID::sensor_bit(&bit.name).into(),
                 suffix_name: None,
                 address: self.address.clone(),
                 value: self.value.clone(),
@@ -165,6 +165,46 @@ impl Value {
     }
     pub(crate) fn merge_value(&mut self, val: &Value) {
         self.value = val.value.clone();
+    }
+}
+
+#[derive(Debug, Clone, Default, Hash, Eq, PartialEq)]
+pub struct ValueID {
+    pub device_id: u16,
+    pub device_name: String,
+    pub sensor_name: String,
+    pub value_name: String,
+}
+
+impl From<init::ValueID> for ValueID {
+    fn from(v: init::ValueID) -> Self {
+        ValueID {
+            device_id: v.device_id.unwrap_or(0),
+            device_name: v.device_name.unwrap_or("".into()),
+            sensor_name: v.sensor_name.unwrap_or("".into()),
+            value_name: v.value_name.unwrap_or("value".into()),
+        }
+    }
+}
+
+impl std::fmt::Display for ValueID {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}) {}/{}/{}", self.device_id, self.device_name, self.sensor_name, self.value_name)
+    }
+}
+
+impl ValueID {
+    pub fn sensor_value_name(&self) -> String {
+        format!("{}/{}", self.sensor_name, self.value_name)
+    }
+}
+
+impl PartialEq<init::ValueID> for ValueID {
+    fn eq(&self, other: &init::ValueID) -> bool {
+        other.device_id.map_or(true, |id| self.device_id == id) && 
+        other.device_name.as_ref().map_or(true, |name| &self.device_name == name) && 
+        other.sensor_name.as_ref().map_or(true, |name| &self.sensor_name == name) && 
+        other.value_name.as_ref().map_or(true, |name| &self.value_name == name)
     }
 }
 
@@ -182,7 +222,7 @@ impl ValueSize {
 impl From<ValueInit> for Value {
     fn from(v: ValueInit) -> Self {
         Value {
-            id: v.name,
+            id: v.name.into(),
             suffix_name: v.suffix_name,
             address: v.address,
             direct: v.direct,
@@ -291,52 +331,13 @@ impl TryFrom<&Value> for f32 {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ValueArc (String, Arc<Value>);
-impl ValueArc {
-    pub fn full_name(&self) -> &String {
-        &self.0
-    }
-    pub fn name(&self) -> Option<&str> {
-        let mut parts = self.0.rsplit("/");
-        match parts.next()? {
-        "value" | "bit" => parts.next(),
-        name @ _ => Some(name)
-        }
-    }
-    pub fn sensor_name(&self) -> Option<&str> {
-        ModbusValues::sensor_name(&self.0)
-    }
-    pub fn device_name(&self) -> Option<&str> {
-        ModbusValues::device_name(&self.0)
-    }
-    pub fn value_clone(&self) -> Arc<Value> {
-        self.1.clone()
-    }
-}
-
-#[test]
-fn test_value_arc_names() {
-    let v = test_value_init();
-    let v = ValueArc("Device/SubDevice/Sensor/ValueName".into(), Arc::new(v));
-    assert_eq!(v.sensor_name().unwrap(), "Sensor");
-    assert_eq!(v.device_name().unwrap(), "Device/SubDevice");
-}
-
-// impl TryFrom<ValueArc> for f32 {
-// impl TryFrom<Arc<Value>> for f32 {
-//     type Error = ();
-//     fn try_from(val: Arc<Value>) -> Result<f32, ()> {
-//         let v = val.as_ref();
-//         f32::try_from(v)
-//     }
-// }
+pub type ValueArc = Arc<Value>;
 
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Default, Clone)]
-pub struct ModbusValues(HashMap<String, Arc<Value>>);
+pub struct ModbusValues(HashMap<ValueID, Arc<Value>>);
 
 impl ModbusValues {
     pub fn new() -> Self {
@@ -344,118 +345,47 @@ impl ModbusValues {
     }
 
     pub fn get_value_arc(&self, name: &str) -> Option<ValueArc> {
-        let v = self.get(name)
-            .or_else(||self.get(&format!("{}/value", name)))
-            .or_else(||self.get(&format!("{}/bit", name)))?;
-        Some(ValueArc(name.into(), v.clone()))
+        let s_value = init::ValueID::sensor_value(name).into();
+        let s_bit = init::ValueID::sensor_bit(name).into();
+        let v = self.get(&s_value)
+            .or_else(||self.get(&s_bit))?;
+        Some(v.clone())
     }
 
-    pub fn set_value(&self, name: &str, value: u32) -> Arc<Value> {
-        let val = self.get(name).unwrap().clone();
+    pub fn set_value(&self, name: &str, value: u32) -> ValueArc {
+        let val = self.get_value_arc(name).unwrap();
         val.update_value(value);
         val
     }
     pub fn get_values_by_name(&self, names: &[&str]) -> ModbusValues {
         ModbusValues (
             names.iter().filter_map(
-                |&name| self.get(name).map(|v|
-                    (String::from(name), Arc::clone(v))
+                |&name| self.get_value_arc(name).map(|v|
+                    (v.id.clone(), v)
                 )
             ).collect()
         )
     }
     
-    pub fn get_value_arc_starts(&self, name: &str) -> Option<ValueArc> {
-        let (name, v) = self.0.iter().find(|&(n,_)| 
-            n.starts_with(name) &&
-            (n.ends_with("/value") ||
-            n.ends_with("/bit"))
-        )?;
-        Some(ValueArc(name.into(), v.clone()))
-    }
-    pub fn get_values_by_name_starts(&self, names: &[&str]) -> ModbusValues {
+    pub fn get_values_by_id(&self, f: impl Fn(&ValueID) -> bool) -> ModbusValues {
         ModbusValues (
-            self.0.iter().filter(|(k, v)| {
-                names.iter().any(|&name| k.starts_with(name))
-            }).map(|(k,v)|(k.clone(), v.clone())).collect()
+            self.0.iter().filter(|(id, v)| f(id))
+                .map(|(id, v)| (id.clone(), v.clone()))
+                .collect()
         )
-    }
-    pub fn get_values_by_name_start(&self, name: &str) -> ModbusValues {
-        ModbusValues (
-            self.0.iter().filter_map(|(k, v)|
-                Some((k.strip_prefix(name)?.to_owned(), v.clone()))
-            ).collect()
-        )
-    }
-    pub fn get_values_by_name_ends(&self, names: &[&str]) -> ModbusValues {
-        ModbusValues (
-            self.0.iter().filter(|(k, v)| {
-                names.iter().any(|&name| k.ends_with(name))
-            }).map(|(k,v)|(k.clone(), v.clone())).collect()
-        )
-    }
-    pub fn get_values_by_name_contains(&self, names: &[&str]) -> ModbusValues {
-        ModbusValues (
-            self.0.iter().filter(|(k, v)| {
-                names.iter().any(|&name| k.contains(name))
-            }).map(|(k,v)|(k.clone(), v.clone())).collect()
-        )
-    }
-
-    pub fn value_name(name: &str) -> Option<&str> {
-        let mut parts = name.rsplit("/");
-        parts.next()
-    }
-    pub fn sensor_name(name: &str) -> Option<&str> {
-        let mut parts = name.rsplit("/");
-        parts.skip(1).next()
-    }
-    pub fn sensor_full_name(name: &str) -> Option<&str> {
-        let mut parts = name.rsplit("/");
-        let sensor_name = parts.skip(1).next()?;
-        let pos_start = sensor_name.as_ptr() as usize - name.as_ptr() as usize ;
-        Some(&name[pos_start..])
-    }
-    pub fn device_name(name: &str) -> Option<&str> {
-        let mut parts = name.rsplit("/");
-        let name_end = parts.skip(2).next()?;
-        let pos_end = name_end.as_ptr() as usize - name.as_ptr() as usize 
-            + name_end.len();
-        Some(&name[..pos_end])
     }
     
-    pub fn convert_to_values(self) -> Self {
-        let map = self.0.into_iter()
-            .filter_map(|(k, v)| Some((
-                Self::value_name(&k)?.to_owned(), v
-            )) )
-            .collect();
-        Self(map)
-    }
-    pub fn convert_to_sensor(self) -> Self {
-        let map = self.0.into_iter()
-            .filter_map(|(k, v)| Some((
-                Self::sensor_full_name(&k)?.to_owned(), v
-            )) )
-            .collect();
-        Self(map)
-    }
-    pub fn print_values(&self) -> String {
-        use std::collections::BTreeMap;
-        let b: BTreeMap<_,_> = self.0.iter().map(|(k, v)| (k.clone(), (v.address(), v.value()))).collect();
-        format!("Invertor Values: {:#?}", b)
-    }
-    pub fn iter_values(&self) -> impl Iterator<Item=(u16, u32, String)> + '_ {
+    pub fn iter_values(&self) -> impl Iterator<Item=(u16, u32, &ValueID)> + '_ {
         self.0.iter().map(|(k, v)| (
                 v.address(), //((v.address()/256) as u8, (v.address()%256) as u8),
-                v.value(), k.clone()
+                v.value(), k
             ))
     }
 }
 
 impl IntoIterator for ModbusValues {
-    type Item = <HashMap<String, Arc<Value>> as IntoIterator>::Item;
-    type IntoIter = <HashMap<String, Arc<Value>> as IntoIterator>::IntoIter;
+    type Item = <HashMap<ValueID, Arc<Value>> as IntoIterator>::Item;
+    type IntoIter = <HashMap<ValueID, Arc<Value>> as IntoIterator>::IntoIter;
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -486,54 +416,48 @@ impl <'a> std::ops::Add<&'a ModbusValues> for &'a ModbusValues {
     }
 }
 
-impl ModbusValues {
-    pub fn set_bit(&self, name: &str, bit: bool) -> Result<(), ()> {
-        let v = self.get(name)
-            .or_else(|| self.get(&format!("{}/bit",name)))
-            .ok_or_else(|| ())?;
-        v.set_bit(bit);
-//         dbg!(&v);
-        Ok(())
-    }
-    pub fn get_bit(&self, name: &str) -> Result<bool, ()> {
-        let v = self.get(&format!("{}/bit",name)).ok_or_else(|| ())?;
-        Ok(v.get_bit())
-    }
-}
-
 impl From<Vec<ValueInit>> for ModbusValues {
     fn from(values: Vec<ValueInit>) -> Self {
         ModbusValues(
             values.into_iter()
-                .map(|v| (v.name.sensor_value_name(), Arc::new(Value::from(v))))
+                .map(|v| (v.name.clone().into(), Arc::new(Value::from(v))))
                 .collect()
         )
     }
 }
 
-impl From<HashMap<String, Arc<Value>>> for ModbusValues {
-    fn from(values: HashMap<String, Arc<Value>>) -> Self {
+impl From<HashMap<ValueID, Arc<Value>>> for ModbusValues {
+    fn from(values: HashMap<ValueID, Arc<Value>>) -> Self {
         ModbusValues(values)
-    }
-}
-
-impl From<Arc<Value>> for ValueArc {
-    fn from(value: Arc<Value>) -> Self {
-        ValueArc(value.name().to_owned(), value)
     }
 }
 
 impl From<ModbusValues> for Vec<ValueArc> {
     fn from(values: ModbusValues) -> Self {
-        values.0.into_iter()
-            .map(|(n, v)| ValueArc (n, v))
-            .collect()
+        values.0.into_iter().map(|v| v.1.clone()).collect()
+    }
+}
+impl From<Vec<ValueArc>> for ModbusValues {
+    fn from(values: Vec<ValueArc>) -> Self {
+        values.into_iter().collect()
+    }
+}
+
+impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
+    fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
+        let mut c = ModbusValues::new();
+        
+        for i in iter {
+            c.insert(i.id().clone(), i);
+        }
+
+        c
     }
 }
 
 
 impl Deref for ModbusValues {
-    type Target = HashMap<String, Arc<Value>>;
+    type Target = HashMap<ValueID, Arc<Value>>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -545,12 +469,6 @@ impl DerefMut for ModbusValues {
     }
 }
 
-impl Deref for ValueArc {
-    type Target = Value;
-    fn deref(&self) -> &Self::Target {
-        &self.1
-    }
-}
 
 // try into bool, i32, f32
 

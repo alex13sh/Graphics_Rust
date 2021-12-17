@@ -60,7 +60,7 @@ impl UpdateReq {
                 .collect()
         }
         Self::Vibro => {
-            values.get_values_by_name_starts(&["Виброскорость дв. "])
+            values.get_values_by_id(|id| id.sensor_name.starts_with("Виброскорость дв. "))
                 .into_iter()
                 .filter(|v| v.1.is_read_only())
                 .map(|(_, v)| v)
@@ -226,15 +226,14 @@ impl From<DeviceInit> for Device {
         {
             let new_values: Vec<_> = values.iter()
                 .flat_map(|(_name, v)| v.get_values_bit())
+                .map(Arc::new)
                 .collect();
-
-            for v in new_values {
-                values.insert(v.name().clone(), Arc::new(v));
-            }
+            let new_values = ModbusValues::from(new_values);
+            values = values + new_values;
         }
         {
             let mut map: HashMap<_, Arc<Value>> = HashMap::new();
-            for (name, v) in values.iter_mut() {
+            for (id, v) in values.iter_mut() {
                 if let Some(v_) = map.get(&v.address()) {
 //                     dbg!(true);
                     if let Some(v) = Arc::get_mut(v) {
@@ -272,19 +271,6 @@ impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
         }
     }
 }
-
-impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
-    fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
-        let mut c = ModbusValues::new();
-
-        for i in iter {
-            c.insert(i.name().clone(), i);
-        }
-
-        c
-    }
-}
-
 
 pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> HashMap<u16, Arc<Value>> {
     values.iter().map(|v| (v.1.address(), v.1.clone())).collect()

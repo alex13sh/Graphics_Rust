@@ -1,8 +1,13 @@
+pub mod modbusvalues;
+pub use modbusvalues::*;
+mod tests;
+
 // use std::hash::{Hash, Hasher};
 pub use super::init::{ValueDirect, ValueSize, Log};
 pub use super::init::{self, Value as ValueInit};
 
 use std::sync::{Arc, Mutex};
+pub type ValueArc = Arc<Value>;
 
 #[derive(Debug)]
 pub struct Value {
@@ -233,17 +238,6 @@ impl From<ValueInit> for Value {
     }
 }
 
-#[cfg(test)]
-fn test_value_init() -> Value {
-    Value::from(ValueInit{
-        name: "Name_1".into(),
-        suffix_name: Some("".into()),
-        address: 1,
-        direct: ValueDirect::Write,
-        size: ValueSize::FLOAT,
-        log: None,
-    })
-}
 
 #[derive(Debug)]
 pub enum ValueFloatError {
@@ -331,170 +325,10 @@ impl TryFrom<&Value> for f32 {
     }
 }
 
-pub type ValueArc = Arc<Value>;
-
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
-
-#[derive(Debug, Default, Clone)]
-pub struct ModbusValues(HashMap<ValueID, Arc<Value>>);
-
-impl ModbusValues {
-    pub fn new() -> Self {
-        ModbusValues(HashMap::new())
-    }
-
-    pub fn get_value_arc(&self, name: &str) -> Option<ValueArc> {
-        let s_value = init::ValueID::sensor_value(name).into();
-        let s_bit = init::ValueID::sensor_bit(name).into();
-        let v = self.get(&s_value)
-            .or_else(||self.get(&s_bit))?;
-        Some(v.clone())
-    }
-
-    pub fn set_value(&self, name: &str, value: u32) -> ValueArc {
-        let val = self.get_value_arc(name).unwrap();
-        val.update_value(value);
-        val
-    }
-    pub fn get_values_by_name(&self, names: &[&str]) -> ModbusValues {
-        ModbusValues (
-            names.iter().filter_map(
-                |&name| self.get_value_arc(name).map(|v|
-                    (v.id.clone(), v)
-                )
-            ).collect()
-        )
-    }
-    
-    pub fn get_values_by_id(&self, f: impl Fn(&ValueID) -> bool) -> ModbusValues {
-        ModbusValues (
-            self.0.iter().filter(|(id, v)| f(id))
-                .map(|(id, v)| (id.clone(), v.clone()))
-                .collect()
-        )
-    }
-    
-    pub fn iter_values(&self) -> impl Iterator<Item=(u16, u32, &ValueID)> + '_ {
-        self.0.iter().map(|(k, v)| (
-                v.address(), //((v.address()/256) as u8, (v.address()%256) as u8),
-                v.value(), k
-            ))
-    }
-}
-
-impl IntoIterator for ModbusValues {
-    type Item = <HashMap<ValueID, Arc<Value>> as IntoIterator>::Item;
-    type IntoIter = <HashMap<ValueID, Arc<Value>> as IntoIterator>::IntoIter;
-
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl std::ops::Add<ModbusValues> for ModbusValues {
-    type Output = ModbusValues;
-    fn add(self, other: Self) -> Self {
-        ModbusValues (
-            self.0.into_iter()
-                .chain(other.0.into_iter())
-                .collect()
-        )
-    }
-}
-
-impl <'a> std::ops::Add<&'a ModbusValues> for &'a ModbusValues {
-    type Output = ModbusValues;
-    fn add(self, other: Self) -> Self::Output {
-        ModbusValues (
-            self.0.iter()
-                .chain(other.0.iter())
-                .map(|(name, v)| (name.clone(), v.clone()))
-                .collect()
-        )
-    }
-}
-
 impl From<Vec<ValueInit>> for ModbusValues {
     fn from(values: Vec<ValueInit>) -> Self {
-        ModbusValues(
-            values.into_iter()
-                .map(|v| (v.name.clone().into(), Arc::new(Value::from(v))))
-                .collect()
-        )
+        values.into_iter()
+            .map(|v| ValueArc::new(v.into()))
+            .collect()
     }
-}
-
-impl From<HashMap<ValueID, Arc<Value>>> for ModbusValues {
-    fn from(values: HashMap<ValueID, Arc<Value>>) -> Self {
-        ModbusValues(values)
-    }
-}
-
-impl From<ModbusValues> for Vec<ValueArc> {
-    fn from(values: ModbusValues) -> Self {
-        values.0.into_iter().map(|v| v.1.clone()).collect()
-    }
-}
-impl From<Vec<ValueArc>> for ModbusValues {
-    fn from(values: Vec<ValueArc>) -> Self {
-        values.into_iter().collect()
-    }
-}
-
-impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
-    fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
-        let mut c = ModbusValues::new();
-        
-        for i in iter {
-            c.insert(i.id().clone(), i);
-        }
-
-        c
-    }
-}
-
-
-impl Deref for ModbusValues {
-    type Target = HashMap<ValueID, Arc<Value>>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for ModbusValues {
-//     type Target = HashMap<String, Arc<Value>>;
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-
-// try into bool, i32, f32
-
-// #[test]
-// fn test_value_ops_bit() {
-//     let v = Value::from(ValueInit{
-//         name: "Name_1".into(),
-//         address: 1,
-//         direct: ValueDirect::Write,
-//         size: ValueSize::BitMap(vec![]),
-//         log: None,
-//     });
-//     v.set_bit(1, true);
-//     assert_eq!(v.value.get(), 2);
-//     v.set_bit(4, true);
-//     assert_eq!(v.value.get(), 18);
-//     assert_eq!(v.get_bit(3), false);
-//     assert_eq!(v.get_bit(4), true);
-// }
-
-#[test]
-fn test_value_into_f32() {
-    let v = test_value_init();
-    *v.value.lock().unwrap() = (u32::from_le_bytes([0x00,0x00,0x20,0x3E]), false);
-    let f: f32 = (&v).try_into().unwrap();
-    assert_eq!(f, 0.15625);
-    let f = f32::from_le_bytes([0x00,0x00,0x20,0x3E]);
-    assert_eq!(f, 0.15625);
 }

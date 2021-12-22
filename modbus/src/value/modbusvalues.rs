@@ -41,6 +41,13 @@ impl ModbusValues {
                 .collect()
         )
     }
+    pub fn unwrap_one(self) -> Result<ValueArc, ()> {
+        if self.0.len() == 1 {
+            Ok(self.0.into_iter().next().unwrap().1)
+        } else {
+            Err(())
+        }
+    }
     
     pub fn iter_values(&self) -> impl Iterator<Item=(u16, u32, &ValueID)> + '_ {
         self.0.iter().map(|(k, v)| (

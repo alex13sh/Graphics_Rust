@@ -40,11 +40,8 @@ impl Devices {
     fn init_values(devices: &[Device]) -> ModbusValues {
         let mut map = HashMap::new();
         for d in devices.iter() {
-            for (name, v) in d.values_map().iter() {
-                if let Some(_) = map.insert(name.clone(), v.clone()) {
-                    map.remove(name.as_str());
-                }
-                map.insert(format!("{}/{}", d.name(), name), v.clone());
+            for (id, v) in d.values_map().iter() {
+                map.insert(id.clone(), v.clone());
             }
         }
 //         dbg!(map.keys());

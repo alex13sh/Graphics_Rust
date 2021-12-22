@@ -53,7 +53,7 @@ impl ValuesList {
     fn view_value<'a, Message: 'a>(value: &ValueArc, style: &Style) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
         let err = value.get_error_min_max();
-        let name = value.name().unwrap();
+        let name = value.name();
         let suffix_name = if let Some(txt) = value.suffix_name() {format!("({})", txt)} else {String::from("")};
         let value = f32::try_from(&value as &modbus::Value);
         let color;
@@ -107,7 +107,7 @@ pub fn make_value_lists_start(modbus_values: &ModbusValues, values_groups: BTree
             ValuesList {
                 name: name,
                 values: values.into_iter().flat_map(|name| { 
-                    modbus_values.get_value_arc_starts(&name)
+                    modbus_values.get_values_by_id(|id| id.sensor_name.starts_with(&name)).unwrap_one().ok()
                 }).collect(),
             }
         ).collect()
@@ -119,8 +119,10 @@ pub fn make_value_lists_start_2(modbus_values: &ModbusValues, values_groups: BTr
             ValuesList {
                 name: name,
                 values: modbus_values
-                    .get_values_by_name_starts(&values.iter().map(|n| &n[..]).collect::<Vec<_>>())
-                    .get_values_by_name_ends(&["/value"]).into(),
+                    .get_values_by_id(|id|
+                        &id.value_name == "value" &&
+                        values.iter().any(|n| id.sensor_name.starts_with(n))
+                    ).into(),
             }
         ).collect()
 }

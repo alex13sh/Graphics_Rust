@@ -522,10 +522,11 @@ impl App {
         let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
         log::trace!("path: {:?}", &path);
         let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, n)| logger::InvertorParametr {
+            .map(|(adr, v, id)| logger::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
                 value: v,
-                name: n,
+//                 name: id.to_string(),
+                name: id.sensor_name.clone(),
             }).collect();
         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
             log::error!("logger::csv::write_invertor_parametrs: {:?}", e);

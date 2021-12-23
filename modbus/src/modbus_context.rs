@@ -65,17 +65,6 @@ impl ModbusContext {
         }
     }
     
-    pub fn update(&self, ranges_address: Option<&Vec<RangeAddress>>) -> Result<(), DeviceError> {
-        use tokio_modbus::client::Reader;
-        let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
-        for r in ranges_address {
-            let buff = block_on(async{self.ctx.lock().await.read_holding_registers(*r.start(), *r.end() - *r.start()+1).await})?;
-//             println!("Ranges ({:?}) is '{:?}'", r, buff);
-            Self::update_impl(&self.values, r.clone(), buff);
-        }
-        Ok(())
-    }
-    
     pub async fn update_async(&self, ranges_address: Option<&Vec<RangeAddress>>) -> Result<(), DeviceError> {
         use tokio_modbus::client::Reader;
         use tokio::time::sleep;
@@ -111,27 +100,14 @@ impl ModbusContext {
         false
     }
     
-    pub(crate) fn set_value(&self, v: &Value) -> Result<(), DeviceError> {
+    pub(crate) async fn set_value(&self, v: &Value) -> Result<(), DeviceError> {
 //         let v = self.values.get(address).unwrap().clone();
         use tokio_modbus::client::Writer;
         match v.size.size() {
-        1 => block_on(async{self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await})?,
+        1 => self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await?,
         2 => {
-            block_on(async{self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await})?;
-            block_on(async{self.ctx.lock().await.write_single_register(v.address()+1, (v.value()>>16) as u16).await})?;
-        },
-        _ => {}
-        };
-        Ok(())
-    }
-    pub(crate) fn get_value(&self, v: &Value) -> Result<(), DeviceError>  {
-//         let v = self.values.get(address).unwrap().clone();
-        use tokio_modbus::client::Reader;
-        match v.size.size() {
-        1 => v.update_value(block_on(async{self.ctx.lock().await.read_holding_registers(v.address(), 1).await})?[0] as u32),
-        2 => {
-            let buf = block_on(async{self.ctx.lock().await.read_holding_registers(v.address(), 2).await})?;
-            v.update_value((buf[0] as u32) | (buf[1] as u32)<<16);
+            self.ctx.lock().await.write_single_register(v.address(), v.value() as u16).await?;
+            self.ctx.lock().await.write_single_register(v.address()+1, (v.value()>>16) as u16).await?;
         },
         _ => {}
         };

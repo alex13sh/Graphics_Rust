@@ -86,16 +86,6 @@ impl Device {
         self.name.to_string()
     }
     
-    pub fn update(&self) -> DeviceResult {
-        self.context()?.update(None)?;
-        Ok(())
-    }
-    pub fn update_all(&self) -> DeviceResult {
-        let req = UpdateReq::All;
-        self.context()?.update(Some(&get_ranges_value(req.filter_values(&self.values), 0)))?;
-        Ok(())
-    }
-    
     pub async fn connect(self: Arc<Self>) -> DeviceResult {
         trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
@@ -110,10 +100,7 @@ impl Device {
 //         self.ctx.is_poisoned()
         false
     }
-//     fn disconnect(&self) -> DeviceResult {
-//         *self.ctx.try_lock()? = None;
-//         Ok(())
-//     }
+
     async fn disconnect(&self) {
         *self.ctx.lock().await = None;
     }
@@ -143,12 +130,12 @@ impl Device {
         res
     }
     
-    pub fn update_new_values(&self) -> DeviceResult {
-        let ctx = self.context()?;
+    pub async fn update_new_values(&self) -> DeviceResult {
+        let ctx = self.context_async().await?;
         for (_name, v) in self.values.iter() {
             if v.is_flag() {
                 v.clear_flag();
-                ctx.set_value(&v)?;
+                ctx.set_value(&v).await?;
             }
         }
         Ok(())

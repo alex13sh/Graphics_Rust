@@ -1,3 +1,5 @@
+#![deny(unused_must_use)]
+
 use iced::{
     Application, executor, Command, window::Mode, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
@@ -66,7 +68,7 @@ fn log_init() {
 
 fn main() {
     log_init();
-    App::run(Settings::default());
+    App::run(Settings::default()).unwrap();
 } 
 
 mod ui;
@@ -358,8 +360,13 @@ impl App {
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
-                self.logic.update_new_values();
-                let device_futures = self.logic.update_async(UpdateReq::ReadOnlyOrLogable);
+                    
+                let device_futures = self.logic.devices_fut_with(
+                    |d| async {
+                        d.clone().update_new_values().await?;
+                        d.update_async(UpdateReq::ReadOnlyOrLogable).await
+                    }
+                );
 
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
@@ -368,7 +375,7 @@ impl App {
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
 //                 self.proccess_values(true);
-                let device_futures = self.logic.update_async(UpdateReq::Vibro);
+                let device_futures = self.logic.devices_fut_with(|d| d.update_async(UpdateReq::Vibro));
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
@@ -376,7 +383,7 @@ impl App {
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();
-                let device_futures = self.logic.reconnect_devices();
+                let device_futures = self.logic.devices_fut_with(|d| d.connect());
                 return Command::batch(device_futures.into_iter()
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res)))

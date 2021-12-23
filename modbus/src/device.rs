@@ -130,7 +130,7 @@ impl Device {
         res
     }
     
-    pub async fn update_new_values(&self) -> DeviceResult {
+    pub async fn update_new_values(self: Arc<Self>) -> DeviceResult {
         let ctx = self.context_async().await?;
         for (_name, v) in self.values.iter() {
             if v.is_flag() {

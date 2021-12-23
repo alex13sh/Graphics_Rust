@@ -52,23 +52,14 @@ impl Devices {
 // Обновление всех устройств
 impl Devices {
         
-    /*device_id, -- вместо Arc<Device>*/ 
-    pub fn update_async(&self, req: UpdateReq) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
-        let mut device_futures = Vec::new();
-        for d in self.get_devices() {
-            if !d.is_connecting() && d.is_connect() {
-                let upd = d.clone().update_async(req);
-                device_futures.push((d.clone(), upd));
-            }
-        }
-        device_futures
-    }
-    pub fn reconnect_devices(&self) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
+    pub fn devices_fut_with<F>(&self, fut: impl Fn(Device) -> F) -> Vec<(Device, F)> 
+    where F: std::future::Future<Output = DeviceResult>
+    {
         let mut device_futures = Vec::new();
         for d in self.get_devices() {
             if !d.is_connecting() && !d.is_connect() {
-                let upd = d.clone().connect();
-                device_futures.push((d.clone(), upd));
+                let f = fut(d.clone());
+                device_futures.push((d.clone(), f));
             }
         }
         device_futures
@@ -78,14 +69,4 @@ impl Devices {
         &self.devices
     }
     
-    pub fn update_new_values(&self) -> DeviceResult {
-        let mut res = Ok(());
-        for d in self.get_devices() {
-            if let Err(e) = d.update_new_values() {
-                res = Err(e);
-            }
-        }
-        res
-    }
-
 }

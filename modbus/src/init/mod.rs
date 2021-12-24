@@ -216,10 +216,10 @@ fn test_klapan_input() {
     let names: Vec<_> = values.iter()
         .skip(1).step_by(2)
         .map(|v| v.name.clone()).collect();
-    assert_eq!(names[0], "Клапан ШК1 открыт/bit");
-    assert_eq!(names[1], "Клапан ШК1 закрыт/bit");
-    assert_eq!(names[10], "Клапан ШК6 открыт/bit");
-    assert_eq!(names[11], "Клапан ШК6 закрыт/bit");
+    assert_eq!(names[0], "Клапан ШК1 открыт/bit".into());
+    assert_eq!(names[1], "Клапан ШК1 закрыт/bit".into());
+    assert_eq!(names[10], "Клапан ШК6 открыт/bit".into());
+    assert_eq!(names[11], "Клапан ШК6 закрыт/bit".into());
 }
 
 pub fn make_o_digit(ip_address: String) -> Device {

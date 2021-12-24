@@ -23,7 +23,7 @@ impl Value {
     }
     pub fn make_value(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
         Value {
-            name: name.into(),
+            name: ValueID::value(name),
             suffix_name: None,
             address: address,
             direct: direct,
@@ -53,7 +53,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct ValueID {
     pub device_id: Option<u16>,
     pub device_name: Option<String>,
@@ -79,6 +79,20 @@ where N: AsRef<str>
             ValueID::sensor(name)
         }
     }
+}
+
+#[test]
+fn test_valueid_from_str() {
+    
+    assert_eq!(
+        ValueID {
+            sensor_name: Some("Двигатель подачи материала в камеру".into()),
+            value_name: Some("Частота высокочастотного ШИМ".into()),
+            .. Default::default()
+        },
+        "Двигатель подачи материала в камеру/Частота высокочастотного ШИМ".into()
+    );
+    
 }
 
 impl ValueID {

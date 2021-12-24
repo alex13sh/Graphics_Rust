@@ -200,7 +200,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.45}
+    fn scale_factor(&self) -> f64 {0.4}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;

@@ -41,6 +41,13 @@ impl InvertorValues {
             "Команда задания частоты",
 //             "Выходной ток (A)", "Скорость двигателя",
         ];
+        let values_ = values.get_values_by_id(|id| 
+                values_str.iter().any(|&name|
+                    id.sensor_name.starts_with(name)
+                )
+            );
+//         dbg!(values_.keys());
+        let v_stop = values_.get_value_arc("Stop").unwrap();
         InvertorValues {
             выходной_ток: values.get_value_arc("Выходной ток (A)").unwrap(),
             скорость_двигателя: values.get_value_arc("Скорость двигателя").unwrap(),
@@ -48,11 +55,7 @@ impl InvertorValues {
             индикация_скорости: values.get_value_arc("Индикация рассчитанной (с PG) скорости").unwrap(),
             индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности (P)").unwrap(),
 
-            values: values.get_values_by_id(|id| 
-                values_str.iter().any(|&name|
-                    id.sensor_name.starts_with(name)
-                )
-            ),
+            values: values_,
         }
     }
 }
@@ -251,3 +254,24 @@ fn test_invertor_error() {
     let err: InvertorError = unsafe { ::std::mem::transmute(4_u8) };
     assert_eq!("Замыкание на землю (GFF)", format!("{}", err));
 }*/
+
+
+#[test]
+fn invertor_values_bit() {
+    let values = Device::from(super::init::make_invertor("".into()).with_id(5)).values;
+//     dbg!(values.keys());
+            let values_str = [
+            "Stop", "Run",
+            "FWD", "REV",
+            "Команда задания частоты",
+//             "Выходной ток (A)", "Скорость двигателя",
+        ];
+    let values = values.get_values_by_id(|id| 
+        values_str.iter().any(|&name|
+            id.sensor_name.starts_with(name)
+        )
+    );
+    dbg!(values.keys());
+    let v_stop = values.get_value_arc("Stop").unwrap();
+    assert_eq!(v_stop.name(), "Stop");
+}

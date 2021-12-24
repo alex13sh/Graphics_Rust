@@ -2,7 +2,10 @@
 use modbus::{ValueArc, ModbusValues, /*ValueError*/};
 
 fn get_value_arc_starts(values: &ModbusValues, name: &str) -> Option<ValueArc> {
-    values.get_values_by_id(|id| id.sensor_name.starts_with(name)).unwrap_one().ok()
+    values.get_values_by_id( |id| 
+        id.sensor_name.starts_with(name) && 
+        id.value_name == "value"
+    ).unwrap_one().ok()
 }
 
 pub struct HalfMeln {

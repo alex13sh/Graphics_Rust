@@ -160,7 +160,11 @@ impl Value {
 //         (0..cnt).map(|i| 
         if let ValueSize::BitMap(ref bits) = self.size {
             bits.iter().map(|bit| Self {
-                id: init::ValueID::sensor_bit(&bit.name).into(),
+                id: ValueID{ 
+                    sensor_name: bit.name.clone(),
+                    value_name: "bit".into(),
+                    .. self.id.clone()
+                },
                 suffix_name: None,
                 address: self.address.clone(),
                 value: self.value.clone(),

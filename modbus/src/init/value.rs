@@ -61,9 +61,23 @@ pub struct ValueID {
     pub value_name: Option<String>,
 }
 
-impl From<&str> for ValueID {
-    fn from(name: &str) -> Self {
-        ValueID::value(name)
+impl <N> From<N> for ValueID 
+where N: AsRef<str>
+{
+    fn from(name: N) -> Self {
+        let name: &str = name.as_ref();
+        if name.contains('/') {
+            let mut names = name.rsplit('/');
+            let mut name_next = || names.next().map(|n| n.into());
+            let mut v = ValueID::default();
+            v.value_name = name_next();
+            v.sensor_name = name_next();
+            v.device_name = name_next();
+            v
+        } else {
+//             ValueID::sensor_value(name)
+            ValueID::sensor(name)
+        }
     }
 }
 
@@ -71,6 +85,12 @@ impl ValueID {
     fn value(name: &str) -> Self {
         Self {
             value_name: Some(name.into()),
+            .. Default::default()
+        }
+    }
+    pub fn sensor(name: &str) -> Self {
+        Self {
+            sensor_name: Some(name.into()),
             .. Default::default()
         }
     }

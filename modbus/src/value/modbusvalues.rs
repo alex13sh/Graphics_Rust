@@ -1,4 +1,5 @@
 use super::{Value, ValueArc, ValueID};
+use super::init::ValueID as IValueID;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
@@ -10,13 +11,10 @@ impl ModbusValues {
         ModbusValues(HashMap::new())
     }
 
-    pub fn get_value_arc(&self, name: &str) -> Option<ValueArc> {
-        use super::init::ValueID;
-        let s_value = ValueID::sensor_value(name).into();
-        let s_bit = ValueID::sensor_bit(name).into();
-        let v = self.get(&s_value)
-            .or_else(||self.get(&s_bit))?;
-        Some(v.clone())
+    pub fn get_value_arc(&self, id: impl Into<IValueID>) -> Option<ValueArc> {
+        let id = id.into();
+        self.0.iter().find(|(id_, v)| *id_ == &id)
+            .map(|(id, v)| v.clone())
     }
 
     pub fn set_value(&self, name: &str, value: u32) -> ValueArc {

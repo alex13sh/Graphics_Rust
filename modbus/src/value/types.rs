@@ -36,7 +36,12 @@ impl PartialEq<init::ValueID> for ValueID {
         other.device_id.map_or(true, |id| self.device_id == id) && 
         other.device_name.as_ref().map_or(true, |name| &self.device_name == name) && 
         other.sensor_name.as_ref().map_or(true, |name| &self.sensor_name == name) && 
-        other.value_name.as_ref().map_or(true, |name| &self.value_name == name)
+        if let Some(name) = other.value_name.as_ref() {
+            &self.value_name == name
+        } else {
+            self.value_name == "value" || 
+            self.value_name == "bit"
+        }
     }
 }
 

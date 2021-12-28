@@ -1,0 +1,17 @@
+[package]
+name = "log"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+csv = "1.1.5"
+umya-spreadsheet = "0.2.2"
+
+directories = "2.0"
+chrono = "0.4"
+
+
+#stream_router = "https://github.com/BroderickCarlin/stream_router"

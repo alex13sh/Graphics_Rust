@@ -61,6 +61,7 @@ iced_futures = {git = "https://github.com/hecrj/iced", rev="391825788"}
 [workspace]
 members = [
     "log",
+    "log_new",
     "modbus",
     "meln_logic",
     "graphic",

@@ -91,75 +91,46 @@ pub mod device {
 }
 
 pub mod iterators {
-//     use std::ops::{Generator, GeneratorState};
 //     use std::pin::Pin;
     
-    fn convert(mut vin: impl Iterator<Item=u32>) -> impl Iterator<Item=f32> 
+    fn fiban_iter(vin: impl Iterator<Item=u32>) -> impl Iterator<Item=f32> 
     {
         let mut sum = 0;
-        std::iter::from_fn(move || {
-            let v = vin.next()?;
-            sum += v;
-            Some(sum  as f32)
-        })
+//         std::iter::from_fn(move || {
+//             let v = vin.next()?;
+//             sum += v;
+//             Some(sum  as f32)
+//         })
+        vin.map(move |v| {sum = sum+v; sum as f32})
     }
     
     #[test]
-    fn test_convert() {
+    fn test_iter() {
         let arr = 0..10;
-        let arr: Vec<f32> = convert(arr.into_iter()).collect();
+        let arr: Vec<f32> = fiban_iter(arr.into_iter()).collect();
         dbg!(arr);
         assert!(false);
     }
-//     pub fn gen(vin: impl Iterator<Item=u32>) -> impl Iterator<Item=f32> {
-//         || {
-//             for i in vin {
-//                 yield i as f32;
-//             }
-//         }
-//     }
     
-//     impl <T> Iterator for T 
-//     where T: Generator<Return = ()>,
-//     {
-//         type Item = <T as Generator>::Yield;
-//         fn next(&mut self) -> Option<Self::Item> {
-//             match self.resume(()) {
-//                 GeneratorState::Yielded(x) => Some(x),
-//                 GeneratorState::Complete(_) => None,
-//             }
-//         }
-//     }
-//     
-//     struct GeneratorIteratorAdapter<G>(Pin<Box<G>>);
-// 
-//     impl<G> GeneratorIteratorAdapter<G>
-//     where
-//         G: Generator<Return = ()>,
-//     {
-//         fn new(gen: G) -> Self {
-//             Self(Box::pin(gen))
-//         }
-//     }
-//     
-//     impl <T, I, G> From<I> for GeneratorIteratorAdapter<G>
-//     where I: Iterator<T>,
-//     G: Generator<Return = ()>,
-//     {
-//     
-//     }
-//     
-//     impl<G> Iterator for GeneratorIteratorAdapter<G>
-//     where
-//         G: Generator<Return = ()>,
-//     {
-//         type Item = G::Yield;
-// 
-//         fn next(&mut self) -> Option<Self::Item> {
-//             match self.0.as_mut().resume(()) {
-//                 GeneratorState::Yielded(x) => Some(x),
-//                 GeneratorState::Complete(_) => None,
-//             }
-//         }
-//     }
+    use futures::stream::{Stream, StreamExt};
+    
+    fn fiban_stream(vin: impl Stream<Item=u32>) -> impl Stream<Item=f32> 
+    {
+        let mut sum = 0;
+//         futures::stream::poll_fn(move |_| {
+//             let v = vin.next()?;
+//             sum += v;
+//             Some(sum  as f32)
+//         })
+        vin.map(move |v| {sum = sum+v; sum as f32})
+    }
+
+    #[test]
+    fn test_stream() {
+        let arr = 0..10;
+        let arr: Vec<f32> = 
+            futures::executor::block_on(fiban_stream(futures::stream::iter(arr)).collect());
+        dbg!(arr);
+        assert!(false);
+    }
 }

@@ -15,3 +15,4 @@ chrono = "0.4"
 
 
 #stream_router = "https://github.com/BroderickCarlin/stream_router"
+futures = "*"

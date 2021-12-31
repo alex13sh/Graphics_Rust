@@ -3,6 +3,7 @@
 
 mod value;
 mod utils;
+mod files;
 
 use value::{ValuesLine, Value};
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;

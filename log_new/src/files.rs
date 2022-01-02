@@ -3,8 +3,8 @@ pub mod csv {
     use super::inner::*;
     use csv::WriterBuilder;
 
-    pub fn read_values< T>(file_name: &PathBuf) -> Option<impl Iterator<Item=T>>
-    where T:  for<'de> serde::Deserialize<'de>
+    pub fn read_values<T>(file_name: impl AsRef<Path>) -> Option<impl Iterator<Item=T>>
+    where T: for<'de> serde::Deserialize<'de>
     {
         
         let file = File::open(file_name).ok()?;
@@ -21,7 +21,7 @@ pub mod csv {
         Some(itr)
     }
     
-    pub fn write_values<T>(file_name: &PathBuf, values: impl Iterator<Item=T>) -> crate::MyResult 
+    pub fn write_values<T>(file_name: impl AsRef<Path>, values: impl Iterator<Item=T>) -> crate::MyResult 
     where T: serde::Serialize
     {
         let file = File::create(file_name)?;
@@ -37,7 +37,7 @@ pub mod csv {
         Ok(())
     }
     
-    pub async fn write_values_async<T>(file_name: &PathBuf, values: impl Stream<Item=T>) -> crate::MyResult 
+    pub async fn write_values_async<T>(file_name: impl AsRef<Path>, mut values: impl Stream<Item=T> + std::marker::Unpin) -> crate::MyResult 
     where T: serde::Serialize
     {
         let file = File::create(file_name)?;
@@ -52,6 +52,32 @@ pub mod csv {
         
         Ok(())
     }
+    
+    #[test]
+    fn test_read_write_csv() {
+        use crate::value::raw::*;
+        use crate::value::ValueDate;
+        if let Some(lines) = read_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376.csv") {
+            
+            let lines = lines.map(|v: ValueDate<ValueOld>| 
+                ValueDate {
+                    date_time: v.date_time,
+                    value: Value::from(v.value),
+                }
+            );
+//             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
+            
+            futures::executor::block_on(
+                write_values_async("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_async.csv", 
+                    futures::stream::iter(lines)
+                )
+            ).unwrap();
+            
+        } else {
+            assert!(false);
+        }
+//         assert!(false);
+    }
 }
 
 pub mod excel {
@@ -61,14 +87,14 @@ pub mod excel {
     
     pub struct File {
         book: umya_spreadsheet::structs::Spreadsheet,
-        file_path: Path,
+        file_path: PathBuf,
     }
     
     impl File {
-        pub fn create(file_path: &PathBuf) -> Self {
+        pub fn create(file_path: impl AsRef<PathBuf>) -> Self {
             Self {
                 book: umya_spreadsheet::new_file(),
-                file_path: file_path.into(),
+                file_path: file_path.as_ref().into(),
             }
         }
         pub fn save(&self) {
@@ -89,7 +115,7 @@ pub mod excel {
     }
     
     impl <'f> Sheet <'f> {
-        pub fn write_value<T>(&mut self, pos: (u16, u16), values: Vec<T>) 
+        pub fn write_value<T>(&mut self, _pos: (u16, u16), _values: Vec<T>) 
         where T: serde::Serialize
         {
         
@@ -99,6 +125,6 @@ pub mod excel {
 
 mod inner {
     pub use futures::stream::{Stream, StreamExt};
-    pub use std::path::PathBuf;
+    pub use std::path::{PathBuf, Path};
     pub use std::fs::File;
 }

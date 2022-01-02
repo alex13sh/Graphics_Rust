@@ -58,6 +58,8 @@ iced = {git = "https://github.com/hecrj/iced", rev="391825788"}
 iced_native = {git = "https://github.com/hecrj/iced", rev="391825788"}
 iced_futures = {git = "https://github.com/hecrj/iced", rev="391825788"}
 
+#csv = {version = "1.1.6", git = "https://github.com/gootorov/rust-csv", branch ="serde-flatten"}
+
 [workspace]
 members = [
     "log",

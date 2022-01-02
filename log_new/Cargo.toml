@@ -7,12 +7,19 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-csv = "1.1.5"
+#csv = "1.1.5"
 umya-spreadsheet = "0.2.2"
 
 directories = "2.0"
 chrono = "0.4"
 
-
 #stream_router = "https://github.com/BroderickCarlin/stream_router"
 futures = "*"
+
+[dependencies.csv]
+version = "1.1.5"
+git = "https://github.com/gootorov/rust-csv"
+branch = "serde-flatten"
+
+[patch.crates-io]
+csv = {version = "1.1.6", git = "https://github.com/gootorov/rust-csv", branch ="serde-flatten"}

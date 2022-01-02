@@ -16,9 +16,21 @@ pub struct ValueDate<Value> {
         #[serde(deserialize_with = "date_time_from_str")]
         #[serde(serialize_with = "date_time_to_str")]
         pub date_time: DateTimeFix,
-        // forward, trasparent
+        #[serde(flatten)]
         pub value: Value,
+        
 }
+
+// impl <VF, VT> From<ValueDate<VF>> for ValueDate<VT> 
+// where VT: From<VF>
+// {
+//     fn from(v: ValueDate<VF>) -> Self {
+//         Self {
+//             date_time: v.date_time,
+//             value: v.value.into(),
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValuesLine<Value> {
@@ -47,6 +59,19 @@ pub mod raw {
         pub full_name: String,
         pub value_u32: u32,
     //     pub value_f32: f32,
+    }
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct ValueOld {
+        pub hash: String,
+        pub value: f32,
+    }
+    impl From<ValueOld> for Value {
+        fn from(v: ValueOld) -> Self {
+            Self {
+                full_name: v.hash,
+                value_u32: v.value as u32,
+            }
+        }
     }
 }
 
@@ -109,7 +134,7 @@ pub mod iterators {
         let arr = 0..10;
         let arr: Vec<f32> = fiban_iter(arr.into_iter()).collect();
         dbg!(arr);
-        assert!(false);
+//         assert!(false);
     }
     
     use futures::stream::{Stream, StreamExt};
@@ -131,6 +156,6 @@ pub mod iterators {
         let arr: Vec<f32> = 
             futures::executor::block_on(fiban_stream(futures::stream::iter(arr)).collect());
         dbg!(arr);
-        assert!(false);
+//         assert!(false);
     }
 }

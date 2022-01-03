@@ -57,7 +57,8 @@ pub mod csv {
     fn test_read_write_csv() {
         use crate::value::raw::*;
         use crate::value::ValueDate;
-        if let Some(lines) = read_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376.csv") {
+        let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376";
+        if let Some(lines) = read_values(&format!("{}.csv", file_path)) {
             
             let lines = lines.map(|v: ValueDate<ValueOld>| 
                 ValueDate {
@@ -65,13 +66,20 @@ pub mod csv {
                     value: Value::from(v.value),
                 }
             );
-//             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
             
-            futures::executor::block_on(
-                write_values_async("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_async.csv", 
-                    futures::stream::iter(lines)
-                )
-            ).unwrap();
+            let (s1, r1) = async_broadcast::broadcast(10);
+            let r2 = r1.clone();
+//             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
+            let f0 = async move {
+                for v in lines {
+                    dbg!(&v);
+                    s1.broadcast(v).await.unwrap();
+                }
+            };
+            let f1 = write_values_async(format!("{}_async_1.csv", file_path), r1);
+            let f2 = write_values_async(format!("{}_async_2.csv", file_path), r2);
+            
+            let _ = futures::executor::block_on( futures::future::join3(f0, f1, f2) );
             
         } else {
             assert!(false);

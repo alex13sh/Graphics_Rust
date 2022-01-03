@@ -1,17 +1,22 @@
-/* Сохраню на будущее (futures)
-use tokio::sync::broadcast;
-use std::future::Future;
-use std::pin::Pin;
+// pub use async_broadcast::broadcast;
 
-pub struct Subscribe<T> (broadcast::Sender<T>);
+pub struct Sender<T>(async_broadcast::Sender<T>);
 
-impl <T> Subscribe<T> {
-    pub fn subscribe(&self) -> broadcast::Receiver<T> {
-        self.0.subscribe()
+impl <T: Clone> Sender<T> {
+    pub async fn send(&self, m: T) {
+        let res = self.0.broadcast(m).await;
+        res.unwrap();
     }
 }
 
-type BoxFut = Pin<Box<dyn Future<Output = ()> + 'static + Send>>;
-type InitFut<T> = fn(Subscribe<T>) -> BoxFut;
-type LogValues = broadcast::Receiver<LogValue>;
-*/
+impl <T> From<async_broadcast::Sender<T>> for Sender<T> {
+    fn from(f: async_broadcast::Sender<T>) -> Self {
+        Self(f)
+    }
+}
+
+pub fn broadcast<T>(cap: usize) -> (Sender<T>, async_broadcast::Receiver<T>)
+{
+    let (s, r) = async_broadcast::broadcast(cap);
+    (Sender::from(s), r)
+}

@@ -67,13 +67,13 @@ pub mod csv {
                 }
             );
             
-            let (s1, r1) = async_broadcast::broadcast(10);
+            let (s1, r1) = crate::broadcast(10);
             let r2 = r1.clone();
 //             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
             let f0 = async move {
                 for v in lines {
                     dbg!(&v);
-                    s1.broadcast(v).await.unwrap();
+                    s1.send(v).await;
                 }
             };
             let f1 = write_values_async(format!("{}_async_1.csv", file_path), r1);

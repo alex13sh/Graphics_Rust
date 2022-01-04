@@ -40,6 +40,29 @@ pub struct ValuesLine<Value> {
     pub values: Box<[Value]>,
 }
 
+impl <V> ValuesLine <V> {
+    pub fn into_values_date(self) -> impl Iterator<Item = ValueDate<V>> 
+    {
+        let dt = self.date_time;
+        let values = self.values.into_vec();
+        values.into_iter()
+            .map(move |v| ValueDate {
+                date_time: dt.clone(),
+                value: v,
+            })
+    }
+}
+impl <V: Clone> ValuesLine <V> {
+    pub fn iter_values_date(&self) -> impl Iterator<Item = ValueDate<V>> + '_ 
+    {
+        self.values.iter()
+            .map(|v| ValueDate {
+                date_time: self.date_time.clone(),
+                value: (*v).clone(),
+            })
+    }
+}
+
 impl <V> From<Box<[V]>> for ValuesLine <V> {
     fn from(v: Box<[V]>) -> Self {
         Self {
@@ -88,6 +111,12 @@ pub mod elk {
         pub sensor_name: String,
     //     pub value_name: String,
         pub value: f32,
+    }
+    
+    impl Value {
+        pub fn get_sensor_value(&self) -> (&str, f32) {
+            (&self.sensor_name, self.value)
+        }
     }
 }
 

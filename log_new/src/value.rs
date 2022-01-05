@@ -120,6 +120,29 @@ pub mod elk {
     }
 }
 
+pub type LogValueSimple = ValueDate<simple::Value>;
+pub type SimpleValuesLine = ValuesLine<simple::Value>;
+pub mod simple {
+    #[derive(Debug, Clone)]
+    pub struct Value {
+        pub sensor_name: String,
+        pub value: f32,
+    }
+    #[derive(Debug, Clone)]
+    pub struct ValueStr<'s> {
+        pub sensor_name: &'s str,
+        pub value: f32,
+    }
+    impl Value {
+        pub fn as_ref(&self) -> ValueStr {
+            ValueStr {
+                sensor_name: self.sensor_name.as_str(),
+                value: self.value,
+            }
+        }
+    }
+}
+
 pub mod invertor {
     use super::*;
     #[derive(Serialize, Deserialize, Debug, Clone)]

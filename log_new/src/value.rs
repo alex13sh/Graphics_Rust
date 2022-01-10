@@ -73,6 +73,7 @@ impl <V> From<Box<[V]>> for ValuesLine <V> {
 }
 
 pub type LogValueRaw = ValueDate<raw::Value>;
+pub type LogValueRawOld = ValueDate<raw::ValueOld>;
 pub type RawValuesLine = ValuesLine<raw::Value>;
 
 pub mod raw {
@@ -93,6 +94,19 @@ pub mod raw {
             Self {
                 full_name: v.hash,
                 value_u32: v.value as u32,
+            }
+        }
+    }
+    
+    impl From<ValueOld> for super::elk::Value {
+        fn from(v: ValueOld) -> Self {
+            let id = crate::convert::value::hash_to_names(&v.hash);
+            Self {
+                device_id: id.0,
+                device_name: id.1,
+                sensor_name: id.2,
+                
+                value: v.value,
             }
         }
     }

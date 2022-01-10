@@ -6,6 +6,7 @@ mod utils;
 mod files;
 mod async_channel;
 mod stat_info;
+mod convert;
 
 use value::{ValuesLine, Value};
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;

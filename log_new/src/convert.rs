@@ -10,9 +10,17 @@ pub mod value {
             value: from.value.into(),
         }
     }
+    pub fn value_date_convert_try<V, U>(from: ValueDate<V>) -> Option<ValueDate<U>> 
+    where U: TryFrom<V>
+    {
+        Some(ValueDate {
+            date_time: from.date_time,
+            value: from.value.try_into().ok()?,
+        })
+    }
     
-    pub fn hash_to_names(hash: &str) -> (u16, String, String) {
-        match hash {
+    pub fn hash_to_names(hash: &str) -> Option<(u16, String, String)> {
+        let res = match hash {
         "Температура статора дв. М2/value" => (1, "МВ210-101".into(), "Температура статора дв. М2".into()),
         "Температура верх подшипника дв. М2/value" => (1, "МВ210-101".into(), "Температура верх подшипника дв. М2".into()),
         "Температура нижн подшипника дв. М2/value" => (1, "МВ210-101".into(), "Температура нижн подшипника дв. М2".into()),
@@ -25,8 +33,11 @@ pub mod value {
         "Разрежение воздуха в системе/value" => (2, "МВ110-24.8АС".into(), "Разрежение воздуха в системе".into()),
         "Температура ротора Пирометр дв. М1/value" => (2, "МВ110-24.8АС".into(), "Температура ротора Пирометр дв. М1".into()),
         "Температура ротора Пирометр дв. М2/value" => (2, "МВ110-24.8АС".into(), "Температура ротора Пирометр дв. М2".into()),
+        
         "Виброскорость дв. М1/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М1".into()),
         "Виброскорость дв. М2/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М2".into()),
+        "Вибродатчик дв. М1/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М1".into()),
+        "Вибродатчик дв. М2/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М2".into()),
         
 //         "Битовая маска состояния выходов" => (3, "МК210-302".into(), "Битовая маска состояния выходов".into()),
 //         "Битовая маска состояния входов" => (3, "МК210-302".into(), "Битовая маска состояния входов".into()),
@@ -80,6 +91,11 @@ pub mod value {
         "6) Invertor/5b28faeb8d" => (6, "Invertor".into(), "Температура радиатора".into()),
         
         _ => (0, "".into(), "".into()),
+        };
+        if res.0 == 0 {
+            None
+        } else {
+            Some(res)
         }
     }
 }
@@ -87,8 +103,8 @@ pub mod value {
 pub mod stream {
     use crate::value::*;
     use futures::{Stream, StreamExt};
-    pub fn raw_to_elk(raw_values: impl Stream<Item=LogValueRawOld> ) -> impl Stream<Item=LogValueHum> {
-        raw_values.map(|v| super::value::value_date_convert(v))
+    pub fn raw_to_elk(raw_values: impl Iterator<Item=LogValueRawOld> ) -> impl Iterator<Item=LogValueHum> {
+        raw_values.filter_map(|v| super::value::value_date_convert_try(v))
     }
     
     pub fn values_to_line<V>(values: impl Stream<Item=ValueDate<V>>, step_sec: f32) -> impl Stream<Item=ValuesLine<V>> {

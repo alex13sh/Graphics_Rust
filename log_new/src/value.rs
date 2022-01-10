@@ -105,15 +105,21 @@ pub mod raw {
         }
     }
     
-    impl From<ValueOld> for super::elk::Value {
-        fn from(v: ValueOld) -> Self {
-            let id = crate::convert::value::hash_to_names(&v.hash);
-            Self {
-                device_id: id.0,
-                device_name: id.1,
-                sensor_name: id.2,
-                
-                value: v.value,
+    impl TryFrom<ValueOld> for super::elk::Value {
+        type Error = String;
+        fn try_from(v: ValueOld) -> Result<Self, String> {
+            if let Some(id) = crate::convert::value::hash_to_names(&v.hash) {
+                Ok(Self {
+                    device_id: id.0,
+                    device_name: id.1,
+                    sensor_name: id.2,
+                    
+                    value: v.value,
+                })
+            } else {
+                let e = Err(format!("Нет соответствия для hash: {}", v.hash));
+                dbg!(&e);
+                e
             }
         }
     }
@@ -185,50 +191,5 @@ pub mod device {
          pub device_id: u16,
          pub device_name: String,
          pub values: Box<[Value]>,
-    }
-}
-
-pub mod iterators {
-//     use std::pin::Pin;
-    
-    fn fiban_iter(vin: impl Iterator<Item=u32>) -> impl Iterator<Item=f32> 
-    {
-        let mut sum = 0;
-//         std::iter::from_fn(move || {
-//             let v = vin.next()?;
-//             sum += v;
-//             Some(sum  as f32)
-//         })
-        vin.map(move |v| {sum = sum+v; sum as f32})
-    }
-    
-    #[test]
-    fn test_iter() {
-        let arr = 0..10;
-        let arr: Vec<f32> = fiban_iter(arr.into_iter()).collect();
-        dbg!(arr);
-//         assert!(false);
-    }
-    
-    use futures::stream::{Stream, StreamExt};
-    
-    fn fiban_stream(vin: impl Stream<Item=u32>) -> impl Stream<Item=f32> 
-    {
-        let mut sum = 0;
-//         futures::stream::poll_fn(move |_| {
-//             let v = vin.next()?;
-//             sum += v;
-//             Some(sum  as f32)
-//         })
-        vin.map(move |v| {sum = sum+v; sum as f32})
-    }
-
-    #[test]
-    fn test_stream() {
-        let arr = 0..10;
-        let arr: Vec<f32> = 
-            futures::executor::block_on(fiban_stream(futures::stream::iter(arr)).collect());
-        dbg!(arr);
-//         assert!(false);
     }
 }

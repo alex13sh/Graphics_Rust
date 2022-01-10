@@ -86,6 +86,18 @@ pub mod csv {
         }
 //         assert!(false);
     }
+    
+    #[test]
+    fn test_convert_raw_to_elk() {
+        use crate::value::raw::*;
+        use crate::value::ValueDate;
+        let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376";
+        if let Some(values) = read_values(&format!("{}.csv", file_path)) {
+            let values = crate::convert::stream::raw_to_elk(values);
+            write_values(&format!("{}_elk.csv", file_path), values).unwrap();
+        }
+//         assert!(false);
+    }
 }
 
 pub mod excel {

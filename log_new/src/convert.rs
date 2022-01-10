@@ -28,8 +28,8 @@ pub mod value {
         "Виброскорость дв. М1/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М1".into()),
         "Виброскорость дв. М2/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М2".into()),
         
-        "Битовая маска состояния выходов" => (3, "МК210-302".into(), "Битовая маска состояния выходов".into()),
-        "Битовая маска состояния входов" => (3, "МК210-302".into(), "Битовая маска состояния входов".into()),
+//         "Битовая маска состояния выходов" => (3, "МК210-302".into(), "Битовая маска состояния выходов".into()),
+//         "Битовая маска состояния входов" => (3, "МК210-302".into(), "Битовая маска состояния входов".into()),
         "Клапан ШК1 открыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК1 открыт".into()),
         "Клапан ШК1 закрыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК1 закрыт".into()),
         "Клапан ШК2 открыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК2 открыт".into()),
@@ -45,7 +45,7 @@ pub mod value {
         "Двигатель насоса вакуума 1/write_bit" => (3, "МК210-302".into(), "Двигатель насоса вакуума 1".into()),
         "Двигатель насоса вакуума 2/write_bit" => (3, "МК210-302".into(), "Двигатель насоса вакуума 2".into()),
         
-        "Битовая маска состояния выходов" => (4, "МУ210-410".into(), "Битовая маска состояния выходов".into()),
+//         "Битовая маска состояния выходов" => (4, "МУ210-410".into(), "Битовая маска состояния выходов".into()),
         "Двигатель подачи материала в камеру/Частота высокочастотного ШИМ" => (4, "МУ210-410".into(), "Двигатель подачи материала в камеру".into()),
         "Направление вращения двигателя ШД/write_bit" => (4, "МУ210-410".into(), "Направление вращения двигателя ШД".into()),
         "Двигатель маслостанции М4/write_bit" => (4, "МУ210-410".into(), "Двигатель маслостанции М4".into()),
@@ -91,7 +91,30 @@ pub mod stream {
         raw_values.map(|v| super::value::value_date_convert(v))
     }
     
-    pub fn values_to_line<V>(values: impl Stream<Item=V>) -> impl Stream<Item=ValueDate<V>> {
-    
+    pub fn values_to_line<V>(values: impl Stream<Item=ValueDate<V>>, step_sec: f32) -> impl Stream<Item=ValuesLine<V>> {
+        use crate::utils::{DateTime, date_time_now};
+        let dlt_ms = (step_sec * 1000.0) as i64;
+        let mut dt: DateTime = date_time_now();
+        let mut vs = Vec::new();
+        
+        values.filter_map(move |v| {
+            if dt > v.date_time {dt = v.date_time};
+            let _dlt_ms = v.date_time.timestamp_millis() - dt.timestamp_millis();
+            let res = if _dlt_ms < dlt_ms {
+                vs.push(v.value);
+                None
+            } else {
+                let vl = ValuesLine {
+                    date_time: dt,
+                    values: std::mem::take(&mut vs).into_boxed_slice(),
+                };
+                dt = v.date_time;
+                vs.push(v.value);
+                Some(vl)
+            };
+            async move {
+                res
+            }
+        })
     }
 }

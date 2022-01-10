@@ -21,6 +21,13 @@ pub struct ValueDate<Value> {
         
 }
 
+impl <V> std::ops::Deref for ValueDate<V> {
+    type Target = V;
+    fn deref(&self) -> &V {
+        &self.value
+    }
+}
+
 // impl <VF, VT> From<ValueDate<VF>> for ValueDate<VT> 
 // where VT: From<VF>
 // {

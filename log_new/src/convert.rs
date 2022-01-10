@@ -133,4 +133,13 @@ pub mod stream {
             }
         })
     }
+    
+    pub fn values_line_to_hashmap(lines: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=simple::ValuesMap> {
+        lines.map(|l| {
+            simple::ValuesMap {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, v.value)).collect(),
+            }
+        })
+    }
 }

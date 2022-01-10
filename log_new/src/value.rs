@@ -150,6 +150,7 @@ pub mod elk {
 pub type LogValueSimple = ValueDate<simple::Value>;
 pub type SimpleValuesLine = ValuesLine<simple::Value>;
 pub mod simple {
+    use super::*;
     #[derive(Debug, Clone)]
     pub struct Value {
         pub sensor_name: String,
@@ -167,6 +168,16 @@ pub mod simple {
                 value: self.value,
             }
         }
+    }
+    
+    use std::collections::BTreeMap;
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct ValuesMap {
+        #[serde(deserialize_with = "date_time_from_str")]
+        #[serde(serialize_with = "date_time_to_str")]
+        pub date_time: DateTimeFix,
+        #[serde(flatten)]
+        pub values: BTreeMap<String, f32>,
     }
 }
 

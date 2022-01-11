@@ -109,10 +109,10 @@ pub mod csv {
         if let Some(values) = read_values(&format!("{}.csv", file_path)) {
             use crate::convert::stream::*;
             let values = crate::convert::stream::raw_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values), 0.1);
+            let lines = values_to_line(futures::stream::iter(values));
             let lines = values_line_to_hashmap(lines);
             futures::executor::block_on( write_values_async(format!("{}_table.csv", file_path), lines) ).unwrap();
-            assert!(false);
+//             assert!(false);
         }
     }
 }

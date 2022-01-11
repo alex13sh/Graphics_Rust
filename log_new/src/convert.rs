@@ -107,9 +107,9 @@ pub mod stream {
         raw_values.filter_map(|v| super::value::value_date_convert_try(v))
     }
     
-    pub fn values_to_line<V>(values: impl Stream<Item=ValueDate<V>>, step_sec: f32) -> impl Stream<Item=ValuesLine<V>> {
+    pub fn values_to_line<V>(values: impl Stream<Item=ValueDate<V>>) -> impl Stream<Item=ValuesLine<V>> {
         use crate::utils::{DateTime, date_time_now};
-        let dlt_ms = (step_sec * 1000.0) as i64;
+        let dlt_ms = 40;
         let mut dt: DateTime = date_time_now();
         let mut vs = Vec::new();
         
@@ -138,7 +138,7 @@ pub mod stream {
         lines.map(|l| {
             simple::ValuesMap {
                 date_time: l.date_time,
-                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, v.value)).collect(),
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
             }
         })
     }

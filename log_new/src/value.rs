@@ -177,7 +177,7 @@ pub mod simple {
         #[serde(serialize_with = "date_time_to_str")]
         pub date_time: DateTimeFix,
         #[serde(flatten)]
-        pub values: BTreeMap<String, f32>,
+        pub values: BTreeMap<String, String>,
     }
 }
 

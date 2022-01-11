@@ -1,3 +1,5 @@
+#![feature(explicit_generic_args_with_impl_trait)]
+
 #![allow(unused_imports)]
 #![allow(dead_code)]
 

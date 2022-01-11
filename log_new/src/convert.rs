@@ -133,6 +133,28 @@ pub mod stream {
             }
         })
     }
+    pub fn values_from_line<V>(lines: impl Stream<Item=ValuesLine<V>>) -> impl Stream<Item=ValueDate<V>> {
+        lines.flat_map(|l| {
+            futures::stream::iter(l.into_values_date())
+        })
+    }
+    
+    pub fn values_from_line_with_diff<V: Clone + PartialEq>(lines: impl Stream<Item=ValuesLine<V>>) -> impl Stream<Item=ValueDate<V>> {
+        let mut line_prev: Option<ValuesLine<V>> = None;
+        lines.flat_map(move |l| {
+            let arr: Vec<_> = if let Some(ref prev) = line_prev.as_ref() {
+                let itr = prev.iter_values_date().zip(l.iter_values_date())
+                    .filter_map(|(p, l)| if p.value != l.value { Some(l.clone()) } else {None})
+                    .collect();
+                line_prev = Some(l.clone());
+                itr
+            } else {
+                line_prev = Some(l.clone());
+                l.into_values_date().collect()
+            };
+            futures::stream::iter(arr)
+        })
+    }
     
     pub fn values_line_to_hashmap(lines: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=simple::ValuesMap> {
         lines.map(|l| {

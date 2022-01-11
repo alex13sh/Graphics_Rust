@@ -115,6 +115,17 @@ pub mod csv {
 //             assert!(false);
         }
     }
+    
+    #[test]
+    fn test_values_line_diff() {
+        let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
+        if let Some(values) = read_values::<crate::value::LogValueRawOld>(&format!("{}.csv", file_path)) {
+            use crate::convert::stream::*;
+            let lines = values_to_line(futures::stream::iter(values));
+            let values = values_from_line_with_diff(lines);
+            futures::executor::block_on( write_values_async(format!("{}_diff.csv", file_path), values) ).unwrap();
+        }
+    }
 }
 
 pub mod excel {

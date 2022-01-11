@@ -91,7 +91,7 @@ pub mod raw {
         pub value_u32: u32,
     //     pub value_f32: f32,
     }
-    #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
     pub struct ValueOld {
         pub hash: String,
         pub value: f32,

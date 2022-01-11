@@ -1,10 +1,10 @@
 
-mod simple {
+pub mod simple {
     use crate::value::*;
     use std::collections::HashMap;
     use futures::{Stream, StreamExt};
     
-    #[derive(Clone, Default)]
+    #[derive(Clone, Default, Debug)]
     pub struct LogState {
         pub cnt: usize,
         pub date_time: Option<crate::utils::DateTimeFix>,

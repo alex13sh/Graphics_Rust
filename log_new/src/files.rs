@@ -129,17 +129,19 @@ pub mod csv {
 }
 
 pub mod excel {
-    //use umya_spreadsheet::*;
+    use umya_spreadsheet::structs::*;
 //     use excel::*;
     use super::inner::*;
+    use crate::LogState;
+    use crate::value::simple;
     
     pub struct File {
-        book: umya_spreadsheet::structs::Spreadsheet,
+        book: Spreadsheet,
         file_path: PathBuf,
     }
     
     impl File {
-        pub fn create(file_path: impl AsRef<PathBuf>) -> Self {
+        pub fn create(file_path: impl AsRef<Path>) -> Self {
             Self {
                 book: umya_spreadsheet::new_file(),
                 file_path: file_path.as_ref().into(),
@@ -150,23 +152,91 @@ pub mod excel {
         }
         pub fn open_sheet(&mut self, name: &'static str) -> Sheet {
             Sheet {
-                file: self,
-                name: name,
+//                 file: self,
+//                 name: name,
+                ws: self.book.get_sheet_by_name_mut(name).unwrap(),
             }
         }
     }
     
     pub struct Sheet<'f> {
-        file: &'f mut File,
-        name: &'static str,
-        
+//         file: &'f mut File,
+//         name: &'static str,
+        ws: &'f mut Worksheet
     }
     
     impl <'f> Sheet <'f> {
-        pub fn write_value<T>(&mut self, _pos: (u16, u16), _values: Vec<T>) 
-        where T: serde::Serialize
-        {
+        pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+            let mut values = values.enumerate().peekable();
+            
+            let l = &std::pin::Pin::new(&mut values).peek().await.unwrap().1;
+            for (col, name) in l.values.keys().enumerate() {
+                self.ws.get_cell_by_column_and_row_mut(pos.0 + col, pos.1).set_value(name);
+            }
         
+            while let Some((row, l)) = values.next().await {
+                for (col, v) in l.values.values().enumerate() {
+                    self.ws.get_cell_by_column_and_row_mut(pos.0 + col, pos.1 + row+1).set_value(v);
+                }
+            };
+        }
+        pub fn write_state(&mut self, pos: (usize, usize), state: LogState) {
+            let mut fields = Vec::new();
+            fields.push(("Время работы (сек)", state.time_work.to_string()));
+            fields.push(("Время разгона (сек)", state.time_acel.to_string()));
+            fields.push(("Обороты двигателя (об/мин)", state.hz_max.to_string()));
+            fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
+            fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
+            fields.push(("Максимальный ток", state.tok_max.to_string()));
+            
+            for (f, row) in fields.into_iter().zip((pos.1+1)..) {
+                self.ws.get_cell_by_column_and_row_mut(1+pos.0, row).set_value(f.0);
+                self.ws.get_cell_by_column_and_row_mut(2+pos.0, row).set_value(f.1);
+            }
+            for (f, row) in state.temps.into_iter().zip((pos.1+8)..) {
+                self.ws.get_cell_by_column_and_row_mut(pos.0+1, row).set_value(f.0);
+                self.ws.get_cell_by_column_and_row_mut(pos.0+2, row).set_value(format!("{:.2}", f.1.0));
+                self.ws.get_cell_by_column_and_row_mut(pos.0+3, row).set_value(format!("{:.2}", f.1.1));
+            }
+        }
+    }
+    
+    #[test]
+    fn test_convert_csv_raw_to_excel() {
+        use crate::convert::stream::*;
+        let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
+        if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
+            let values = raw_to_elk(values);
+            let lines = values_to_line(futures::stream::iter(values)).take(20);
+            
+            let (s, mut l1) = crate::broadcast(20);
+            
+//             let mut lines = lines.boxed();
+//             let f1 = async move {
+//                 while let Some(l) = lines.next().await {
+//                     s.send(l).await;
+//                 }
+//                 dbg!("s close");
+//                 drop(s);
+//             };
+//             let f1 = lines.for_each(move |l| async {s.send(l).await;});
+            let f1 = lines.map(|l| Ok(l)).forward(s);
+            let mut l2 = l1.clone();
+            let f2 = async move {
+                
+                let l1 = values_line_to_hashmap(l1);
+                let mut f = File::create(format!("{}.xlsx", file_path));
+//                 {
+                    let l2 = values_line_to_simple(l2);
+                    let mut s = f.open_sheet("Sheet1");
+                    s.write_values((1,1), l1).await;
+                    
+                    let stat = crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)}).await;
+                    s.write_state((17,2), stat.unwrap());
+                f.save();
+            };
+            
+            futures::executor::block_on(futures::future::join(f1, f2));
         }
     }
 }

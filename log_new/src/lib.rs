@@ -11,6 +11,8 @@ mod stat_info;
 mod convert;
 
 use value::{ValuesLine, Value};
+use stat_info::simple::LogState;
+
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 use async_channel::{broadcast, Sender};
 

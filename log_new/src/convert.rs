@@ -164,4 +164,15 @@ pub mod stream {
             }
         })
     }
+    
+    pub fn values_line_to_simple(lines: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
+        lines.map(|l| {
+            SimpleValuesLine {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| simple::Value{
+                    sensor_name: v.sensor_name, value: v.value}
+                ).collect::<Vec<_>>().into_boxed_slice(),
+            }
+        })
+    }
 }

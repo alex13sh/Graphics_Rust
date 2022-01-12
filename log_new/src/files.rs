@@ -213,29 +213,19 @@ pub mod excel {
             
             let (s, l1) = broadcast(10);
             
-//             let mut lines = lines.boxed();
-//             let f1 = async move {
-//                 while let Some(l) = lines.next().await {
-//                     dbg!(&l);
-//                     s.send(l).await;
-//                 }
-//                 dbg!("s close");
-//                 drop(s);
-//             };
-//             let f1 = lines.for_each(move |l| async {s.send(l).await;});
             let f1 = lines.map(|l| Ok(l)).forward(s);
             let l2 = l1.clone();
             let f2 = async move {
                 
                 let l1 = values_line_to_hashmap(l1);
                 let mut f = File::create(format!("{}.xlsx", file_path));
-//                 {
-                    let l2 = values_line_to_simple(l2);
-                    let mut s = f.open_sheet("Sheet1");
-                    s.write_values((1,1), l1).await;
-                    
-                    let stat = crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)}).await;
-                    s.write_state((17,2), stat.unwrap());
+                let l2 = values_line_to_simple(l2);
+                let mut s = f.open_sheet("Sheet1");
+                let (_, stat) = futures::future::join(
+                    s.write_values((1,1), l1),
+                    crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
+                ).await;
+                s.write_state((17,2), stat.unwrap());
                 f.save();
             };
             

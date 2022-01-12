@@ -1,46 +1,86 @@
 // pub use async_broadcast::broadcast;
+// pub use postage::broadcast::channel as broadcast;
+// pub use postage::broadcast::Sender;
+pub use postage::prelude::*;
 
-pub struct Sender<T>(async_broadcast::Sender<T>);
-
-impl <T: Clone> Sender<T> {
-    pub async fn send(&self, m: T) {
-        let res = self.0.broadcast(m).await;
-        res.unwrap();
-    }
-}
-
-impl <T> From<async_broadcast::Sender<T>> for Sender<T> {
-    fn from(f: async_broadcast::Sender<T>) -> Self {
-        Self(f)
-    }
-}
-
-pub fn broadcast<T>(cap: usize) -> (Sender<T>, async_broadcast::Receiver<T>)
+pub fn broadcast<T: Clone>(cap: usize) -> (Sender<T>, postage::broadcast::Receiver<T>)
 {
-    let (s, r) = async_broadcast::broadcast(cap);
+    let (s, r) = postage::broadcast::channel(cap);
 //     s.set_overflow(true);
     (Sender::from(s), r)
 }
 
-use futures::task::{Poll, Context};
-use std::pin::Pin;
-use futures::Sink;
 
-impl<T:Clone> Sink<T> for Sender<T> {
-        type Error = async_broadcast::TrySendError<T>;
+pub struct Sender<T>(
+//     std::pin::Pin<
+        postage::broadcast::Sender<T>
+    ,
+    /*value:*/ Option<T>
+);
 
-        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            if unsafe { self.get_unchecked_mut() }.0.is_full() {
-                Poll::Pending
-//                 Poll::Ready(Self::Error::Full(T))
+
+impl <T> From<postage::broadcast::Sender<T>> for Sender<T> {
+    fn from(f: postage::broadcast::Sender<T>) -> Self {
+        Self(f, None)
+    }
+}
+
+pub mod wrap_sink {
+    use postage::sink::PollSend;
+    use postage::sink::SendError;
+
+    use postage::sink::Sink;
+    use postage::Context;
+    use std::pin::Pin;
+
+    impl<T> Sink for super::Sender<T>
+    where
+        T: Clone,
+    {
+        type Item = T;
+
+        fn poll_send(
+            self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+            value: Self::Item,
+        ) -> PollSend<Self::Item> {
+            Pin::new(&mut unsafe{self.get_unchecked_mut()}.0).poll_send(cx, value)
+        }
+    }
+}
+
+use futures::Sink as _;
+
+pub mod features_sink {
+    pub use postage::prelude::Sink as _;
+    use futures::task::{Poll, Context};
+    use std::pin::Pin;
+    use postage::sink::PollSend;
+    use postage::sink::SendError;
+
+    impl<T:Clone> futures::Sink<T> for super::Sender<T> {
+        type Error = postage::sink::SendError<()>;
+
+        // get_unchecked_mut
+        fn poll_ready(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            let res = if let Some(value) = self.1.clone() {
+                match self.poll_send(&mut ctx.into(), value.clone()) {
+                PollSend::Ready => Poll::Ready(Ok(())),
+                PollSend::Pending(_) => Poll::Pending,
+                PollSend::Rejected(_) => Poll::Ready(Err(SendError(()))),
+                }
             } else {
+//                 Poll::Ready(Err(SendError(())))
+//                 Poll::Pending
                 Poll::Ready(Ok(()))
-            }
+            };
+            dbg!(&res);
+            res
         }
 
         fn start_send(self: Pin<&mut Self>, item: T) -> Result<(), Self::Error> {
-            // TODO: impl<T> Unpin for Vec<T> {}
-            unsafe { self.get_unchecked_mut() }.0.try_broadcast(item)?;
+            dbg!("start_send");
+            unsafe{self.get_unchecked_mut()}.1 = Some(item);
             Ok(())
         }
 
@@ -49,7 +89,8 @@ impl<T:Clone> Sink<T> for Sender<T> {
         }
 
         fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            self.0.close();
+//             self.0.close();
             Poll::Ready(Ok(()))
         }
     }
+}

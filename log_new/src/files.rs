@@ -61,6 +61,7 @@ pub mod csv {
     fn test_read_write_csv() {
         use crate::value::raw::*;
         use crate::value::ValueDate;
+        use crate::async_channel::*;
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376";
         if let Some(lines) = read_values(&format!("{}.csv", file_path)) {
             
@@ -71,7 +72,7 @@ pub mod csv {
                 }
             );
             
-            let (s1, r1) = crate::broadcast(10);
+            let (mut s1, r1) = broadcast(10);
             let r2 = r1.clone();
 //             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
             let f0 = async move {
@@ -204,16 +205,18 @@ pub mod excel {
     #[test]
     fn test_convert_csv_raw_to_excel() {
         use crate::convert::stream::*;
+        use crate::async_channel::*;
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values)).take(20);
+            let lines = values_to_line(futures::stream::iter(values)).take(100);
             
-            let (s, mut l1) = crate::broadcast(20);
+            let (s, l1) = broadcast(10);
             
 //             let mut lines = lines.boxed();
 //             let f1 = async move {
 //                 while let Some(l) = lines.next().await {
+//                     dbg!(&l);
 //                     s.send(l).await;
 //                 }
 //                 dbg!("s close");
@@ -221,7 +224,7 @@ pub mod excel {
 //             };
 //             let f1 = lines.for_each(move |l| async {s.send(l).await;});
             let f1 = lines.map(|l| Ok(l)).forward(s);
-            let mut l2 = l1.clone();
+            let l2 = l1.clone();
             let f2 = async move {
                 
                 let l1 = values_line_to_hashmap(l1);

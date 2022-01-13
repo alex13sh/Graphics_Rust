@@ -10,6 +10,7 @@ mod async_channel;
 mod stat_info;
 mod convert;
 
+use utils::DateTimeFix;
 pub use value::{ValuesLine, Value};
 pub use utils::get_file_path;
 pub use stat_info::simple::LogState;
@@ -22,6 +23,7 @@ use futures::stream::BoxStream;
 
 pub struct LogSession {
     log_dir: PathBuf,
+    date_time: DateTimeFix,
     // value_rows: Vec<ValuesLine<Value>>,
     values_elk: Option<async_channel::Sender<value::ElkValuesLine>>,
     values_raw: Option<async_channel::Sender<value::ValuesLine<value::Value>>>,
@@ -31,6 +33,7 @@ impl LogSession {
     pub fn new() -> Self {
         Self {
             log_dir: utils::get_file_path("log/"),
+            date_time: utils::date_time_now(),
             values_elk: None,
             values_raw: None,
         }
@@ -47,6 +50,9 @@ impl LogSession {
     
     pub fn relate_path(&self, rel: &str) -> PathBuf {
         self.log_dir.join(rel)
+    }
+    fn date_time_str(&self) -> String {
+        utils::date_time_to_string_name_short(&self.date_time)
     }
     
     pub fn push_values(&mut self, values: Box<[Value]>) {
@@ -66,9 +72,16 @@ impl LogSession {
         }
     }
 
+    pub fn make_path_excel(&self) -> PathBuf {
+        self.log_dir
+        .join("csv_elk").join(&self.date_time_str())
+        .with_extension("xlsx")
+    }
     pub async fn write_excel(&self) {
         let elk = self.values_elk.as_ref().unwrap();
-        files::excel::write_file(&self.log_dir, elk.subscribe()).await;
+        let file_path = self.make_path_excel();
+        files::excel::write_file(file_path,
+             elk.subscribe()).await;
     }
 
     pub async fn write_csv_elk(&self) {
@@ -76,24 +89,31 @@ impl LogSession {
         use files::csv::*;
         let elk = self.values_elk.as_ref().unwrap();
         let values = values_from_line(elk.subscribe());
-        write_values_async(&self.log_dir, values).await.unwrap();
+        let file_path = self.log_dir
+            .join("csv_elk").join(&self.date_time_str());
+        write_values_async(file_path,
+            values).await.unwrap();
     }
     pub async fn write_csv_raw(&self) {
         use convert::stream::*;
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
         let values = values_from_line(raw.subscribe());
-        write_values_async(&self.log_dir, values).await.unwrap();
+        write_values_async(&self.log_dir
+            .join("csv_raw").join(&self.date_time_str()), 
+            values).await.unwrap();
     }
     pub async fn write_csv_raw_diff(&self) {
         use convert::stream::*;
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
         let values = values_from_line_with_diff(raw.subscribe());
-        write_values_async(&self.log_dir, values).await.unwrap();
+        write_values_async(&self.log_dir
+            .join("csv_raw").join(&format!("{}_diff", self.date_time_str())), 
+            values).await.unwrap()
     }
 
-    pub async fn write_full(self: Arc<Self>) {
+    pub async fn write_full(&self) {
         futures::join!(
             self.write_csv_elk(),
             self.write_excel(),

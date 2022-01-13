@@ -75,7 +75,7 @@ impl LogSession {
 
     pub fn make_path_excel(&self) -> PathBuf {
         self.log_dir
-        .join("csv_elk").join(&self.date_time_str())
+        .join("excel").join(&self.date_time_str())
         .with_extension("xlsx")
     }
     pub async fn write_excel(&self) {
@@ -91,7 +91,8 @@ impl LogSession {
         let elk = self.values_elk.as_ref().unwrap();
         let values = values_from_line(elk.subscribe());
         let file_path = self.log_dir
-            .join("csv_elk").join(&self.date_time_str());
+            .join("csv_elk").join(&self.date_time_str())
+            .with_extension("csv");
         write_values_async(file_path,
             values).await.unwrap();
     }
@@ -109,8 +110,10 @@ impl LogSession {
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
         let values = values_from_line_with_diff(raw.subscribe());
-        write_values_async(&self.log_dir
-            .join("csv_raw").join(&format!("{}_diff", self.date_time_str())), 
+        let file_path = self.log_dir
+            .join("csv_raw").join(&format!("{}_diff", self.date_time_str()))
+            .with_extension("csv");
+        write_values_async(file_path, 
             values).await.unwrap()
     }
 

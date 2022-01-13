@@ -228,37 +228,48 @@ pub mod excel {
         })
     }
     
+    use crate::value::ElkValuesLine;
+    pub async fn write_file(file_path: impl AsRef<Path>, values_line: impl Stream<Item=ElkValuesLine>) {
+        use crate::async_channel::*;
+        use crate::convert::stream::*;
+        use futures::future::join;
+        
+        let file_path = file_path.as_ref();
+        let lines = crate::stat_info::simple::filter_half_low(values_line);
+        
+        let (s, l1) = broadcast(10);
+        
+        let f_to_channel = lines.map(|l| Ok(l)).forward(s);
+        let l2 = l1.clone();
+        let f_from_channel = async move {
+            let l1 = filter_half(l1);
+            let l1 = values_simple_line_to_hashmap(l1);
+//                 let l2 = crate::stat_info::simple::filter_half_low(l2);
+//                 let l2 = values_line_to_simple(l2);
+            
+            let mut f = File::create(file_path.with_extension("xlsx"));
+            let mut s = f.open_sheet("Sheet1");
+            let (_, stat) = join(
+                s.write_values((1,1), l1),
+                crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
+            ).await;
+            s.write_state((12,2), stat.unwrap());
+            f.save();
+        };
+        join(f_to_channel, f_from_channel).await;
+    }
+    
     #[test]
     fn test_convert_csv_raw_to_excel() {
         use crate::convert::stream::*;
-        use crate::async_channel::*;
+        
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values));
-            let lines = crate::stat_info::simple::filter_half_low(lines);
+            let lines = values_to_line(futures::stream::iter(values)).take(100);
             
-            let (s, l1) = broadcast(10);
-            
-            let f1 = lines.map(|l| Ok(l)).forward(s);
-            let l2 = l1.clone();
-            let f2 = async move {
-                let l1 = filter_half(l1);
-                let l1 = values_simple_line_to_hashmap(l1);
-//                 let l2 = crate::stat_info::simple::filter_half_low(l2);
-//                 let l2 = values_line_to_simple(l2);
-                
-                let mut f = File::create(format!("{}.xlsx", file_path));                
-                let mut s = f.open_sheet("Sheet1");
-                let (_, stat) = futures::future::join(
-                    s.write_values((1,1), l1),
-                    crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
-                ).await;
-                s.write_state((12,2), stat.unwrap());
-                f.save();
-            };
-            
-            futures::executor::block_on(futures::future::join(f1, f2));
+            let f = write_file(file_path, lines);
+            futures::executor::block_on(f);
         }
     }
 }

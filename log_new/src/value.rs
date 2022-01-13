@@ -1,7 +1,7 @@
 use crate::utils::{DateTimeFix, date_time_from_str, date_time_to_str};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Value {
     pub device_id: u16,
     pub device_name: String,
@@ -143,6 +143,17 @@ pub mod elk {
     impl Value {
         pub fn get_sensor_value(&self) -> (&str, f32) {
             (&self.sensor_name, self.value)
+        }
+    }
+    
+    impl From<super::Value> for Value {
+        fn from(v: super::Value) -> Self {
+            Value {
+                device_id: v.device_id,
+                device_name: v.device_name,
+                sensor_name: v.sensor_name,
+                value: v.value_f32,
+            }
         }
     }
 }

@@ -18,6 +18,16 @@ pub mod value {
             value: from.value.try_into().ok()?,
         })
     }
+
+    pub fn values_line_convert<V, U>(from: ValuesLine<V>) -> ValuesLine<U> 
+    where U: From<V>
+    {
+        ValuesLine {
+            date_time: from.date_time,
+            values: from.values.into_vec().into_iter()
+                .map(|v| v.into()).collect::<Vec<_>>().into_boxed_slice()
+        }
+    }
     
     pub fn hash_to_names(hash: &str) -> Option<(u16, String, String)> {
         let res = match hash {

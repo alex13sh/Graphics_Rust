@@ -1,6 +1,6 @@
 // pub use async_broadcast::broadcast;
 // pub use postage::broadcast::channel as broadcast;
-// pub use postage::broadcast::Sender;
+pub use postage::broadcast::Receiver;
 pub use postage::prelude::*;
 
 pub fn broadcast<T: Clone>(cap: usize) -> (Sender<T>, postage::broadcast::Receiver<T>)
@@ -18,6 +18,11 @@ pub struct Sender<T>(
     /*value:*/ Option<T>
 );
 
+impl <T> Sender<T> {
+    pub fn subscribe(&self) -> postage::broadcast::Receiver<T> {
+        self.0.subscribe()
+    }
+}
 
 impl <T> From<postage::broadcast::Sender<T>> for Sender<T> {
     fn from(f: postage::broadcast::Sender<T>) -> Self {

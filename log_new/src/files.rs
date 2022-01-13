@@ -171,13 +171,21 @@ pub mod excel {
             let mut values = values.enumerate().peekable();
             
             let l = &std::pin::Pin::new(&mut values).peek().await.unwrap().1;
+            self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + 0)
+                    .set_value("Время");
+            let dt_start = l.date_time.clone();
+            
             for (col, name) in l.values.keys().enumerate() {
-                self.ws.get_cell_by_column_and_row_mut(pos.0 + col, pos.1).set_value(name);
+                self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1).set_value(name);
             }
         
             while let Some((row, l)) = values.next().await {
+                let time = l.date_time.timestamp_millis() - dt_start.timestamp_millis();
+                let time = (time as f32 / 100.0).round() / 10.0;
+                self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + row+1)
+                    .set_value(time.to_string());
                 for (col, v) in l.values.values().enumerate() {
-                    self.ws.get_cell_by_column_and_row_mut(pos.0 + col, pos.1 + row+1).set_value(v);
+                    self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1 + row+1).set_value(v);
                 }
             };
         }
@@ -202,6 +210,24 @@ pub mod excel {
         }
     }
     
+    use crate::value::SimpleValuesLine;
+    pub fn filter_half(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
+        use futures::StreamExt;
+        vin.map(|line| {
+            SimpleValuesLine {
+                date_time: line.date_time,
+                values: line.values.into_vec().into_iter().filter(|v| {
+                    match v.sensor_name.as_str() {
+                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" => true,
+                    "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false, 
+                    sensor_name if sensor_name.starts_with("Температура") => true,
+                    _ => false,
+                    }
+                }).collect::<Vec<_>>().into_boxed_slice(),
+            }
+        })
+    }
+    
     #[test]
     fn test_convert_csv_raw_to_excel() {
         use crate::convert::stream::*;
@@ -209,23 +235,26 @@ pub mod excel {
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values)).take(100);
+            let lines = values_to_line(futures::stream::iter(values));
+            let lines = crate::stat_info::simple::filter_half_low(lines);
             
             let (s, l1) = broadcast(10);
             
             let f1 = lines.map(|l| Ok(l)).forward(s);
             let l2 = l1.clone();
             let f2 = async move {
+                let l1 = filter_half(l1);
+                let l1 = values_simple_line_to_hashmap(l1);
+//                 let l2 = crate::stat_info::simple::filter_half_low(l2);
+//                 let l2 = values_line_to_simple(l2);
                 
-                let l1 = values_line_to_hashmap(l1);
-                let mut f = File::create(format!("{}.xlsx", file_path));
-                let l2 = values_line_to_simple(l2);
+                let mut f = File::create(format!("{}.xlsx", file_path));                
                 let mut s = f.open_sheet("Sheet1");
                 let (_, stat) = futures::future::join(
                     s.write_values((1,1), l1),
                     crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
                 ).await;
-                s.write_state((17,2), stat.unwrap());
+                s.write_state((12,2), stat.unwrap());
                 f.save();
             };
             

@@ -175,4 +175,13 @@ pub mod stream {
             }
         })
     }
+    
+    pub fn values_simple_line_to_hashmap(lines: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=simple::ValuesMap> {
+        lines.map(|l| {
+            simple::ValuesMap {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
+            }
+        })
+    }
 }

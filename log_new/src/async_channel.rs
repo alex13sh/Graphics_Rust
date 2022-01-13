@@ -1,7 +1,8 @@
 // pub use async_broadcast::broadcast;
 // pub use postage::broadcast::channel as broadcast;
 pub use postage::broadcast::Receiver;
-pub use postage::prelude::*;
+pub use postage::prelude::Sink as _;
+pub use futures::{Stream, StreamExt};
 
 pub fn broadcast<T: Clone>(cap: usize) -> (Sender<T>, postage::broadcast::Receiver<T>)
 {

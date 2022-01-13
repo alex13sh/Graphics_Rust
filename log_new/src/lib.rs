@@ -16,6 +16,7 @@ use stat_info::simple::LogState;
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 
 use std::path::PathBuf;
+use futures::{Stream, StreamExt};
 
 pub struct LogSession {
     log_dir: PathBuf,
@@ -77,5 +78,14 @@ impl LogSession {
             self.write_csv_raw(),
             self.write_csv_raw_diff(),
         );
+    }
+
+    pub fn get_statistic_low(&self) -> impl Stream<Item = stat_info::simple::LogState>{
+        let lines = crate::stat_info::simple::filter_half_low(self.values_elk.subscribe());
+        stat_info::simple::calc(lines)
+    }
+    pub fn get_statistic_top(&self) -> impl Stream<Item = stat_info::simple::LogState>{
+        let lines = crate::stat_info::simple::filter_half_top(self.values_elk.subscribe());
+        stat_info::simple::calc(lines)
     }
 }

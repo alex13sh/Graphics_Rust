@@ -18,6 +18,7 @@ pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 
 use std::{path::PathBuf, sync::Arc};
 use futures::{Stream, StreamExt};
+use futures::stream::BoxStream;
 
 pub struct LogSession {
     log_dir: PathBuf,
@@ -59,7 +60,7 @@ impl LogSession {
 
             let f = async {
                 elk.send(values_line_convert(line.clone())).await.unwrap();
-                raw.send(line).await.unwrap();
+                // raw.send(line).await.unwrap();
             };
             futures::executor::block_on(f);
         }
@@ -101,14 +102,14 @@ impl LogSession {
         );
     }
 
-    pub fn get_statistic_low(&self) -> impl Stream<Item = stat_info::simple::LogState>{
-        let elk = self.values_elk.as_ref().unwrap();
+    pub fn get_statistic_low(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
+        let elk = self.values_elk.as_ref()?;
         let lines = crate::stat_info::simple::filter_half_low(elk.subscribe());
-        stat_info::simple::calc(lines)
+        Some(stat_info::simple::calc(lines).boxed())
     }
-    pub fn get_statistic_top(&self) -> impl Stream<Item = stat_info::simple::LogState>{
-        let elk = self.values_elk.as_ref().unwrap();
+    pub fn get_statistic_top(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
+        let elk = self.values_elk.as_ref()?;
         let lines = crate::stat_info::simple::filter_half_top(elk.subscribe());
-        stat_info::simple::calc(lines)
+        Some(stat_info::simple::calc(lines).boxed())
     }
 }

@@ -22,7 +22,8 @@ struct UI {
 #[derive(Debug, Clone)]
 pub enum Message {
     OpenTable,
-    UpdateInfo(Option<(logger::LogState, PathBuf)>),
+    UpdateInfo(logger::LogState),
+    UpdateFile(PathBuf),
 }
 
 impl InfoPane {
@@ -55,11 +56,8 @@ impl InfoPane {
                 }
             }
         }
-        Message::UpdateInfo(Some((table_state, path))) => {
-            self.set_info(table_state);
-            self.set_file_path(path);
-        },
-        Message::UpdateInfo(None) => {println!("Message::UpdateInfo(None)");}
+        Message::UpdateInfo(table_state) => self.set_info(table_state),
+        Message::UpdateFile(path) => self.set_file_path(path),
         }
     }
 

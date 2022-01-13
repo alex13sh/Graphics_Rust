@@ -215,7 +215,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.65}
+    fn scale_factor(&self) -> f64 {0.4}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
@@ -236,6 +236,13 @@ impl Application for App {
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
+
+            if let Some(stream) = self.log_session.get_statistic_low() {
+                Subscription::from_recipe(
+                    ui::animations::MyStream{name: "statistic_low".into(), stream: stream}
+                ).map(ui::info_pane::Message::UpdateInfo)
+                .map(Message::InfoPane)
+            } else {Subscription::none()},
         ])
     }
     

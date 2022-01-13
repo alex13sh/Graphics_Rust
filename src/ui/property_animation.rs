@@ -104,7 +104,6 @@ where
     M: Clone + Send + Sync + 'static
 {
     type Output = M;
-
     fn hash(&self, state: &mut H) {
         use std::hash::Hash;
 
@@ -113,7 +112,6 @@ where
 //         self.device.is_connect().hash(state);
         self.message.hash(state);
     }
-
     fn stream(
         self: Box<Self>,
         _input: futures::stream::BoxStream<'static, I>,
@@ -132,6 +130,33 @@ where
             }
         };
         Box::pin(gen)
-    }    
+    }
 }
 
+pub struct MyStream <T> {
+    pub name: String,
+    pub stream: futures::stream::BoxStream<'static, T>,
+}
+
+impl<H, I, T> subscription::Recipe<H, I> for MyStream<T>
+where
+    H: std::hash::Hasher,
+    T: Clone + Send + Sync + 'static
+{
+    type Output = T;
+
+    fn hash(&self, state: &mut H) {
+        use std::hash::Hash;
+
+        std::any::TypeId::of::<Self>().hash(state);
+//         self.sub.hash(state);
+        self.name.hash(state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: futures::stream::BoxStream<'static, I>,
+    ) -> futures::stream::BoxStream<'static, Self::Output> {
+        self.stream
+    }
+}

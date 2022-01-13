@@ -10,7 +10,7 @@ use iced::{
 pub struct InfoPane {
     ui: UI,
     // log values
-    info: Option<logger::structs::TableState>,
+    info: Option<logger::LogState>,
     file_path: Option<PathBuf>,
 }
 
@@ -22,7 +22,7 @@ struct UI {
 #[derive(Debug, Clone)]
 pub enum Message {
     OpenTable,
-    UpdateInfo(Option<(logger::structs::TableState, PathBuf)>),
+    UpdateInfo(Option<(logger::LogState, PathBuf)>),
 }
 
 impl InfoPane {
@@ -34,7 +34,7 @@ impl InfoPane {
         }
     }
 
-    pub fn set_info(&mut self, info: logger::structs::TableState) {
+    pub fn set_info(&mut self, info: logger::LogState) {
         self.info = Some(info);
     }
     pub fn set_file_path(&mut self, path: PathBuf) {

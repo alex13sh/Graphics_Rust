@@ -1,5 +1,6 @@
 #![deny(unused_must_use)]
 
+use futures::FutureExt;
 use iced::{
     Application, executor, Command, window::Mode, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
@@ -10,7 +11,7 @@ use iced::{
 fn log_init() {
     use simplelog::*;
     use std::fs::File;
-    let dt = logger::date_time_to_string_name_short(&logger::date_time_now());
+    let dt = logger::utils::date_time_to_string_name_short(&logger::utils::date_time_now());
     std::fs::create_dir(logger::get_file_path(&format!("./simplelog/[{}]/", dt))).unwrap();
     let conf_modbus_update = ConfigBuilder::new()
 //         .add_filter_allow_str("app_complex_simple_ui")
@@ -42,27 +43,27 @@ fn log_init() {
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
             WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
-                File::create(logger::get_file_path(
+                File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/modbus_update.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
-                File::create(logger::get_file_path(
+                File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/meln_logic.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app,
-                File::create(logger::get_file_path(
+                File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/app_complex_simple_ui.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_app_update,
-                File::create(logger::get_file_path(
+                File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/app_update.log", dt)
                 )).unwrap()
             ),
             WriteLogger::new(LevelFilter::Trace, conf_dozator,
-                File::create(logger::get_file_path(
+                File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/dozator.log", dt)
                 )).unwrap()
             ),
@@ -107,8 +108,8 @@ pub struct App {
     oil_station: ui::OilStation,
     info_pane: ui::InfoPane,
     
-    log_values: Vec<logger::LogValueRaw>,
     devices_queue: HashMap<DeviceID, Arc<Device>>,
+    log_session: Arc<logger::LogSession>,
     is_logging: bool,
 }
 
@@ -186,8 +187,9 @@ impl Application for App {
             devices: devices,
             meln: meln,
             is_worked: false,
-            log_values: Vec::new(),
+
             devices_queue: HashMap::new(),
+            log_session: Arc::new(logger::LogSession::new()),
             is_logging: false,
         },
         
@@ -213,7 +215,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.4}
+    fn scale_factor(&self) -> f64 {0.65}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
@@ -280,10 +282,11 @@ impl Application for App {
         Message::LoggingTurn(enb) => {
             self.is_logging = enb;
             if enb {
-                self.reset_values();
+                Arc::get_mut(&mut self.log_session).unwrap().start();
+                let f = self.log_session.clone().write_full();
+                return Command::perform(f, |_| Message::ResultEmpty);
             } else {
-                let f = Self::log_save(std::mem::take(&mut self.log_values));
-                return Command::perform(f, |res| Message::InfoPane(ui::info_pane::Message::UpdateInfo(res)));
+                Arc::get_mut(&mut self.log_session).unwrap().stop();
             }
         }
         }
@@ -535,11 +538,18 @@ impl App {
                 .map(|(_k, v)| v)
                 .filter(|v| v.is_log())
                 .filter_map(|v| Some((v, f32::try_from(v.as_ref()).ok()?)))
-                .map(|(v, vf)| logger::LogValueRaw::new(v.hash(), vf)).collect() // Избавиться от hash
+                .map(|(v, vf)| logger::Value {
+                    device_id: v.id().device_id.clone(),
+                    device_name: v.id().device_name.clone(),
+                    sensor_name: v.id().sensor_name.clone(),
+                    value_name: v.id().value_name.clone(),
+                    value_u32: v.value(),
+                    value_f32: vf,
+                }).collect() // Избавиться от hash
             };
             // Разницу записывать
-            self.log_values.append(&mut log_values);
-        }
+            Arc::get_mut(&mut self.log_session).unwrap().push_values(log_values.into_boxed_slice());
+        } 
 
 //         let warn = values.iter().map(|(_,v)| v)
 //             .map(|v| v.is_error())
@@ -547,55 +557,24 @@ impl App {
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
-    async fn log_save(values: Vec<logger::LogValueRaw>) -> Option<(logger::structs::TableState, PathBuf)> {
-        log::trace!("log_save: values len: {}", values.len());
-        if values.is_empty() { return None; }
-            
-        logger::new_csv_raw(&values);
+//     fn save_invertor(invertor_values: &ModbusValues) {
+//         let dt = logger::date_time_now();
+//         log::trace!("save_invertor date_time: {:?}", &dt);
+//         let dt = logger::date_time_to_string_name_short(&dt);
+//         let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
+//         log::trace!("path: {:?}", &path);
+//         let parametrs: Vec<_> = invertor_values.iter_values()
+//             .map(|(adr, v, id)| logger::InvertorParametr {
+//                 address: format!("({}, {})", adr/256, adr%256),
+//                 value: v,
+// //                 name: id.to_string(),
+//                 name: id.sensor_name.clone(),
+//             }).collect();
+//         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
+//             log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
+//         }
+//     }
 
-        let vec_map = vec![
-        ("Скорость", "2207H"),
-        ("Ток", "5146ba6795"),
-        ("Мощность", "2206H"),
-        ("Скорость 2", "6) Invertor/4bd5c4e0a9"),
-        ("Ток 2", "6) Invertor/5146ba6795"),
-        ("Мощность 2", "6) Invertor/2206H"),
-
-        ("Вибродатчик", "Виброскорость дв. М1/value"),
-        ("Вибродатчик 2", "Виброскорость дв. М2/value"),
-        ("Температура ротора", "Температура ротора Пирометр дв. М1/value"),
-        ("Температура ротора 2", "Температура ротора Пирометр дв. М2/value"),
-        ("Температура статора дв. М1", "Температура статора двигатель М1/value"),
-        ("Температура масла на верхн. выходе дв. М1", "Температура масла на верхн. выходе дв. М1/value"),
-        ("Температура масла на нижн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1/value"),
-        ("Разрежение воздуха в системе", "Разрежение воздуха в системе/value"),
-        ];
-        
-        let res = logger::new_table_fields(values, 1, vec_map);
-        return res;
-    }
-
-    fn save_invertor(invertor_values: &ModbusValues) {
-        let dt = logger::date_time_now();
-        log::trace!("save_invertor date_time: {:?}", &dt);
-        let dt = logger::date_time_to_string_name_short(&dt);
-        let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
-        log::trace!("path: {:?}", &path);
-        let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, id)| logger::InvertorParametr {
-                address: format!("({}, {})", adr/256, adr%256),
-                value: v,
-//                 name: id.to_string(),
-                name: id.sensor_name.clone(),
-            }).collect();
-        if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
-            log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
-        }
-    }
-
-    fn reset_values(&mut self) {
-        self.log_values = Vec::new();
-    }
     fn is_started(&self) -> bool {
         self.meln.properties.is_started.get()
     }

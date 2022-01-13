@@ -5,26 +5,26 @@ authors = ["alex13sh <alex97sh@yandex.ru>"]
 edition = "2018"
 resolver = "2"
 
-[[bin]]
-name = "meln_graphics"
-path = "src/main.rs"
+# [[bin]]
+# name = "meln_graphics"
+# path = "src/main.rs"
 
-[[bin]]
-name = "app_test_device"
-path = "src/main_app_test_device.rs"
+# [[bin]]
+# name = "app_test_device"
+# path = "src/main_app_test_device.rs"
 
-[[bin]]
-name = "app_stand_graphic"
-path = "./src/app_stand_graphic.rs"
+# [[bin]]
+# name = "app_stand_graphic"
+# path = "./src/app_stand_graphic.rs"
 
 [[bin]]
 name = "app_complex_simple_ui"
 path = "./src/app_complex_simple_ui.rs"
 
 
-[[bin]]
-name = "app_test_klapan"
-path = "./src/app_test_klapan.rs"
+# [[bin]]
+# name = "app_test_klapan"
+# path = "./src/app_test_klapan.rs"
 
 [[bin]]
 name = "app_config"
@@ -37,7 +37,7 @@ iced = { version = "0.3", features = ["canvas", "tokio", "svg"] }
 iced_native = "0.3"
 iced_futures = "0.3"
 
-futures = "0.3.12"
+futures = {version="0.3.12", features=["alloc"]}
 futures-core = "0.3"
 futures-util = "0.3"
 tokio = { version = "1.3.0", features = ["sync", "macros"]}
@@ -48,7 +48,7 @@ coarse-prof = {version = "0.2.4"}
 log = "0.4.14"
 simplelog = "0.10"
 
-logger = {path = "./log", package = "log"}
+logger = {path = "./log_new", package = "log_new"}
 modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
 graphic = {path = "./graphic"}

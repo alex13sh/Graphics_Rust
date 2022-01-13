@@ -21,6 +21,7 @@ use std::{path::PathBuf, sync::Arc};
 use futures::{Stream, StreamExt};
 use futures::stream::BoxStream;
 
+#[derive(Clone)]
 pub struct LogSession {
     log_dir: PathBuf,
     date_time: DateTimeFix,

@@ -91,7 +91,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 // use std::path::PathBuf;
 use tokio::sync::Mutex;
-type LogSessionSync = Arc<Mutex<LogSession>>;
 
 
 pub struct App {
@@ -112,7 +111,7 @@ pub struct App {
     info_pane: ui::InfoPane,
     
     devices_queue: HashMap<DeviceID, Arc<Device>>,
-    log_session: LogSessionSync,
+    log_session: LogSession,
     is_logging: bool,
 }
 
@@ -192,7 +191,7 @@ impl Application for App {
             is_worked: false,
 
             devices_queue: HashMap::new(),
-            log_session: Arc::new(Mutex::new(logger::LogSession::new())),
+            log_session: logger::LogSession::new(),
             is_logging: false,
         },
         
@@ -240,8 +239,7 @@ impl Application for App {
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
 
-            if let Some(stream) = self.log_session.try_lock().ok()
-                    .and_then(|l| l.get_statistic_low()) {
+            if let Some(stream) = self.log_session.get_statistic_low() {
                 Subscription::from_recipe(
                     ui::animations::MyStream{name: "statistic_low".into(), stream: stream}
                 ).map(ui::info_pane::Message::UpdateInfo)
@@ -292,18 +290,19 @@ impl Application for App {
         Message::ResultEmpty => {},
         Message::LoggingTurn(enb) => {
             self.is_logging = enb;
-            let mut lock = self.log_session.try_lock().unwrap();
+
+            let log_session = &mut self.log_session;
             if enb {
-                lock.start();
-                let log_session = self.log_session.clone();
-                let file_path = lock.make_path_excel();
+                log_session.start();
+                let file_path = log_session.make_path_excel();
+                let log_session = log_session.clone();
                 let f = async move {
-                    log_session.lock().await.write_full().await;
+                    log_session.write_full().await;
                     file_path
                 };
                 return Command::perform(f, |path| Message::InfoPane(ui::info_pane::Message::UpdateFile(path)));
             } else {
-                lock.stop();
+                log_session.stop();
             }
         }
         }
@@ -565,7 +564,7 @@ impl App {
                 }).collect() // Избавиться от hash
             };
             // Разницу записывать
-            self.log_session.try_lock().unwrap().push_values(log_values.into_boxed_slice());
+            self.log_session.push_values(log_values.into_boxed_slice());
         } 
 
 //         let warn = values.iter().map(|(_,v)| v)

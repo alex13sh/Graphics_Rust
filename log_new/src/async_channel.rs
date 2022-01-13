@@ -11,7 +11,7 @@ pub fn broadcast<T: Clone>(cap: usize) -> (Sender<T>, postage::broadcast::Receiv
     (Sender::from(s), r)
 }
 
-
+#[derive(Clone)]
 pub struct Sender<T>(
 //     std::pin::Pin<
         postage::broadcast::Sender<T>

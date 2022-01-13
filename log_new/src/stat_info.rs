@@ -16,6 +16,7 @@ pub mod simple {
         pub vibro_max: f32,
         pub hz_vibro: u32, // Зона вибрации
         pub tok_max: u32,
+        pub watt_max: u32,
         
         pub temps: HashMap<String, (f32, f32)>,
     }
@@ -52,12 +53,13 @@ pub mod simple {
                 // self.time_acel = self.time_all;
             }
             ValueStr {sensor_name: "Выходной ток (A)", value} => self.tok_max = self.tok_max.max(value as u32),
+            ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => self.watt_max = self.watt_max.max(value as u32),
             ValueStr {sensor_name: sensor, value} if sensor.starts_with("Температура") => {
                 if let Some(ref mut temp) = self.temps.get_mut(sensor) {
                     temp.1 = value;
                 } else {
                     self.temps.insert(sensor.into(), (value, value));
-                }   
+                }
             }
             _ => {}
             }

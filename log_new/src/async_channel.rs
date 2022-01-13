@@ -80,12 +80,11 @@ pub mod features_sink {
 //                 Poll::Pending
                 Poll::Ready(Ok(()))
             };
-            dbg!(&res);
+            // dbg!(&res);
             res
         }
 
         fn start_send(self: Pin<&mut Self>, item: T) -> Result<(), Self::Error> {
-            dbg!("start_send");
             unsafe{self.get_unchecked_mut()}.1 = Some(item);
             Ok(())
         }

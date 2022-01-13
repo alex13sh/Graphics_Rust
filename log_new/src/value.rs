@@ -118,7 +118,7 @@ pub mod raw {
                 })
             } else {
                 let e = Err(format!("Нет соответствия для hash: {}", v.hash));
-                dbg!(&e);
+                // dbg!(&e);
                 e
             }
         }

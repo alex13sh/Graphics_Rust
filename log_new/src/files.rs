@@ -77,8 +77,8 @@ pub mod csv {
 //             write_values("/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376_sync.csv", lines).unwrap();
             let f0 = async move {
                 for v in lines {
-                    dbg!(&v);
-                    s1.send(v).await;
+                    // dbg!(&v);
+                    s1.send(v).await.unwrap();
                 }
             };
             let f1 = write_values_async(format!("{}_async_1.csv", file_path), r1);
@@ -191,18 +191,20 @@ pub mod excel {
         }
         pub fn write_state(&mut self, pos: (usize, usize), state: LogState) {
             let mut fields = Vec::new();
-            fields.push(("Время работы (сек)", state.time_work.to_string()));
+            fields.push(("Время запуска", state.date_time.unwrap().to_string()));
+            fields.push(("Время работы (сек)", state.time_all.to_string()));
             fields.push(("Время разгона (сек)", state.time_acel.to_string()));
             fields.push(("Обороты двигателя (об/мин)", state.hz_max.to_string()));
             fields.push(("Максимальная вибрация", state.vibro_max.to_string()));
             fields.push(("Зона вибрации (об/мин)", state.hz_vibro.to_string()));
             fields.push(("Максимальный ток", state.tok_max.to_string()));
+            fields.push(("Максимальная мощность", state.watt_max.to_string()));
             
             for (f, row) in fields.into_iter().zip((pos.1+1)..) {
                 self.ws.get_cell_by_column_and_row_mut(1+pos.0, row).set_value(f.0);
                 self.ws.get_cell_by_column_and_row_mut(2+pos.0, row).set_value(f.1);
             }
-            for (f, row) in state.temps.into_iter().zip((pos.1+8)..) {
+            for (f, row) in state.temps.into_iter().zip((pos.1+10)..) {
                 self.ws.get_cell_by_column_and_row_mut(pos.0+1, row).set_value(f.0);
                 self.ws.get_cell_by_column_and_row_mut(pos.0+2, row).set_value(format!("{:.2}", f.1.0));
                 self.ws.get_cell_by_column_and_row_mut(pos.0+3, row).set_value(format!("{:.2}", f.1.1));
@@ -266,7 +268,7 @@ pub mod excel {
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values)).take(100);
+            let lines = values_to_line(futures::stream::iter(values));
             
             let f = write_file(file_path, lines);
             futures::executor::block_on(f);

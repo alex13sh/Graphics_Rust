@@ -90,11 +90,15 @@ impl Device {
         trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
         
-        *self.ctx.lock().await = super::ModbusContext
+        let mut ctx = self.ctx.lock().await;
+        let new_ctx = super::ModbusContext
             ::new_async(&self.address, &self.values).await.map(Arc::new); 
         
-        if !self.is_connect() {Err(DeviceError::ContextNull)}
-        else {Ok(())}
+        if new_ctx.is_none() {
+            return Err(DeviceError::ContextNull);
+        }
+        *ctx = new_ctx;
+        Ok(())
     }
     pub fn is_connecting(&self) -> bool {
 //         self.ctx.is_poisoned()
@@ -108,11 +112,12 @@ impl Device {
     pub async fn update_async(self: Arc<Self>, req: UpdateReq) -> DeviceResult {
 //         trace!("pub async fn update_async");
 
-        let ctx = self.context_async().await?;
-        if ctx.is_busy() {
-//             info!(" <- device is busy");
-            return Err(DeviceError::ContextBusy);
-        }
+        let mut try_ctx = self.ctx.try_lock();
+        let try_ctx = try_ctx.as_mut()
+            .map_err(|_|DeviceError::ContextBusy)?;
+        let ctx = try_ctx.as_ref()
+            .ok_or(DeviceError::ContextNull)?;
+        
 //         info!("Device: {} - {:?}", self.name, self.address);
         let len = match (self.address.is_tcp_ip(), &req) {
             (true, UpdateReq::ReadOnly) => 8,
@@ -121,17 +126,20 @@ impl Device {
             _ => 1,
         };
         let res = ctx.update_async(Some(&get_ranges_value(req.filter_values(&self.values), len))).await;
-
+//         drop(ctx);
 //         info!("-> res");
         if res.is_err() {
             log::error!(target: "modbus::update::update_async", "{:?}; {:?}", &res, self);
-            self.disconnect().await;
+//             if self.address.is_tcp_ip() {
+//                 self.disconnect().await;
+                **try_ctx = None;
+//             }
         }
         res
     }
     
     pub async fn update_new_values(self: Arc<Self>) -> DeviceResult {
-        let ctx = self.context_async().await?;
+        let ctx = self.context()?;
         for (_name, v) in self.values.iter() {
             if v.is_flag() {
                 v.clear_flag();
@@ -157,7 +165,7 @@ impl Device {
     }
     pub(super) fn context(&self) -> Result<ModbusContext, DeviceError> {
 //         trace!("device get context");
-        if let Some(ref ctx) = *self.ctx.try_lock().or_else(|_|Err(DeviceError::ContextNull))? {
+        if let Some(ref ctx) = *self.ctx.try_lock().map_err(|_|DeviceError::ContextBusy)? {
             Ok(ctx.clone())
         } else {
             Err(DeviceError::ContextNull)

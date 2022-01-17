@@ -6,8 +6,9 @@ use super::Value;
 pub struct Device {
     pub name: DeviceID,
     pub values: Vec<Value>,
-    pub device_type: DeviceType<Device>, 
     pub address: DeviceAddress,
+    
+    pub config: DeviceConfig,
 }
 
 #[derive(Debug)]
@@ -32,24 +33,9 @@ impl std::fmt::Display for DeviceID {
 }
 
 #[derive(Debug)]
-pub enum DeviceType<D> {
-    OwenAnalog,
-    OwenDigitalIO,
-    // Немецкий модуль
-    Invertor {
-        functions: Vec<InvertorFunc>
-    },
-    Convertor {
-        devices: Vec<D>
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum InvertorFunc {
-    DigitalInput(u8, u8), // Номер входа, Номер функции
-    DigitalOutput(u8, u8),
-    AnalogInput(u8, u8),
-    AnalogOutput(u8, u8),
+pub struct DeviceConfig {
+    // Интервал обновлений в секундах
+    pub interval_update_in_sec: f32,
 }
 
 #[derive(Debug, Clone)]

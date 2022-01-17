@@ -1,4 +1,3 @@
-use super::init::{DeviceType, InvertorFunc};
 use super::{Device, DeviceError, ModbusValues};
 use super::Value;
 use crate::ValueArc;
@@ -137,35 +136,6 @@ impl InvertorValues {
 
 // Configure
 impl Invertor {
-    fn get_address_function(&self, num_func: u8) -> Option<u16> {
-        match &self.device.device_type {
-        DeviceType::Invertor {functions} => {
-            for f in functions.iter() {
-                match f {
-                InvertorFunc::DigitalInput(num_input, num_func_input) => {
-                    if *num_func_input == num_func {
-                        if *num_input >= 2 {
-                            return Some(*num_input as u16 -2 + 2*256+1);
-                        } else {return None;}
-                    }
-                },
-                InvertorFunc::DigitalOutput(num_output, num_func_output) => {
-                    if *num_func_output == num_func {
-                        if [0, 1, 3, 4].contains(num_output) {
-                            return Some(*num_output as u16 + 2*256+13);
-                        } else if *num_output >= 5 {
-                            return Some(*num_output as u16-5 + 2*256+36);
-                        }
-                    }
-                },
-                _ => {return None;}
-                }
-            }
-        },
-        _ => {}
-        };
-        None
-    }
     
     pub fn device(&self) -> Arc<Device> {
         self.device.clone()
@@ -226,16 +196,6 @@ impl From<Arc<Device>> for Invertor {
             values: InvertorValues::from_device(&d),
             device: d.clone(),
         }
-    }
-}
-
-// Funcs
-impl Invertor {
-    fn read_digit_func(_func: &InvertorFunc) -> bool {
-        false
-    }
-    fn read_analog_func(_func: &InvertorFunc) -> f32 {
-        0_f32
     }
 }
 

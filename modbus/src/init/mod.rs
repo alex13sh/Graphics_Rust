@@ -46,7 +46,9 @@ pub fn make_owen_analog_1(ip_addres: &str) -> Device {
     
     Device {
         name: "МВ210-101".into(),
-        device_type: DeviceType::OwenAnalog,
+        config: DeviceConfig {
+            interval_update_in_sec: 1.0,
+        },
         address: DeviceAddress::TcpIP(ip_addres.into()),
         values: vec![
             make_values(1, "Температура статора дв. М2", (60, 85)),
@@ -100,7 +102,9 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
 
     Device {
         name: "МВ110-24.8АС".into(),
-        device_type: DeviceType::OwenAnalog,
+        config: DeviceConfig {
+            interval_update_in_sec: 0.1, // 100 ms
+        },
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id),
         
         values: vec![
@@ -127,7 +131,9 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
     let make_value = Value::make_value;
     Device {
         name: "Уровень масла".into(),
-        device_type: DeviceType::OwenAnalog,
+        config: DeviceConfig {
+            interval_update_in_sec: 5.0, // 5s
+        },
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
         values: vec![
@@ -158,7 +164,9 @@ pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
     let make_value = Value::make_value;
     Device {
         name: "МКОН".into(),
-        device_type: DeviceType::OwenAnalog,
+        config: DeviceConfig {
+            interval_update_in_sec: 0.0, // Совсем не обновлять
+        },
         address: DeviceAddress::TcpIp2Rtu(ip_addres.into(), id), // <<--
 
         values: vec![
@@ -176,7 +184,9 @@ pub fn make_i_digit(ip_address: String) -> Device {
     let prefix = format!("{}", "3) МК210-302");
     Device {
         name: "МК210-302".into(),
-        device_type: DeviceType::OwenDigitalIO,
+        config: DeviceConfig {
+            interval_update_in_sec: 1.0, // 1s или больше?
+        },
         address: DeviceAddress::TcpIP(ip_address),
         values: vec![
             vec![
@@ -229,7 +239,9 @@ pub fn make_o_digit(ip_address: String) -> Device {
     let prefix = format!("{}", "4) МУ210-410");
     Device {
         name: "МУ210-410".into(),
-        device_type: DeviceType::OwenDigitalIO,
+        config: DeviceConfig {
+            interval_update_in_sec: 0.0, 
+        },
         address: DeviceAddress::TcpIP(ip_address),
         values: vec![
             vec![
@@ -260,15 +272,8 @@ pub fn make_invertor(ip_address: String) -> Device {
     Device {
         name: "Invertor".into(),
         address: DeviceAddress::TcpIP(ip_address), // "192.168.1.7"
-        device_type: DeviceType::Invertor {
-            functions: vec![
-//                 InvertorFunc::DigitalOutput(0, 2), // Заданная частота достигнута
-//                 InvertorFunc::DigitalOutput(0, 13), // Предупреждение о перегреве радиатора
-//                 InvertorFunc::DigitalInput(0, 6), // Команда JOG (Разгон и Замедление)
-//                 InvertorFunc::DigitalInput(0, 12), // Остановка на выбег/Пуск по рампе
-//                 InvertorFunc::DigitalInput(0, 40), // Остановка на выбеге
-                
-            ]
+        config: DeviceConfig {
+            interval_update_in_sec: 0.5, // 500ms
         },
         values: {
             let add_invertor_value = |name: &str, p: u16, adr: u16|
@@ -681,7 +686,7 @@ pub fn make_invertor(ip_address: String) -> Device {
             // Part 21 ReadOnly
             reg.append(&mut vec![
                 Value::new(0x2100, "Код ошибки") // Pr.06-17 - 06.22
-                    .direct(ValueDirect::read()) // interval
+                    .direct(ValueDirect::read()) // interval_update_in_sec
                     .size(ValueSize::UINT16), // UINT32
                 Value::new(0x2119, "2119H")
                     .direct(ValueDirect::read())

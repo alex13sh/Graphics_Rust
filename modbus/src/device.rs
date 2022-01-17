@@ -2,7 +2,7 @@
 
 use super::{Value, ModbusValues};
 
-use super::init::{DeviceType, DeviceAddress, DeviceID};
+use super::init::{DeviceConfig, DeviceAddress, DeviceID};
 use super::init::Device as DeviceInit;
 
 use std::collections::HashMap;
@@ -18,9 +18,9 @@ type ModbusContext = Arc<super::ModbusContext>;
 pub struct Device {
     name: DeviceID,
     address: DeviceAddress,
+    pub config: DeviceConfig,
     #[derivative(Debug="ignore")]
     pub(super) values: ModbusValues,
-    pub(super) device_type: DeviceType<Device>,
     #[derivative(Debug="ignore")]
     pub(super) ctx: Mutex< Option<ModbusContext> >,
 }
@@ -217,7 +217,6 @@ impl std::convert::From<std::io::Error> for DeviceError {
 
 impl From<DeviceInit> for Device {
     fn from(d: DeviceInit) -> Device {
-        let typ: DeviceType<Device> = d.device_type.into();
         let mut values: ModbusValues  = d.values
             .into_iter().map(|v| Arc::new(Value::from(v)))
             .collect();
@@ -248,25 +247,10 @@ impl From<DeviceInit> for Device {
         Device {
             name: d.name,
             address: d.address.clone(),
-            device_type: typ,
+            config: d.config,
 //             ctx: Mutex::new(super::ModbusContext::new(&d.address, &values).map(Arc::new)),
             ctx: Mutex::new(None),
             values: values,
-        }
-    }
-}
-
-impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
-    fn from(dt: DeviceType<DeviceInit>) -> Self {
-        match dt {
-        DeviceType::<DeviceInit>::OwenAnalog => DeviceType::<Device>::OwenAnalog,
-        DeviceType::<DeviceInit>::OwenDigitalIO => DeviceType::<Device>::OwenDigitalIO,
-        DeviceType::<DeviceInit>::Invertor {functions} => DeviceType::<Device>::Invertor {functions:functions},
-        DeviceType::<DeviceInit>::Convertor {devices} => {
-            DeviceType::<Device>::Convertor {
-                devices: devices.into_iter().map(|d| Device::from(d)).collect()
-            }
-        },
         }
     }
 }

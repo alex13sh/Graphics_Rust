@@ -212,8 +212,8 @@ impl Application for App {
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
 //                 time::every(std::time::Duration::from_millis(100))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
-                time::every(std::time::Duration::from_secs(20))
-                .map(|_| MessageMudbusUpdate::ModbusConnect),
+//                 time::every(std::time::Duration::from_secs(20))
+//                 .map(|_| MessageMudbusUpdate::ModbusConnect),
                 time::every(std::time::Duration::from_secs(30*60))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
@@ -391,11 +391,11 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
-                if res.is_ok() {
-                    let f = d.clone().update_async(UpdateReq::All);
-                    return Command::perform(f, move |res| Message::MessageUpdate(
-                            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
-                }
+//                 if res.is_ok() {
+//                     let f = d.clone().update_async(UpdateReq::ReadOnlyOrLogable); // All
+//                     return Command::perform(f, move |res| Message::MessageUpdate(
+//                             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+//                 }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
 //                 let d = self.devices.invertor_2.device();

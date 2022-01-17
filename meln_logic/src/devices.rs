@@ -57,10 +57,8 @@ impl Devices {
     {
         let mut device_futures = Vec::new();
         for d in self.get_devices() {
-            if !d.is_connecting() && !d.is_connect() {
-                let f = fut(d.clone());
-                device_futures.push((d.clone(), f));
-            }
+            let f = fut(d.clone());
+            device_futures.push((d.clone(), f));
         }
         device_futures
     }

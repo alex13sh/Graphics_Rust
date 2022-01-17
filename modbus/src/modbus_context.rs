@@ -33,10 +33,11 @@ impl ModbusContext {
         DeviceAddress::TcpIp2Rtu(txt, _) => {
             use tokio_modbus::prelude::*;
             let socket_addr = (txt.to_owned()+":502").parse().ok()?;
-            log::trace!("ModbusContext::new: adr: {:?}, num: {:?}", &socket_addr, num);
-            
+            log::trace!(target: "modbus::update::connect", "ModbusContext::new: adr: {:?}, num: {:?}", &socket_addr, num);
+            let ctx = Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?));
+            log::trace!(target: "modbus::update::connect", "ctx ready  adr: {:?}, num: {:?}", &socket_addr, num);
             Some(ModbusContext {
-                ctx: Arc::new(Mutex::new(tcp::connect_slave(socket_addr, num.into()).await.ok()?)),
+                ctx: ctx,
                 is_rtu: num != 1,
                 ranges_address: get_ranges_value(UpdateReq::ReadOnly.filter_values(&values), 8),
                 values: convert_modbusvalues_to_hashmap_address(values),
@@ -71,33 +72,38 @@ impl ModbusContext {
         use tokio::time::timeout;
         use std::time::Duration;
         let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
+        
+        let timeout = Duration::from_millis(
+            if self.is_rtu {120*ranges_address.len()} else {200} as u64
+        );
+        log::info!("timeout: {:?}", &timeout);
+        let timeout = sleep(timeout);
+        
+        let f = async {
+        let mut ctx = self.ctx.lock().await;
         for r in ranges_address {
             let buff = {
-                let mut ctx = self.ctx.lock().await;
+                
                 let buff = ctx.read_holding_registers(*r.start(), *r.end() - *r.start()+1);
 //             println!("Ranges ({:?}) is '{:?}'", r, buff);
-                let timeout = sleep(Duration::from_millis(
-                    if self.is_rtu {200} else {100}
-                ));
-                let res = tokio::select! {
-                buff = buff => Ok(buff),
-                _ = timeout => Err(DeviceError::TimeOut),
-                };
-                res?
+            
+                buff.await
             };
             if let Ok(buff) = buff {
                 Self::update_impl(&self.values, r.clone(), buff);
             } else {
+                log::error!("buff: {:?}", buff);
                 log::error!("Range ({:?})\nRanges: {:?}", r, &ranges_address);
                 return Err(DeviceError::ValueOut);
             }
         }
         Ok(())
-    }
-    
-    pub(crate) fn is_busy(&self) -> bool {
-//         self.ctx.is_poisoned()
-        false
+        };
+        
+        tokio::select! {
+        res = f => res,
+        _ = timeout => Err(DeviceError::TimeOut),
+        }
     }
     
     pub(crate) async fn set_value(&self, v: &Value) -> Result<(), DeviceError> {

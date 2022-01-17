@@ -361,13 +361,14 @@ impl App {
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
                     
-                let device_futures = self.devices.iter().cloned().map(
+                let device_futures = self.devices.iter().cloned()
+                .filter(|d| d.is_connect())
+                .map(
                     |d| (d.clone(), async {
                         d.clone().update_new_values().await?;
                         d.update_async(UpdateReq::ReadOnlyOrLogable).await
                     })
                 );
-
                 return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))

@@ -86,6 +86,10 @@ impl Device {
         self.name.to_string()
     }
     
+    pub fn id(&self) -> &DeviceID {
+        &self.name
+    }
+    
     pub async fn connect(self: Arc<Self>) -> DeviceResult {
         trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
@@ -105,7 +109,7 @@ impl Device {
         false
     }
 
-    async fn disconnect(&self) {
+    pub async fn disconnect(&self) {
         *self.ctx.lock().await = None;
     }
     

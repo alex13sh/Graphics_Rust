@@ -74,7 +74,7 @@ fn main() {
 mod ui;
 use ui::style;
 
-use modbus::{ModbusValues, Device, DeviceError};
+use modbus::{ModbusValues, Device, DeviceError, DeviceResult};
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -134,8 +134,8 @@ pub enum Message {
 pub enum MessageMudbusUpdate {
     ModbusUpdate, ModbusUpdateAsyncAnswer,
     ModbusUpdateAsync, ModbusUpdateAsync_Vibro, ModbusUpdateAsync_Invertor,
-    ModbusConnect, ModbusConnectAnswer(Arc<Device>, Result<(), DeviceError>),
-    ModbusUpdateAsyncAnswerDevice(Arc<Device>, Result<(), DeviceError>),
+    ModbusConnect, ModbusConnectAnswer(Arc<Device>, DeviceResult),
+    ModbusUpdateAsyncAnswerDevice(Arc<Device>, DeviceResult),
 //     GraphicUpdate,
     LogUpdate,
 }
@@ -407,16 +407,25 @@ impl App {
 //                 self.proccess_values();
 //                 self.proccess_speed();
             },
-            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d, res) => {
-                if res.is_err() && !d.address().is_tcp_ip() {
-                    if !d.is_connecting() && !d.is_connect() {
-                        let dc = d.clone();
-                        let upd = async move {dc.connect().await};
-//                     return async{ Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect)}.into();
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(ref d, ref res) => {
+                match &res {
+                Ok(_) | Err(DeviceError::ContextBusy) => {}
+                Err(DeviceError::ContextNull) => {
+                    if !d.address().is_tcp_ip() {
+                        println!("message: {:?}", &message);
+                    }
+                }
+                Err(_) => {
+//                     if d.address().is_tcp_ip() {
+                        let d = d.clone();
+                        log::info!(target: "modbus::update::reconnect", "Reconnect {}", d.name());
+                        let upd = reconnect_device(d.clone());
                         return Command::perform(upd, move |res| Message::MessageUpdate(
                             MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res))
                         );
-                    }
+                    
+//                     }
+                }
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
@@ -549,6 +558,27 @@ impl App {
     fn is_worked(&self) -> bool {
         self.is_worked
     }
+}
+
+async fn reconnect_device(d: Arc<Device>) -> DeviceResult {
+    log::trace!(target: "modbus::update::connect", "reconnect {:?}", &d);
+    println!("reconnect: {:?}", d.id());
+    use std::time::Duration;
+    use tokio::time::sleep;
+    let timeout = Duration::from_millis(120);
+    d.disconnect().await;
+    for _ in 0..5 {
+        let f = d.clone().connect();
+        let f_timeout = sleep(timeout);
+        tokio::select! {
+        res = f => {return res;},
+        _ = f_timeout => {},
+        };
+        sleep(timeout).await;
+    }
+    log::trace!(target: "modbus::update::connect", "timeout {:?}", &d);
+    println!("reconnect timeout: {:?}", d.id());
+    Err(DeviceError::TimeOut)
 }
 
 use half_complect::{HalfComplect};

@@ -81,3 +81,52 @@ where
         Box::pin(gen)
     }    
 }
+
+use std::sync::Arc;
+
+pub struct DeviceUpdate<Message> {
+    device: Arc<modbus::Device>,
+    message: fn(Arc<modbus::Device>) -> Message,
+}
+
+impl <M> DeviceUpdate<M> {
+    pub fn new(d: Arc<modbus::Device>, m: fn(Arc<modbus::Device>) -> M) -> Self {
+        Self {
+            device: d,
+            message: m,
+        }
+    }
+}
+
+impl<H, I, M> subscription::Recipe<H, I> for DeviceUpdate<M>
+where
+    H: std::hash::Hasher,
+    M: Clone + Send + Sync + 'static
+{
+    type Output = M;
+
+    fn hash(&self, state: &mut H) {
+        use std::hash::Hash;
+
+        std::any::TypeId::of::<Self>().hash(state);
+        self.device.id().hash(state);
+        self.message.hash(state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: futures::stream::BoxStream<'static, I>,
+    ) -> futures::stream::BoxStream<'static, Self::Output> {
+        use tokio::time::sleep;
+        use std::time::Duration;
+        let gen = stream! {
+            loop {
+                let interval = self.device.config.interval_update_in_sec;
+                sleep(Duration::from_millis((interval * 1_000.0) as u64)).await;
+                yield (self.message)(self.device.clone());
+            }
+        };
+        Box::pin(gen)
+    }    
+}
+

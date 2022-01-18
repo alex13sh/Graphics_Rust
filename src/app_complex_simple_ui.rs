@@ -132,10 +132,9 @@ pub enum Message {
 
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
-    ModbusUpdate, ModbusUpdateAsyncAnswer,
-    ModbusUpdateAsync, ModbusUpdateAsync_Vibro, ModbusUpdateAsync_Invertor,
+    UpdateDevice(Arc<Device>), ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    ModbusUpdateAsync_Invertor,
     ModbusConnect, ModbusConnectAnswer(Arc<Device>, DeviceResult),
-    ModbusUpdateAsyncAnswerDevice(Arc<Device>, DeviceResult),
 //     GraphicUpdate,
     LogUpdate,
 }
@@ -210,12 +209,10 @@ impl Application for App {
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
-//                 time::every(std::time::Duration::from_millis(100))
-//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Vibro),
 //                 time::every(std::time::Duration::from_secs(20))
 //                 .map(|_| MessageMudbusUpdate::ModbusConnect),
-                time::every(std::time::Duration::from_secs(30*60))
-                .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
+//                 time::every(std::time::Duration::from_secs(30*60))
+//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
 
@@ -349,18 +346,27 @@ impl Application for App {
 
 // modbus update
 impl App {
+    fn sub_devices(devices: &[Arc<Device>]) -> Subscription<MessageMudbusUpdate> {
+        use ui::animations::DeviceUpdate;
+        Subscription::batch(
+            devices.iter().filter(|d| d.is_connect())
+                .map(|d| Subscription::from_recipe(
+                    DeviceUpdate::new(d.clone(), MessageMudbusUpdate::UpdateDevice)
+                ))
+        )
+    }
+
     fn modbus_update(&mut self, message: MessageMudbusUpdate) -> Command<Message> {
         log::trace!(target: "modbus::update", "modbus_update \n\tmessage: {:?}", &message);
         use modbus::UpdateReq;
         match message {
-            MessageMudbusUpdate::ModbusUpdate  => {
-//                 self.devices.update();
-
-                self.proccess_values();
+            MessageMudbusUpdate::UpdateDevice(d) => {
+                // Добавить в очередь
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
                     
+                // Обновлять устройства из очереди
                 let device_futures = self.devices.iter().cloned()
                 .filter(|d| d.is_connect())
                 .map(
@@ -369,18 +375,10 @@ impl App {
                         d.update_async(UpdateReq::ReadOnlyOrLogable).await
                     })
                 );
-                return Command::batch(device_futures
-                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
-                    ));
-            },
-            MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
-//                 self.proccess_values(true);
-                let device_futures = self.devices.iter().cloned().map(|d| (d.clone(), d.update_async(UpdateReq::Vibro)));
-                return Command::batch(device_futures
-                    .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
-                    ));
+//                 return Command::batch(device_futures
+//                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
+//                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
+//                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();
@@ -391,11 +389,6 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
-//                 if res.is_ok() {
-//                     let f = d.clone().update_async(UpdateReq::ReadOnlyOrLogable); // All
-//                     return Command::perform(f, move |res| Message::MessageUpdate(
-//                             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
-//                 }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
 //                 let d = self.devices.invertor_2.device();
@@ -407,27 +400,6 @@ impl App {
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();
 //                 self.proccess_speed();
-            },
-            MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(ref d, ref res) => {
-                match &res {
-                Ok(_) | Err(DeviceError::ContextBusy) => {}
-                Err(DeviceError::ContextNull) => {
-                    if !d.address().is_tcp_ip() {
-                        println!("message: {:?}", &message);
-                    }
-                }
-                Err(_) => {
-//                     if d.address().is_tcp_ip() {
-                        let d = d.clone();
-                        log::info!(target: "modbus::update::reconnect", "Reconnect {}", d.name());
-                        let upd = reconnect_device(d.clone());
-                        return Command::perform(upd, move |res| Message::MessageUpdate(
-                            MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res))
-                        );
-                    
-//                     }
-                }
-                }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
             MessageMudbusUpdate::LogUpdate => {

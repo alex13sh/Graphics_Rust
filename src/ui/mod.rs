@@ -19,7 +19,7 @@ pub mod style;
 mod property_animation;
 
 pub mod animations {
-    pub use super::property_animation::{PropertyAnimation, BroadcastAnimation};
+    pub use super::property_animation::*;
 
     #[derive(Debug, Clone)]
     pub enum Progress {

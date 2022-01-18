@@ -137,7 +137,6 @@ pub enum MessageMudbusUpdate {
     ModbusUpdateAsync_Invertor,
     ModbusConnect, ModbusConnectAnswer(Arc<Device>, DeviceResult),
 //     GraphicUpdate,
-    LogUpdate,
 }
 
 #[derive(Debug, Clone)]
@@ -205,8 +204,7 @@ impl Application for App {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
-        let interval_update = if self.is_logging {100} else {200};
-        let interval_log = if self.is_logging {100} else {1000};
+        let interval_update = if self.is_logging {100} else {500};
         Subscription::batch(vec![
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
@@ -215,8 +213,6 @@ impl Application for App {
 //                 .map(|_| MessageMudbusUpdate::ModbusConnect),
 //                 time::every(std::time::Duration::from_secs(30*60))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
-                time::every(std::time::Duration::from_millis(interval_log))
-                .map(|_| MessageMudbusUpdate::LogUpdate),
                 Self::sub_devices(self.devices.iter().cloned()),
             ]).map(Message::MessageUpdate),
             
@@ -367,9 +363,7 @@ impl App {
                 // Добавить в очередь
                 self.devices_queue.insert(d.id().clone(), d);
             },
-            MessageMudbusUpdate::ModbusUpdateAsync => {
-                self.meln.properties.update_property(&self.meln.values);
-                    
+            MessageMudbusUpdate::ModbusUpdateAsync => {                    
                 // Обновлять устройства из очереди
                 let devices = std::mem::take(&mut self.devices_queue);
                 let devices_future = async move {
@@ -422,13 +416,12 @@ impl App {
 //                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
-//                 self.proccess_values();
-//                 self.proccess_speed();
+                self.meln.properties.update_property(&self.meln.values);
+                if self.is_logging {
+                    self.proccess_values();
+                }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();
-            MessageMudbusUpdate::LogUpdate => {
-                self.proccess_values();
-            },
         }
         Command::none()
     }

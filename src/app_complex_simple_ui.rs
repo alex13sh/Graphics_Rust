@@ -74,7 +74,7 @@ fn main() {
 mod ui;
 use ui::style;
 
-use modbus::{ModbusValues, Device, DeviceError, DeviceResult};
+use modbus::{ModbusValues, Device, DeviceID, DeviceError, DeviceResult};
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -98,6 +98,7 @@ pub struct App {
     info_pane: ui::InfoPane,
     
     log_values: Vec<logger::LogValueRaw>,
+    devices_queue: HashMap<DeviceID, Arc<Device>>,
     is_logging: bool,
 }
 
@@ -174,6 +175,7 @@ impl Application for App {
             meln: meln,
             is_worked: false,
             log_values: Vec::new(),
+            devices_queue: HashMap::new(),
             is_logging: false,
         },
         
@@ -215,7 +217,7 @@ impl Application for App {
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 time::every(std::time::Duration::from_millis(interval_log))
                 .map(|_| MessageMudbusUpdate::LogUpdate),
-
+                Self::sub_devices(self.devices.iter().cloned()),
             ]).map(Message::MessageUpdate),
             
             Self::sub_meln(&self.meln.properties).map(Message::MelnMessage),
@@ -346,10 +348,11 @@ impl Application for App {
 
 // modbus update
 impl App {
-    fn sub_devices(devices: &[Arc<Device>]) -> Subscription<MessageMudbusUpdate> {
+    fn sub_devices(devices: impl Iterator<Item=Arc<Device>>) -> Subscription<MessageMudbusUpdate> {
         use ui::animations::DeviceUpdate;
         Subscription::batch(
-            devices.iter().filter(|d| d.is_connect())
+            devices
+//                 .filter(|d| d.is_connect())
                 .map(|d| Subscription::from_recipe(
                     DeviceUpdate::new(d.clone(), MessageMudbusUpdate::UpdateDevice)
                 ))
@@ -362,23 +365,44 @@ impl App {
         match message {
             MessageMudbusUpdate::UpdateDevice(d) => {
                 // Добавить в очередь
+                self.devices_queue.insert(d.id().clone(), d);
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
                     
                 // Обновлять устройства из очереди
-                let device_futures = self.devices.iter().cloned()
-                .filter(|d| d.is_connect())
-                .map(
-                    |d| (d.clone(), async {
-                        d.clone().update_new_values().await?;
-                        d.update_async(UpdateReq::ReadOnlyOrLogable).await
-                    })
-                );
-//                 return Command::batch(device_futures
-//                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
-//                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
-//                     ));
+                let devices = std::mem::take(&mut self.devices_queue);
+                let devices_future = async move {
+                    let mut devices_reconnect = Vec::new();
+                    for (_, d) in devices {
+                        let d2 = d.clone();
+                        let res = async move {
+//                             log::trace!(target: "modbus::update::update_new_values", "{:?}", d.id());
+                            d.clone().update_new_values().await?;
+//                             log::trace!(target: "modbus::update::update_async", "{:?}", d.id());
+                            d.clone().update_async(UpdateReq::ReadOnlyOrLogable).await
+                        }.await;
+                        if let Err(e) = res {
+                            println!("Error: {:?} {:?}", &e, &d2);
+                            log::trace!(target: "modbus::update", "[error] {:?} {:?}", &e, &d2);
+                            match e {
+                            DeviceError::TimeOut => {
+                                devices_reconnect.push(d2)
+                            },
+                            _ => {}
+                            }
+                        }
+                    }
+                    
+                    for d in devices_reconnect {
+                        if let Err(e) = reconnect_device(d).await {
+                            dbg!(e);
+                        }
+                    }
+                };
+
+                return Command::perform(devices_future, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();

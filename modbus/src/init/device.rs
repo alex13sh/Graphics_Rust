@@ -11,7 +11,7 @@ pub struct Device {
     pub config: DeviceConfig,
 }
 
-#[derive(Debug, Hash)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct DeviceID {
     pub id: u16, // Индекс начинается с 1
     pub name: String,

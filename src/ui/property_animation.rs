@@ -110,6 +110,7 @@ where
 
         std::any::TypeId::of::<Self>().hash(state);
         self.device.id().hash(state);
+//         self.device.is_connect().hash(state);
         self.message.hash(state);
     }
 
@@ -120,10 +121,14 @@ where
         use tokio::time::sleep;
         use std::time::Duration;
         let gen = stream! {
-            loop {
-                let interval = self.device.config.interval_update_in_sec;
-                sleep(Duration::from_millis((interval * 1_000.0) as u64)).await;
-                yield (self.message)(self.device.clone());
+            if self.device.config.interval_update_in_sec != 0.0 {
+                loop {
+                    let interval = self.device.config.interval_update_in_sec;
+                    sleep(Duration::from_millis((interval * 1_000.0) as u64)).await;
+                    if self.device.is_connect() {
+                        yield (self.message)(self.device.clone());
+                    }
+                }
             }
         };
         Box::pin(gen)

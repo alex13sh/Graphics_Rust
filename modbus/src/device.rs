@@ -2,7 +2,7 @@
 
 use super::{Value, ModbusValues};
 
-use super::init::{DeviceConfig, DeviceAddress, DeviceID};
+pub use super::init::{DeviceConfig, DeviceAddress, DeviceID};
 use super::init::Device as DeviceInit;
 
 use std::collections::HashMap;
@@ -176,7 +176,7 @@ impl Device {
         }
     }
     pub fn is_connect(&self) -> bool {
-        self.context().is_ok()
+       !matches!(self.context(), Err(DeviceError::ContextNull))
     }
     pub fn get_ip_address(&self) -> String {
         match &self.address {

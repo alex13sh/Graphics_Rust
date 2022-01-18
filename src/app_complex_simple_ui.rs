@@ -294,11 +294,12 @@ impl Application for App {
             let log_session = &mut self.log_session;
             if enb {
                 log_session.start();
-                let file_path = log_session.make_path_excel();
-                let log_session = log_session.clone();
+//                 let log_session = log_session.make_read().unwrap();
+                let file = log_session.make_path_excel();
+                let f = log_session.write_full();
                 let f = async move {
-                    log_session.write_full().await;
-                    file_path
+                    f.await;
+                    file
                 };
                 return Command::perform(f, |path| Message::InfoPane(ui::info_pane::Message::UpdateFile(path)));
             } else {

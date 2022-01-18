@@ -20,6 +20,8 @@ pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 use std::{path::PathBuf, sync::Arc};
 use futures::{Stream, StreamExt};
 use futures::stream::BoxStream;
+use std::future::Future;
+
 
 #[derive(Clone)]
 pub struct LogSession {
@@ -79,14 +81,14 @@ impl LogSession {
         .join("excel").join(&self.date_time_str())
         .with_extension("xlsx")
     }
-    pub async fn write_excel(&self) {
+    pub fn write_excel(&self) -> impl Future<Output=()> {
         let elk = self.values_elk.as_ref().unwrap();
         let file_path = self.make_path_excel();
         files::excel::write_file(file_path,
-             elk.subscribe()).await;
+             elk.subscribe())
     }
 
-    pub async fn write_csv_elk(&self) {
+    pub fn write_csv_elk(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
         let elk = self.values_elk.as_ref().unwrap();
@@ -95,9 +97,9 @@ impl LogSession {
             .join("csv_elk").join(&self.date_time_str())
             .with_extension("csv");
         write_values_async(file_path,
-            values).await.unwrap();
+            values).unwrap()
     }
-    pub async fn write_csv_raw(&self) {
+    pub fn write_csv_raw(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
@@ -106,9 +108,9 @@ impl LogSession {
             .join("csv_raw").join(&self.date_time_str())
             .with_extension("csv");
         write_values_async(file_path, 
-            values).await.unwrap();
+            values).unwrap()
     }
-    pub async fn write_csv_raw_diff(&self) {
+    pub fn write_csv_raw_diff(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
@@ -117,16 +119,28 @@ impl LogSession {
             .join("csv_raw").join(&format!("{}_diff", self.date_time_str()))
             .with_extension("csv");
         write_values_async(file_path, 
-            values).await.unwrap();
+            values).unwrap()
     }
 
-    pub async fn write_full(&self) {
-        futures::join!(
-            self.write_csv_elk(),
-            self.write_excel(),
-            self.write_csv_raw(),
-            self.write_csv_raw_diff(),
-        );
+    pub fn write_full(&self) -> impl Future<Output=()> {
+//         let f = futures::future::join_all(vec![
+//             self.write_csv_elk(),
+//             self.write_excel(),
+//             self.write_csv_raw(),
+//             self.write_csv_raw_diff(),
+//         ]);
+//         async {
+//             let _ = f.await;
+//         }
+        let f1 = self.write_csv_elk();
+        let f2 = self.write_excel();
+        let f3 = self.write_csv_raw();
+        let f4 = self.write_csv_raw_diff();
+        async move {
+            futures::join!(
+                f1, f2, f3, f4
+            );
+        }
     }
 
     pub fn get_statistic_low(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{

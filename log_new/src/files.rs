@@ -37,7 +37,7 @@ pub mod csv {
         Ok(())
     }
     
-    pub async fn write_values_async<T>(file_name: impl AsRef<Path>, values: impl Stream<Item=T> ) -> crate::MyResult 
+    pub fn write_values_async<T>(file_name: impl AsRef<Path>, values: impl Stream<Item=T> ) -> crate::MyResult<impl Future<Output=()>>
     where T: serde::Serialize
     {
         let file = File::create(file_name)?;
@@ -49,12 +49,13 @@ pub mod csv {
 //         while let Some(value) = values.next().await {
 //             wrt.serialize(value)?;
 //         }
-        values.fold(wrt, |mut wrt, v| async {
-            wrt.serialize(v).unwrap();
-            wrt
-        }).await;
-        
-        Ok(())
+        let f = async {
+            let _ = values.fold(wrt, |mut wrt, v| async {
+                wrt.serialize(v).unwrap();
+                wrt
+            }).await;
+        };
+        Ok(f)
     }
     
     #[test]
@@ -231,12 +232,11 @@ pub mod excel {
     }
     
     use crate::value::ElkValuesLine;
-    pub async fn write_file(file_path: impl AsRef<Path>, values_line: impl Stream<Item=ElkValuesLine>) {
+    pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Stream<Item=ElkValuesLine>) -> impl Future<Output=()> {
         use crate::async_channel::*;
         use crate::convert::stream::*;
         use futures::future::join;
         
-        let file_path = file_path.as_ref();
         let lines = crate::stat_info::simple::filter_half_low(values_line);
         
         let (s, l1) = broadcast(10);
@@ -244,6 +244,7 @@ pub mod excel {
         let f_to_channel = lines.map(|l| Ok(l)).forward(s);
         let l2 = l1.clone();
         let f_from_channel = async move {
+            let file_path = file_path.as_ref();
             let l1 = filter_half(l1);
             let l1 = values_simple_line_to_hashmap(l1);
 //                 let l2 = crate::stat_info::simple::filter_half_low(l2);
@@ -251,14 +252,19 @@ pub mod excel {
             
             let mut f = File::create(file_path.with_extension("xlsx"));
             let mut s = f.open_sheet("Sheet1");
+            dbg!(file_path);
             let (_, stat) = join(
                 s.write_values((1,1), l1),
                 crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
             ).await;
+            dbg!("await");
             s.write_state((12,2), stat.unwrap());
             f.save();
+            dbg!("save");
         };
-        join(f_to_channel, f_from_channel).await;
+        async move {
+            let _ = join(f_to_channel, f_from_channel).await;
+        }
     }
     
     #[test]
@@ -280,4 +286,5 @@ mod inner {
     pub use futures::stream::{Stream, StreamExt};
     pub use std::path::{PathBuf, Path};
     pub use std::fs::File;
+    pub use std::future::Future;
 }

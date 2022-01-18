@@ -94,14 +94,12 @@ impl Device {
         trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
         
-        let mut ctx = self.ctx.lock().await;
-        let new_ctx = super::ModbusContext
+        *self.ctx.lock().await = super::ModbusContext
             ::new_async(&self.address, &self.values).await.map(Arc::new); 
         
-        if new_ctx.is_none() {
+        if self.is_connect() {
             return Err(DeviceError::ContextNull);
         }
-        *ctx = new_ctx;
         Ok(())
     }
     pub fn is_connecting(&self) -> bool {

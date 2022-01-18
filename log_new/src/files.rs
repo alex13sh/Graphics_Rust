@@ -149,7 +149,7 @@ pub mod excel {
             }
         }
         pub fn save(&self) {
-            let _ = umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path);
+            umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path).unwrap();
         }
         pub fn open_sheet(&mut self, name: &'static str) -> Sheet {
             Sheet {

@@ -43,6 +43,7 @@ impl LogSession {
     pub fn start(&mut self) {
         self.values_elk = Some(async_channel::broadcast(20).0);
         self.values_raw = Some(async_channel::broadcast(20).0);
+        self.date_time = utils::date_time_now();
     }
     pub fn stop(&mut self) {
         self.values_elk = None;
@@ -67,7 +68,7 @@ impl LogSession {
 
             let f = async {
                 elk.send(values_line_convert(line.clone())).await.unwrap();
-                // raw.send(line).await.unwrap();
+                raw.send(line).await.unwrap();
             };
             futures::executor::block_on(f);
         }
@@ -101,8 +102,10 @@ impl LogSession {
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
         let values = values_from_line(raw.subscribe());
-        write_values_async(&self.log_dir
-            .join("csv_raw").join(&self.date_time_str()), 
+        let file_path = self.log_dir
+            .join("csv_raw").join(&self.date_time_str())
+            .with_extension("csv");
+        write_values_async(file_path, 
             values).await.unwrap();
     }
     pub async fn write_csv_raw_diff(&self) {
@@ -114,7 +117,7 @@ impl LogSession {
             .join("csv_raw").join(&format!("{}_diff", self.date_time_str()))
             .with_extension("csv");
         write_values_async(file_path, 
-            values).await.unwrap()
+            values).await.unwrap();
     }
 
     pub async fn write_full(&self) {

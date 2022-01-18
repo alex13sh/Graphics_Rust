@@ -26,7 +26,7 @@ pub mod simple {
             self.cnt += 1;
             
             if let Some(prev_line) = prev_line {
-                self.time_all = (self.date_time.unwrap().timestamp_millis() - line.date_time.timestamp_millis()) as f32 / 1000.0;
+                self.time_all = (line.date_time.timestamp_millis() - self.date_time.unwrap().timestamp_millis()) as f32 / 1000.0;
                 for (p, v) in prev_line.iter_values_date().zip(line.iter_values_date()) {
                     self.apply_value(v.clone());
                     self.apply_dlt_value(p, v);

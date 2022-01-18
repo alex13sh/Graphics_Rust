@@ -19,7 +19,7 @@ pub fn date_time_to_string_name(dt: &DateTime) -> String {
 }
 
 pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
-    (*dt+Duration::hours(3)).format("%d_%m_%Y %H_%M_%S")
+    (*dt+Duration::hours(3)).format("%d_%m_%Y-%H_%M_%S")
         .to_string()
 }
 pub fn date_time_to_string_name_hum(dt: &DateTime) -> String {

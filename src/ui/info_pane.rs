@@ -47,8 +47,8 @@ impl InfoPane {
         Message::OpenTable => {
             use std::process::Command;
             if let Some(ref file_path) = self.file_path {
-                let res = Command::new("libreoffice")
-                        .arg("--calc")
+                let res = Command::new("xdg-open")
+//                         ("libreoffice").arg("--calc")
                         .arg(file_path)
                         .spawn();
                 if let Err(e) = res {

@@ -124,8 +124,8 @@ impl Device {
         
 //         info!("Device: {} - {:?}", self.name, self.address);
         let len = match (self.address.is_tcp_ip(), &req) {
-            (true, UpdateReq::ReadOnly) => 8,
-            (false, UpdateReq::ReadOnly) => 1,
+            (true, UpdateReq::ReadOnlyOrLogable) => 8,
+            (false, UpdateReq::ReadOnlyOrLogable) => 2,
             (false, UpdateReq::All) => 0,
             _ => 1,
         };

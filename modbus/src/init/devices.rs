@@ -54,8 +54,8 @@ pub mod owen_digit {
         let bitn = pin as u8;
         vec![
             make_value(&prefix, "Режим работы", 272+pin, ValueSize::UINT16, ValueDirect::Write),
-            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write)
-                .with_log(Log::sensor(name).value("write_bit")),
+            make_value(&prefix, "bit", 470, ValueSize::Bit(bitn), ValueDirect::Write),
+//                 .with_log(Log::sensor(name).value("write_bit")),
         ]
     }
     

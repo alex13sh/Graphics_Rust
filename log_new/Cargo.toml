@@ -12,6 +12,7 @@ umya-spreadsheet = "0.2.2"
 
 directories = "2.0"
 chrono = "0.4"
+rayon = "*"
 
 #stream_router = "https://github.com/BroderickCarlin/stream_router"
 futures = "*"

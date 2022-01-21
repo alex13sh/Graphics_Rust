@@ -93,6 +93,38 @@ pub mod csv {
 //         assert!(false);
     }
     
+    fn get_raw_files_iter(dir: &str) -> impl Iterator<Item=PathBuf> {
+        let path = get_file_path(dir);
+        dbg!(&path);
+        let paths = std::fs::read_dir(path).unwrap();
+        let iter = paths.filter_map(|res| res.ok())
+        .map(|dir| dir.path())
+        .filter(|path|
+            if let Some(ext) = path.extension() {
+                ext == "csv"
+            } else {false}
+        );
+//         res.sort_by_key(|p| p.metadata().unwrap().modified().unwrap());
+        iter
+    }
+
+    fn file_name2date_time(file_name: &str) -> Option<DateTimeFix> {
+        dbg!(file_name);
+        let file_name = &format!("{} +0300", file_name);
+        let res = DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y %H_%M_%S.csv %z")
+        .or_else(|_|
+            DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y__%H_%M_%S.csv %z")
+        ).or_else(|_|
+            DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y__%H_%M_%S_%.f.csv %z")
+        ).or_else(|_|
+            DateTimeFix::parse_from_str(file_name, "+value_%d_%m_%Y__%H_%M_%S_%.f_filter_0.1.csv %z")
+        )
+        .inspect_err(|e| {dbg!(e);})
+        .ok();
+        dbg!(&res);
+        res
+    }
+
     #[test]
     fn test_convert_raw_to_elk() {
         use crate::value::raw::*;
@@ -103,6 +135,35 @@ pub mod csv {
             write_values(&format!("{}_elk.csv", file_path), values).unwrap();
         }
 //         assert!(false);
+    }
+
+    #[test]
+    fn test_converts_raw_to_elk() {
+        use crate::value::raw::*;
+        use crate::value::ValueDate;
+        use rayon::prelude::*;
+        use rayon::iter::ParallelBridge;
+        use rayon::prelude::ParallelIterator;
+
+        let dir_elk = get_file_path("log/values/csv/");
+        // for file_path in  {
+        get_raw_files_iter("log/values/csv_raw/")
+            // .par_bridge()
+
+        .filter_map(|file_path| {
+            Some((
+                file_name2date_time(file_path.file_name().unwrap().to_str().unwrap())?,
+                read_values(file_path)?
+            ))
+        })
+        .map(|(dt, values)| (dt, crate::convert::stream::raw_to_elk(values)))
+        .for_each(
+            |(dt, values)| {
+                write_values(dir_elk
+                    .join(date_time_to_string_name_short(&dt)).with_extension("csv"), 
+                    values).unwrap();
+            }
+        )
     }
     
     #[test]
@@ -287,4 +348,5 @@ mod inner {
     pub use std::path::{PathBuf, Path};
     pub use std::fs::File;
     pub use std::future::Future;
+    pub use crate::utils::{get_file_path, DateTimeFix, date_time_to_string_name_short};
 }

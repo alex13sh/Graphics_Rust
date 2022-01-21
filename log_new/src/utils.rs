@@ -48,6 +48,14 @@ where
     serializer.serialize_str(&s)
 }
 
+pub(crate) fn float_to_str<S>(value: &f32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let s = format!("{:.2}", value);
+    serializer.serialize_str(&s)
+}
+
 pub fn get_file_path(file_name: &str) -> PathBuf {
     let mut path: PathBuf = if let Some(project_dirs) =
         directories::ProjectDirs::from("rs", "modbus", "GraphicModbus")

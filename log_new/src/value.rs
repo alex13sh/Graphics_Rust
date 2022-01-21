@@ -1,4 +1,4 @@
-use crate::utils::{DateTimeFix, date_time_from_str, date_time_to_str};
+use crate::utils::{DateTimeFix, date_time_from_str, date_time_to_str, float_to_str};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -137,6 +137,7 @@ pub mod elk {
         #[serde(rename = "value_name")]
         pub sensor_name: String,
     //     pub value_name: String,
+        #[serde(serialize_with = "float_to_str")]
         pub value: f32,
     }
     

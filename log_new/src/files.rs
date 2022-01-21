@@ -82,8 +82,8 @@ pub mod csv {
                     s1.send(v).await.unwrap();
                 }
             };
-            let f1 = write_values_async(format!("{}_async_1.csv", file_path), r1);
-            let f2 = write_values_async(format!("{}_async_2.csv", file_path), r2);
+            let f1 = write_values_async(format!("{}_async_1.csv", file_path), r1).unwrap();
+            let f2 = write_values_async(format!("{}_async_2.csv", file_path), r2).unwrap();
             
             let _ = futures::executor::block_on( futures::future::join3(f0, f1, f2) );
             
@@ -113,7 +113,7 @@ pub mod csv {
             let values = crate::convert::stream::raw_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
             let lines = values_line_to_hashmap(lines);
-            futures::executor::block_on( write_values_async(format!("{}_table.csv", file_path), lines) ).unwrap();
+            futures::executor::block_on( write_values_async(format!("{}_table.csv", file_path), lines).unwrap() );
 //             assert!(false);
         }
     }
@@ -125,7 +125,7 @@ pub mod csv {
             use crate::convert::stream::*;
             let lines = values_to_line(futures::stream::iter(values));
             let values = values_from_line_with_diff(lines);
-            futures::executor::block_on( write_values_async(format!("{}_diff.csv", file_path), values) ).unwrap();
+            futures::executor::block_on( write_values_async(format!("{}_diff.csv", file_path), values).unwrap() );
         }
     }
 }

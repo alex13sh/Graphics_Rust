@@ -27,14 +27,14 @@ impl From<&ModbusValues> for Klapans {
         Klapans {
             давление_воздуха: values.get_value_arc("Давление воздуха компрессора").unwrap(),
             двигатель_компрессора_воздуха: values.get_value_arc("Двигатель компрессора воздуха").unwrap(),
-            klapans: values.get_values_by_name_contains(
-                &["Клапан нижнего контейнера", "Клапан верхнего контейнера",
+            klapans: values.get_values_by_id(|id|
+                ["Клапан нижнего контейнера", "Клапан верхнего контейнера",
                 "Клапан подачи материала", "Клапан помольной камеры",
                 "Клапан напуска", "Клапан насоса М5"]
+                .iter().any(|k| k==&id.sensor_name)
             ),
-            klapans_шк: values.get_values_by_name_contains(
-                klapans_шк.iter().map(|name| name.as_str())
-                    .collect::<Vec<_>>().as_slice()
+            klapans_шк: values.get_values_by_id(|id|
+                klapans_шк.iter().any(|k| k==&id.sensor_name)
             ),
         }
     }
@@ -47,9 +47,7 @@ impl Klapans {
 //             return;
 //         }
         
-        if let Err(e) = self.klapans.set_bit(name, enb) {
-            dbg!(e);
-        }
+        self.klapans.get_value_arc(name).unwrap().set_bit(enb);
     }
     fn двигатель_компрессора_воздуха_turn(&self, enb: bool) {
         self.двигатель_компрессора_воздуха.set_bit(enb);
@@ -73,10 +71,10 @@ pub mod watcher {
     impl Klapans {
         pub(crate) fn update_property(&self, values: &super::Klapans) {
             for (n, p) in &self.klapans {
-                p.set(values.klapans.get_bit(n).unwrap());
+                p.set(values.klapans.get_value_arc(n).unwrap().get_bit());
             }
             for ((шк, _n), p) in &self.klapans_шк {
-                p.set(values.klapans_шк.get_bit(&format!("Клапан {} открыт", шк)).unwrap());
+                p.set(values.klapans_шк.get_value_arc(&format!("Клапан {} открыт", шк)).unwrap().get_bit());
             }
         }
         

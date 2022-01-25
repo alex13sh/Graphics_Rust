@@ -14,7 +14,7 @@ impl From<&ModbusValues> for OilStation {
         OilStation {
             температура: values.get_value_arc("Температура масла на выходе маслостанции").unwrap(),
             давление_масла: values.get_value_arc("Давление масла на выходе маслостанции").unwrap(),
-            уровень_масла: values.get_value_arc("Уровень масла/value").unwrap(),
+            уровень_масла: values.get_value_arc("Процентное значение уровня масла").unwrap(),
             motor: values.get_value_arc("Двигатель маслостанции М4").unwrap(),
         }
     }

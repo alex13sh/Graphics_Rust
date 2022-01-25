@@ -1,5 +1,4 @@
 use super::style;
-use super::animations::LinerAnimation;
 
 use iced::{
     Element, Text, button, Button, slider, Slider,

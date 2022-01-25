@@ -1,3 +1,5 @@
+#![deny(unused_must_use)]
+
 use iced::{
     Application, executor, Command, window::Mode, Subscription, time,
     Element, Container, Text, button, Button, slider, Slider,
@@ -66,7 +68,7 @@ fn log_init() {
 
 fn main() {
     log_init();
-    App::run(Settings::default());
+    App::run(Settings::default()).unwrap();
 } 
 
 mod ui;
@@ -82,7 +84,7 @@ use std::path::PathBuf;
 pub struct App {
     ui: UI,
     has_exit: bool,
-    logic: meln_logic::init::Devices,
+    devices: modbus::Devices,
     meln: meln_logic::Meln,
     is_worked: bool,
     txt_status: String,
@@ -152,8 +154,8 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let logic = meln_logic::init::Devices::new();
-        let meln = meln_logic::Meln::new(logic.get_values());
+        let devices = modbus::Devices::new();
+        let meln = meln_logic::Meln::new(devices.get_values());
         let meln_fut = meln.clone();
 
         (App {
@@ -169,7 +171,7 @@ impl Application for App {
             oil_station: ui::OilStation::new_by_meln(&meln.values),
             info_pane: ui::InfoPane::new(),
         
-            logic: logic,
+            devices: devices,
             meln: meln,
             is_worked: false,
             log_values: Vec::new(),
@@ -198,7 +200,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.45}
+    fn scale_factor(&self) -> f64 {0.4}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
@@ -247,18 +249,18 @@ impl Application for App {
         Message::DozatorUI(m) => {
             let res = self.dozator.update(m, &meln.material.dozator)
                 .map(Message::DozatorUI);
-//             self.logic.update_new_values();
+//             self.devices.update_new_values();
             return res;
         },
         Message::OilStation(m) => {
             self.oil_station.update(m, &meln.oil);
-//             self.logic.update_new_values();
+//             self.devices.update_new_values();
         },
         Message::KlapansUI(m) => {
             self.klapans.update_material(m.clone(), &meln.material);
             self.klapans.update_vacuum(m.clone(), &meln.vacuum);
             self.klapans.update(m, &meln.klapans);
-//             self.logic.update_new_values();
+//             self.devices.update_new_values();
         }
         Message::InfoPane(m) => self.info_pane.update(m),
         Message::MessageUpdate(m) => return self.modbus_update(m),
@@ -352,32 +354,37 @@ impl App {
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
-//                 self.logic.update();
+//                 self.devices.update();
 
                 self.proccess_values();
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
-                self.logic.update_new_values();
-                let device_futures = self.logic.update_async(UpdateReq::ReadOnlyOrLogable);
+                    
+                let device_futures = self.devices.iter().cloned().map(
+                    |d| (d.clone(), async {
+                        d.clone().update_new_values().await?;
+                        d.update_async(UpdateReq::ReadOnlyOrLogable).await
+                    })
+                );
 
-                return Command::batch(device_futures.into_iter()
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
 //                 self.proccess_values(true);
-                let device_futures = self.logic.update_async(UpdateReq::Vibro);
-                return Command::batch(device_futures.into_iter()
+                let device_futures = self.devices.iter().cloned().map(|d| (d.clone(), d.update_async(UpdateReq::Vibro)));
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();
-                let device_futures = self.logic.reconnect_devices();
-                return Command::batch(device_futures.into_iter()
+                let device_futures = self.devices.iter().map(|d| (d.clone(), d.clone().connect()));
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res)))
                     ));
@@ -390,7 +397,7 @@ impl App {
                 }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
-//                 let d = self.logic.invertor_2.device();
+//                 let d = self.devices.invertor_2.device();
 //                 Self::save_invertor(d.values_map());
 //                 let f = d.update_async(UpdateReq::All);
 //                 return Command::perform(f, move |res| Message::MessageUpdate(
@@ -468,7 +475,7 @@ impl App {
     
     fn proccess_values(&mut self) {
         use std::convert::TryFrom;
-        let values = self.logic.get_values();
+        let values = self.devices.get_values();
         if self.is_logging {
             let mut log_values: Vec<_> = {
                 values.iter()
@@ -522,10 +529,11 @@ impl App {
         let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
         log::trace!("path: {:?}", &path);
         let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, n)| logger::InvertorParametr {
+            .map(|(adr, v, id)| logger::InvertorParametr {
                 address: format!("({}, {})", adr/256, adr%256),
                 value: v,
-                name: n,
+//                 name: id.to_string(),
+                name: id.sensor_name.clone(),
             }).collect();
         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
             log::error!("logger::csv::write_invertor_parametrs: {:?}", e);

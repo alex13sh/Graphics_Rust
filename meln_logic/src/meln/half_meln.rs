@@ -1,6 +1,13 @@
 #![allow(dead_code)]
 use modbus::{ValueArc, ModbusValues, /*ValueError*/};
 
+fn get_value_arc_starts(values: &ModbusValues, name: &str) -> Option<ValueArc> {
+    values.get_values_by_id( |id| 
+        id.sensor_name.starts_with(name) && 
+        id.value_name == "value"
+    ).unwrap_one().ok()
+}
+
 pub struct HalfMeln {
     values: ModbusValues, // Все значения
 
@@ -36,15 +43,17 @@ impl From<&HalfPartInner> for HalfPart {
 
 impl HalfMeln {
     pub fn low(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_contains(&["М1/"]).convert_to_sensor()
-            + values.get_values_by_name_start("5) Invertor/");
+        let values = values.get_values_by_id(|id| id.sensor_name.ends_with("М1"))
+            + values.get_values_by_id(|id| id.device_id == 5 && id.device_name=="Invertor");
         let температура_масла = ["Температура масла на верхн. выходе дв. М1", "Температура масла на нижн. выходе дв. М1" ];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
+            vibro: get_value_arc_starts(&values, "Виброскорость").unwrap(),
             part: HalfPartInner::Low{
-                температура_масла_values: values.get_values_by_name_contains(&температура_масла)
+                температура_масла_values: values.get_values_by_id(
+                    |id| температура_масла.iter().any(|n| n==&id.sensor_name)
+                )
             },
             температура_верх: values.get_value_arc(температура_масла[0]).unwrap(),
             температура_нижн: values.get_value_arc(температура_масла[1]).unwrap(),
@@ -52,15 +61,17 @@ impl HalfMeln {
         }
     }
     pub fn top(values: &ModbusValues) -> Self {
-        let values = values.get_values_by_name_contains(&["М2/"]).convert_to_sensor()
-            + values.get_values_by_name_start("6) Invertor/");
+        let values = values.get_values_by_id(|id| id.sensor_name.ends_with("М2"))
+            + values.get_values_by_id(|id| id.device_id == 6 && id.device_name=="Invertor");
         let температура_подшибника = ["Температура верх подшипника дв. М2", "Температура нижн подшипника дв. М2"];
         HalfMeln {
             invertor: Invertor::from(&values),
             motor: Motor::from(&values),
-            vibro: values.get_value_arc_starts("Виброскорость").unwrap(),
+            vibro: get_value_arc_starts(&values, "Виброскорость").unwrap(),
             part: HalfPartInner::Top{
-                температура_подшибника_values: values.get_values_by_name_contains(&температура_подшибника)
+                температура_подшибника_values: values.get_values_by_id(
+                    |id| температура_подшибника.iter().any(|n| n==&id.sensor_name)
+                )
             },
             температура_верх: values.get_value_arc(температура_подшибника[0]).unwrap(),
             температура_нижн: values.get_value_arc(температура_подшибника[1]).unwrap(),
@@ -90,11 +101,14 @@ pub struct Motor {
 
 impl From<&ModbusValues> for Motor {
     fn from(values: &ModbusValues) -> Self {
+        let get_value_arc_starts = |name: &str| get_value_arc_starts(values, name).unwrap();
         Motor {
 //             speed: values.get_value_arc("Скорость двигателя").unwrap(),
-            температура_статора: values.get_value_arc_starts("Температура статора").unwrap(),
-            температура_ротора: values.get_value_arc_starts("Температура ротора Пирометр").unwrap(),
-            температуры_values: values.get_values_by_name_contains(&["Температура статора", "Температура ротора Пирометр",]),
+            температура_статора: get_value_arc_starts("Температура статора"),
+            температура_ротора: get_value_arc_starts("Температура ротора Пирометр"),
+            температуры_values: values.get_values_by_id(
+                |id| ["Температура статора", "Температура ротора Пирометр",].iter().any(|n| id.sensor_name.starts_with(n))
+            ),
         }
     }
 }

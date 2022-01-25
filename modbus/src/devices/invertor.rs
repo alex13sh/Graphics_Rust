@@ -41,6 +41,13 @@ impl InvertorValues {
             "Команда задания частоты",
 //             "Выходной ток (A)", "Скорость двигателя",
         ];
+        let values_ = values.get_values_by_id(|id| 
+                values_str.iter().any(|&name|
+                    id.sensor_name.starts_with(name)
+                )
+            );
+//         dbg!(values_.keys());
+        let v_stop = values_.get_value_arc("Stop").unwrap();
         InvertorValues {
             выходной_ток: values.get_value_arc("Выходной ток (A)").unwrap(),
             скорость_двигателя: values.get_value_arc("Скорость двигателя").unwrap(),
@@ -48,7 +55,7 @@ impl InvertorValues {
             индикация_скорости: values.get_value_arc("Индикация рассчитанной (с PG) скорости").unwrap(),
             индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности (P)").unwrap(),
 
-            values: values.get_values_by_name_starts(&values_str),
+            values: values_,
         }
     }
 }
@@ -86,45 +93,45 @@ impl InvertorValues {
     pub fn start(&self) {
         let vm = &self.values;
 
-        vm.get("Stop").unwrap().set_bit(false);
-        vm.get("Run").unwrap().set_bit(true);
+        vm.get_value_arc("Stop").unwrap().set_bit(false);
+        vm.get_value_arc("Run").unwrap().set_bit(true);
     }
     pub fn stop(&self) {
         let vm = &self.values;
 
-        vm.get("Stop").unwrap().set_bit(true);
-        vm.get("Run").unwrap().set_bit(false);
+        vm.get_value_arc("Stop").unwrap().set_bit(true);
+        vm.get_value_arc("Run").unwrap().set_bit(false);
     }
     pub fn set_direct(&self, direct: DvijDirect) {
         let vm = &self.values;
 
         match direct {
         DvijDirect::FWD => {
-            vm.get("FWD").unwrap().set_bit(true);
-            vm.get("REV").unwrap().set_bit(false);
+            vm.get_value_arc("FWD").unwrap().set_bit(true);
+            vm.get_value_arc("REV").unwrap().set_bit(false);
         }
         DvijDirect::REV => {
-            vm.get("FWD").unwrap().set_bit(false);
-            vm.get("REV").unwrap().set_bit(true);
+            vm.get_value_arc("FWD").unwrap().set_bit(false);
+            vm.get_value_arc("REV").unwrap().set_bit(true);
         }
         }
     }
     pub fn set_speed(&self, hz: u32) {
         let vm = &self.values;
-//         let v_set_hz = vm.get("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
-        let v_set_speed = vm.get("Команда задания частоты").unwrap().clone();
+//         let v_set_hz = vm.get_value_arc("Заданная частота по коммуникационному интерфейсу").unwrap().clone();
+        let v_set_speed = vm.get_value_arc("Команда задания частоты").unwrap().clone();
         v_set_speed.set_value(hz);
     }
     pub fn get_amper_out_value(&self) -> Arc<Value> {
-        self.выходной_ток.value_clone()
+        self.выходной_ток.clone()
     } 
     pub fn get_hz_out_value(&self) -> Arc<Value> {
 //         let vm = &self.values;
-//         vm.get("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
-        self.скорость_двигателя.value_clone()
+//         vm.get_value_arc("Скорость двигателя").unwrap().clone() // Заменить на "Выходная частота"
+        self.скорость_двигателя.clone()
     }
     pub fn get_speed_out_value(&self) -> Arc<Value> {
-        self.индикация_скорости.value_clone()
+        self.индикация_скорости.clone()
     }
 }
 
@@ -247,3 +254,24 @@ fn test_invertor_error() {
     let err: InvertorError = unsafe { ::std::mem::transmute(4_u8) };
     assert_eq!("Замыкание на землю (GFF)", format!("{}", err));
 }*/
+
+
+#[test]
+fn invertor_values_bit() {
+    let values = Device::from(super::init::make_invertor("".into()).with_id(5)).values;
+//     dbg!(values.keys());
+            let values_str = [
+            "Stop", "Run",
+            "FWD", "REV",
+            "Команда задания частоты",
+//             "Выходной ток (A)", "Скорость двигателя",
+        ];
+    let values = values.get_values_by_id(|id| 
+        values_str.iter().any(|&name|
+            id.sensor_name.starts_with(name)
+        )
+    );
+    dbg!(values.keys());
+    let v_stop = values.get_value_arc("Stop").unwrap();
+    assert_eq!(v_stop.name(), "Stop");
+}

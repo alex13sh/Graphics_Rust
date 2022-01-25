@@ -2,7 +2,7 @@
 
 #[derive(Debug, Clone)]
 pub struct Value {
-    pub name: String,
+    pub name: ValueID,
     pub suffix_name: Option<String>,
     pub address: u16,
     pub direct: ValueDirect,
@@ -23,7 +23,7 @@ impl Value {
     }
     pub fn make_value(name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Self {
         Value {
-            name: name.into(),
+            name: ValueID::value(name),
             suffix_name: None,
             address: address,
             direct: direct,
@@ -31,7 +31,10 @@ impl Value {
             log: None,
         }
     }
-
+    pub fn with_sensor(mut self, sensor_name: &str) -> Self {
+        self.name.sensor_name = Some(sensor_name.into());
+        self
+    }
     pub fn with_log(mut self, log: Log) -> Self {
         self.log = Some(log);
         self
@@ -47,6 +50,77 @@ impl Value {
     pub fn size(mut self, size: ValueSize) -> Self {
         self.size = size;
         self
+    }
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct ValueID {
+    pub device_id: Option<u16>,
+    pub device_name: Option<String>,
+    pub sensor_name: Option<String>,
+    pub value_name: Option<String>,
+}
+
+impl <N> From<N> for ValueID 
+where N: AsRef<str>
+{
+    fn from(name: N) -> Self {
+        let name: &str = name.as_ref();
+        if name.contains('/') {
+            let mut names = name.rsplit('/');
+            let mut name_next = || names.next().map(|n| n.into());
+            let mut v = ValueID::default();
+            v.value_name = name_next();
+            v.sensor_name = name_next();
+            v.device_name = name_next();
+            v
+        } else {
+//             ValueID::sensor_value(name)
+            ValueID::sensor(name)
+        }
+    }
+}
+
+#[test]
+fn test_valueid_from_str() {
+    
+    assert_eq!(
+        ValueID {
+            sensor_name: Some("Двигатель подачи материала в камеру".into()),
+            value_name: Some("Частота высокочастотного ШИМ".into()),
+            .. Default::default()
+        },
+        "Двигатель подачи материала в камеру/Частота высокочастотного ШИМ".into()
+    );
+    
+}
+
+impl ValueID {
+    fn value(name: &str) -> Self {
+        Self {
+            value_name: Some(name.into()),
+            .. Default::default()
+        }
+    }
+    pub fn sensor(name: &str) -> Self {
+        Self {
+            sensor_name: Some(name.into()),
+            .. Default::default()
+        }
+    }
+    pub fn sensor_bit(name: &str) -> Self {
+        Self {
+            sensor_name: Some(name.into()),
+            value_name: Some("bit".into()),
+            .. Default::default()
+        }
+    }
+    pub fn sensor_value(name: &str) -> Self {
+        Self {
+            sensor_name: Some(name.into()),
+            value_name: Some("value".into()),
+            .. Default::default()
+        }
     }
 }
 

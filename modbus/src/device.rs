@@ -2,7 +2,7 @@
 
 use super::{Value, ModbusValues};
 
-use super::init::{DeviceType, DeviceAddress};
+use super::init::{DeviceType, DeviceAddress, DeviceID};
 use super::init::Device as DeviceInit;
 
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ type ModbusContext = Arc<super::ModbusContext>;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Device {
-    name: String,
+    name: DeviceID,
     address: DeviceAddress,
     #[derivative(Debug="ignore")]
     pub(super) values: ModbusValues,
@@ -60,7 +60,7 @@ impl UpdateReq {
                 .collect()
         }
         Self::Vibro => {
-            values.get_values_by_name_starts(&["Виброскорость дв. "])
+            values.get_values_by_id(|id| id.sensor_name.starts_with("Виброскорость дв. "))
                 .into_iter()
                 .filter(|v| v.1.is_read_only())
                 .map(|(_, v)| v)
@@ -81,18 +81,9 @@ impl UpdateReq {
 }
 
 impl Device {
-    pub fn name(&self) -> &String {
-        &self.name
-    }
-    
-    pub fn update(&self) -> DeviceResult {
-        self.context()?.update(None)?;
-        Ok(())
-    }
-    pub fn update_all(&self) -> DeviceResult {
-        let req = UpdateReq::All;
-        self.context()?.update(Some(&get_ranges_value(req.filter_values(&self.values), 0)))?;
-        Ok(())
+    // Для чего мне этот name нужен?? Для отображение полного имени, или только названия модуля?
+    pub fn name(&self) -> String {
+        self.name.to_string()
     }
     
     pub async fn connect(self: Arc<Self>) -> DeviceResult {
@@ -109,10 +100,7 @@ impl Device {
 //         self.ctx.is_poisoned()
         false
     }
-//     fn disconnect(&self) -> DeviceResult {
-//         *self.ctx.try_lock()? = None;
-//         Ok(())
-//     }
+
     async fn disconnect(&self) {
         *self.ctx.lock().await = None;
     }
@@ -142,12 +130,12 @@ impl Device {
         res
     }
     
-    pub fn update_new_values(&self) -> DeviceResult {
-        let ctx = self.context()?;
+    pub async fn update_new_values(self: Arc<Self>) -> DeviceResult {
+        let ctx = self.context_async().await?;
         for (_name, v) in self.values.iter() {
             if v.is_flag() {
                 v.clear_flag();
-                ctx.set_value(&v)?;
+                ctx.set_value(&v).await?;
             }
         }
         Ok(())
@@ -225,15 +213,14 @@ impl From<DeviceInit> for Device {
         {
             let new_values: Vec<_> = values.iter()
                 .flat_map(|(_name, v)| v.get_values_bit())
+                .map(Arc::new)
                 .collect();
-
-            for v in new_values {
-                values.insert(v.name().clone(), Arc::new(v));
-            }
+            let new_values = ModbusValues::from(new_values);
+            values = values + new_values;
         }
         {
             let mut map: HashMap<_, Arc<Value>> = HashMap::new();
-            for (name, v) in values.iter_mut() {
+            for (id, v) in values.iter_mut() {
                 if let Some(v_) = map.get(&v.address()) {
 //                     dbg!(true);
                     if let Some(v) = Arc::get_mut(v) {
@@ -271,19 +258,6 @@ impl From<DeviceType<DeviceInit>> for DeviceType<Device> {
         }
     }
 }
-
-impl std::iter::FromIterator<Arc<Value>> for ModbusValues {
-    fn from_iter<I: IntoIterator<Item=Arc<Value>>>(iter: I) -> Self {
-        let mut c = ModbusValues::new();
-
-        for i in iter {
-            c.insert(i.name().clone(), i);
-        }
-
-        c
-    }
-}
-
 
 pub(super) fn convert_modbusvalues_to_hashmap_address(values: &ModbusValues) -> HashMap<u16, Arc<Value>> {
     values.iter().map(|v| (v.1.address(), v.1.clone())).collect()

@@ -36,17 +36,6 @@ pub(crate) fn init_devices() -> Vec<Device> {
     ]
 }
 
-pub(super) fn make_value (name: &str, address: u16, size: ValueSize, direct: ValueDirect) -> Value {
-    Value {
-        name: name.into(),
-        suffix_name: None,
-        address: address,
-        direct: direct,
-        size: size,
-        log: None,
-    }
-}
-
 pub fn make_owen_analog_1(ip_addres: &str) -> Device {
     use devices::owen_analog::make_sensor_fn;
     let make_values = |pin, name, err: (i32, i32)|
@@ -126,8 +115,8 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
             make_sensor_vibra(8, "Виброскорость дв. М2", (10.0, 16.0)),
 
             vec![
-                make_value("Адрес датчика", 0x50, ValueSize::UINT16, ValueDirect::Write),
-                make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
+                Value::make_value("Адрес датчика", 0x50, ValueSize::UINT16, ValueDirect::Write),
+                Value::make_value("Скорость обмена", 0x30, ValueSize::UINT16, ValueDirect::Write),
 //                 make_value("Запись изменений", 0x78, ValueSize::UINT16, ValueDirect::Write),
             ]
         ].into_iter().flatten().collect(),
@@ -135,6 +124,7 @@ pub fn make_owen_analog_2(ip_addres: &str, id: u8) -> Device {
 }
 
 pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
+    let make_value = Value::make_value;
     Device {
         name: "Уровень масла".into(),
         device_type: DeviceType::OwenAnalog,
@@ -144,10 +134,12 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
             // От 85 до 150 мм -- растояние в 75 мм
             // Или от 60 до 135
             make_value("value", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((90, 80).into()))
+                .with_sensor("Процентное значение уровня масла")
                 .with_log(Log::sensor("Процентное значение уровня масла"))
                 .with_suffix("%")
                 .size(ValueSize::UInt16Map(|v| (v - 60) as f32 *100.0/80.0)), // <<---
             make_value("value_mm", 0x898, ValueSize::UINT16, ValueDirect::read().err_min((70, 60).into()))
+                .with_sensor("Абсолютное значение уровня масла")
                 .with_log(Log::sensor("Абсолютное значение уровня масла"))
                 .with_suffix("мм")
                 .size(ValueSize::UINT16),
@@ -163,6 +155,7 @@ pub fn make_pdu_rs(ip_addres: &str, id: u8) -> Device {
 }
 
 pub fn make_mkon(ip_addres: &str, id: u8) -> Device {
+    let make_value = Value::make_value;
     Device {
         name: "МКОН".into(),
         device_type: DeviceType::OwenAnalog,
@@ -223,10 +216,10 @@ fn test_klapan_input() {
     let names: Vec<_> = values.iter()
         .skip(1).step_by(2)
         .map(|v| v.name.clone()).collect();
-    assert_eq!(names[0], "Клапан ШК1 открыт/bit");
-    assert_eq!(names[1], "Клапан ШК1 закрыт/bit");
-    assert_eq!(names[10], "Клапан ШК6 открыт/bit");
-    assert_eq!(names[11], "Клапан ШК6 закрыт/bit");
+    assert_eq!(names[0], "Клапан ШК1 открыт/bit".into());
+    assert_eq!(names[1], "Клапан ШК1 закрыт/bit".into());
+    assert_eq!(names[10], "Клапан ШК6 открыт/bit".into());
+    assert_eq!(names[11], "Клапан ШК6 закрыт/bit".into());
 }
 
 pub fn make_o_digit(ip_address: String) -> Device {
@@ -279,17 +272,17 @@ pub fn make_invertor(ip_address: String) -> Device {
         },
         values: {
             let add_invertor_value = |name: &str, p: u16, adr: u16|
-                Value::new(p*256+adr, name)
+                Value::new(p*256+adr, "value")
+                .with_sensor(name)
                 .size(ValueSize::UINT16);
             let add_float_invertor_value = |name: &str, p: u16, adr: u16, dot|
-                Value::new(p*256+adr, name)
+                add_invertor_value(name, p, adr)
                 .size(ValueSize::UInt16Dot(dot));
             let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
                 add_float_invertor_value(name, p, adr, 1);
             let add_simple_value_read = |_value: &str, p: u16, adr: u16, name: &str|
-                Value::new(p*256+adr, name)
+                add_simple_invertor_value(name, p, adr)
                 .direct(ValueDirect::read())
-                .size(ValueSize::UInt16Map(|v| v as f32/10_f32))
                 .with_log(Log::sensor(name));
 
             // P0
@@ -668,18 +661,23 @@ pub fn make_invertor(ip_address: String) -> Device {
             ]);
             
             let add_simple_value_read = |_value: &str, adr: u16, name: &str|
-                Value::new(adr, name)
+                Value::new(adr, "value")
+                .with_sensor(name)
                 .direct(ValueDirect::read())
+                .with_log(Log::sensor(name));
+            let add_float_invertor_value_read = |name:  &str, adr: u16, dot|
+                Value::new(adr, "value")
+                .with_sensor(name)
+                .direct(ValueDirect::read())
+                .size(ValueSize::UInt16Dot(dot))
                 .with_log(Log::sensor(name));
             let add_simple_value_read_speed = |value: &str, adr: u16, name: &str|
                 add_simple_value_read(value, adr, name)
                     .size(ValueSize::UInt16Map(|v| v as f32/100_f32*60_f32));
             let add_simple_value_read_100 = |value: &str, adr: u16, name: &str|
-                add_simple_value_read(value, adr, name)
-                    .size(ValueSize::UInt16Map(|v| v as f32/100_f32));
+                add_float_invertor_value_read(name, adr, 2);
             let add_simple_value_read_10 = |value: &str, adr: u16, name: &str|
-                add_simple_value_read(value, adr, name)
-                    .size(ValueSize::UInt16Map(|v| v as f32/10_f32));
+                add_float_invertor_value_read(name, adr, 1);
             // Part 21 ReadOnly
             reg.append(&mut vec![
                 Value::new(0x2100, "Код ошибки") // Pr.06-17 - 06.22

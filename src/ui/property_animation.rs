@@ -37,7 +37,7 @@ where
         let mut sub = self.sub;
         let gen = stream! {
             loop {
-                sub.changed().await;
+                sub.changed().await.unwrap();
                 let val = sub.borrow().clone();
                 yield val;
             }

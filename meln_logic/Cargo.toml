@@ -8,8 +8,6 @@ edition = "2018"
 [lib]
 name = "meln_logic"
 
-# path = "./src/init_2.rs"
-
 [dependencies]
 tokio = { version = "1.12.0", features = ["sync", "macros"]}
 async-stream = "*"
@@ -17,11 +15,7 @@ futures-core = "0.3"
 futures-util = "0.3"
 log = "0.4.14"
 
-macros = {path="./macros", package="meln_logic_macro", optional=true}
 modbus = {path = "../modbus"}
-
-# [workspace]
-# members = ["macros"]
 
 [features]
 default = []

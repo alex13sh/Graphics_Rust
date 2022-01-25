@@ -1,12 +1,20 @@
 #![allow(dead_code)]
 
+pub(crate) mod oil_station;
+pub(crate) mod vacuum_station;
+pub(crate) mod material;
+pub(crate) mod klapans;
+pub(crate) mod half_meln;
+pub(crate) mod dozator;
+
 use modbus::ModbusValues;
-use super::HalfMeln;
-use super::Dozator;
-use super::OilStation;
-use super::VacuumStation;
-use super::Material;
-use super::Klapans;
+use half_meln::HalfMeln;
+use dozator::Dozator;
+use oil_station::OilStation;
+use vacuum_station::VacuumStation;
+use material::Material;
+use klapans::Klapans;
+
 
 pub struct Meln {
     
@@ -47,12 +55,10 @@ impl Meln {
 }
 
 pub mod watcher {
-    use crate::structs::{
+    use crate::watcher::{
         Property, changed_all, changed_any,
-        watcher::{
             HalfMeln, OilStation, VacuumStation,
             Material, Dozator, Klapans,
-        }
     };
     
     #[derive(Default)]

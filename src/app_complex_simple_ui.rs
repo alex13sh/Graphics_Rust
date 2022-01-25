@@ -82,7 +82,7 @@ use std::path::PathBuf;
 pub struct App {
     ui: UI,
     has_exit: bool,
-    logic: meln_logic::init::Complect,
+    logic: meln_logic::init::Devices,
     meln: meln_logic::Meln,
     is_worked: bool,
     txt_status: String,
@@ -152,7 +152,7 @@ impl Application for App {
     type Message = Message;
     
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let logic = meln_logic::init::Complect::new();
+        let logic = meln_logic::init::Devices::new();
         let meln = meln_logic::Meln::new(logic.get_values());
         let meln_fut = meln.clone();
 
@@ -352,7 +352,7 @@ impl App {
         use modbus::UpdateReq;
         match message {
             MessageMudbusUpdate::ModbusUpdate  => {
-                self.logic.update();
+//                 self.logic.update();
 
                 self.proccess_values();
             },
@@ -384,19 +384,17 @@ impl App {
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
                 if res.is_ok() {
-                    let dc = d.clone();
-                    let f = async move {dc.update_async(UpdateReq::All).await};
+                    let f = d.clone().update_async(UpdateReq::All);
                     return Command::perform(f, move |res| Message::MessageUpdate(
                             MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
                 }
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
-                let d = self.logic.invertor_2.device();
-                Self::save_invertor(d.values_map());
-                let dc = d.clone();
-                let f = async move {dc.update_async(UpdateReq::All).await};
-                return Command::perform(f, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+//                 let d = self.logic.invertor_2.device();
+//                 Self::save_invertor(d.values_map());
+//                 let f = d.update_async(UpdateReq::All);
+//                 return Command::perform(f, move |res| Message::MessageUpdate(
+//                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
 //                 self.proccess_values();

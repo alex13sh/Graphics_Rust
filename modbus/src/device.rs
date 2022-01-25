@@ -95,7 +95,7 @@ impl Device {
         Ok(())
     }
     
-    pub async fn connect(&self) -> DeviceResult {
+    pub async fn connect(self: Arc<Self>) -> DeviceResult {
         trace!(target: "modbus::update::connect", "{:?}", self);
         if self.is_connect() {return Ok(());}
         
@@ -117,7 +117,7 @@ impl Device {
         *self.ctx.lock().await = None;
     }
     
-    pub async fn update_async(&self, req: UpdateReq) -> DeviceResult {
+    pub async fn update_async(self: Arc<Self>, req: UpdateReq) -> DeviceResult {
 //         trace!("pub async fn update_async");
 
         let ctx = self.context_async().await?;

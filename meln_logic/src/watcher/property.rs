@@ -69,5 +69,5 @@ macro_rules! changed_all(
     }
 );
 
-pub(in crate::structs_2) use changed_any;
-pub(in crate::structs_2) use changed_all;
+pub(in crate) use changed_any;
+pub(in crate) use changed_all;

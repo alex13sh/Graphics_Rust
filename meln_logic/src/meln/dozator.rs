@@ -99,7 +99,7 @@ impl From<&ModbusValues> for Dozator {
 }
 
 pub mod watcher {
-    use crate::structs::Property;
+    use crate::watcher::Property;
     
     #[derive(Default)]
     pub struct Dozator {

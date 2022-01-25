@@ -1,53 +1,94 @@
-use modbus::{Value, ModbusValues};
+use modbus::{init, ModbusValues, /*ValueError*/};
+use modbus::{Device as MDevice, DeviceResult, DeviceError, UpdateReq};
+
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use futures_core::stream::Stream;
-use async_stream::stream;
-
-#[derive(Clone)]
-pub struct Dozator {
-    hz_value: Arc<Value>,
-    direct: Arc<Value>,
-//     hz: u32,
+type Device = Arc<MDevice>;
+pub struct Devices {
+    devices: Vec<Device>,
+    values: ModbusValues,
 }
 
-impl Dozator {
-    pub fn new(values: ModbusValues) -> Option<Self> {
-        Some(Self {
-            hz_value: values.get("Двигатель подачи материала в камеру/Частота высокочастотного ШИМ")?.clone(),
-            direct: values.get("Направление вращения двигателя ШД/bit")?.clone(),
-//             hz: 0,
-        })
-    }
-    pub fn set_value(&self, value: i32) {
-        self.direct.set_bit(value>=0);
-        self.hz_value.set_value(value as u32);
-    }
-    pub fn set_value_stream(&self, finish_value: i32) -> impl Stream<Item = i32>  {
-        let hz_value = self.hz_value.clone();
-        let direct = self.direct.clone();
-        stream! {
-        use tokio::time::sleep;
-        use std::time::Duration;
-        let steps = 20;
-        let step_ms = 5_000/steps;
-        let start_value = hz_value.value();
-        let dlt_value = (finish_value as i32 - start_value as i32) as f32 / steps as f32;
-        for i in 0..steps {
-            let i = i as f32;
-            let v = (start_value as f32 + dlt_value as f32 * i);
-            direct.set_bit(v>=0.0);
-            hz_value.set_value(v as u32);
-            yield v as i32;
-            sleep(Duration::from_millis(step_ms)).await;
-        }
+// Инициализация
+impl Devices {
+    pub fn new() -> Self {
+        let devices: Vec<_> = vec![
+            init::make_invertor("192.168.1.5".into()).with_id(5),
+            init::make_invertor("192.168.1.6".into()).with_id(6),
+        
+            init::make_i_digit("192.168.1.10".into()).with_id(3), 
+            init::make_o_digit("192.168.1.12".into()).with_id(4),
+            init::make_owen_analog_1("192.168.1.11").with_id(1),
+            init::make_owen_analog_2("192.168.1.13", 11).with_id(2),
+            init::make_pdu_rs("192.168.1.13", 12).with_id(7),
+            init::make_mkon("192.168.1.13", 1),
+        ].into_iter().map(MDevice::from).map(Arc::new).collect();
+        
+        let values = Self::init_values(&devices);
+        
+        Devices {
+            values: values,
+            devices: devices,
         }
     }
-    pub fn get_value(&self) -> u32 {
-        self.hz_value.value()
+
+    pub fn get_values(&self) -> &ModbusValues {
+        &self.values
     }
-    pub fn get_value_f32(&self) -> f32 {
-        use std::convert::TryFrom;
-        TryFrom::try_from(self.hz_value.as_ref()).unwrap()
+    
+    fn init_values(devices: &[Device]) -> ModbusValues {
+        let mut map = HashMap::new();
+        for d in devices.iter() {
+            for (name, v) in d.values_map().iter() {
+                if let Some(_) = map.insert(name.clone(), v.clone()) {
+                    map.remove(name.as_str());
+                }
+                map.insert(format!("{}/{}", d.name(), name), v.clone());
+            }
+        }
+//         dbg!(map.keys());
+        ModbusValues::from(map)
     }
+}
+
+// Обновление всех устройств
+impl Devices {
+        
+    /*device_id, -- вместо Arc<Device>*/ 
+    pub fn update_async(&self, req: UpdateReq) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
+        let mut device_futures = Vec::new();
+        for d in self.get_devices() {
+            if !d.is_connecting() && d.is_connect() {
+                let upd = d.clone().update_async(req);
+                device_futures.push((d.clone(), upd));
+            }
+        }
+        device_futures
+    }
+    pub fn reconnect_devices(&self) -> Vec<(Device, impl std::future::Future<Output = DeviceResult>)> {
+        let mut device_futures = Vec::new();
+        for d in self.get_devices() {
+            if !d.is_connecting() && !d.is_connect() {
+                let upd = d.clone().connect();
+                device_futures.push((d.clone(), upd));
+            }
+        }
+        device_futures
+    }
+    
+    pub fn get_devices(&self) -> &[Device] {
+        &self.devices
+    }
+    
+    pub fn update_new_values(&self) -> DeviceResult {
+        let mut res = Ok(());
+        for d in self.get_devices() {
+            if let Err(e) = d.update_new_values() {
+                res = Err(e);
+            }
+        }
+        res
+    }
+
 }

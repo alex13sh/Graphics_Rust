@@ -1,6 +1,3 @@
-pub mod devices;
-pub use devices as init;
-
 pub mod meln;
 pub use meln::{Meln as MelnValues};
 pub mod watcher;

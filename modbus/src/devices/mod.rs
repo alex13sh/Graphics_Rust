@@ -55,20 +55,7 @@ impl Devices {
 
 // Обновление всех устройств
 impl Devices {
-        
-    pub fn devices_fut_with<F>(&self, fut: impl Fn(Device) -> F) -> Vec<(Device, F)> 
-    where F: std::future::Future<Output = DeviceResult>
-    {
-        let mut device_futures = Vec::new();
-        for d in self.get_devices() {
-            let f = fut(d.clone());
-            device_futures.push((d.clone(), f));
-        }
-        device_futures
+    pub fn iter(&self) -> impl Iterator<Item=&Device> {
+        self.devices.iter()
     }
-    
-    pub fn get_devices(&self) -> &[Device] {
-        &self.devices
-    }
-    
 }

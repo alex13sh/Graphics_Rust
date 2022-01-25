@@ -361,30 +361,30 @@ impl App {
             MessageMudbusUpdate::ModbusUpdateAsync => {
                 self.meln.properties.update_property(&self.meln.values);
                     
-                let device_futures = self.devices.devices_fut_with(
-                    |d| async {
+                let device_futures = self.devices.iter().cloned().map(
+                    |d| (d.clone(), async {
                         d.clone().update_new_values().await?;
                         d.update_async(UpdateReq::ReadOnlyOrLogable).await
-                    }
+                    })
                 );
 
-                return Command::batch(device_futures.into_iter()
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Vibro => {
 //                 self.proccess_values(true);
-                let device_futures = self.devices.devices_fut_with(|d| d.update_async(UpdateReq::Vibro));
-                return Command::batch(device_futures.into_iter()
+                let device_futures = self.devices.iter().cloned().map(|d| (d.clone(), d.update_async(UpdateReq::Vibro)));
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)))
                     ));
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();
-                let device_futures = self.devices.devices_fut_with(|d| d.connect());
-                return Command::batch(device_futures.into_iter()
+                let device_futures = self.devices.iter().map(|d| (d.clone(), d.clone().connect()));
+                return Command::batch(device_futures
                     .map(|(d, f)| Command::perform(f, move |res| Message::MessageUpdate(
                         MessageMudbusUpdate::ModbusConnectAnswer(d.clone(), res)))
                     ));

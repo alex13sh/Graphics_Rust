@@ -555,16 +555,18 @@ async fn reconnect_device(d: Arc<Device>) -> DeviceResult {
     println!("reconnect: {:?}", d.id());
     use std::time::Duration;
     use tokio::time::sleep;
-    let timeout = Duration::from_millis(120);
+    let timeout = Duration::from_millis(200);
     d.disconnect().await;
-    for _ in 0..5 {
+    for _ in 0..20 {
         let f = d.clone().connect();
         let f_timeout = sleep(timeout);
         tokio::select! {
-        res = f => {return res;},
+        res = f => {
+            
+            return res;
+        },
         _ = f_timeout => {},
         };
-        sleep(timeout).await;
     }
     log::trace!(target: "modbus::update::connect", "timeout {:?}", &d);
     println!("reconnect timeout: {:?}", d.id());

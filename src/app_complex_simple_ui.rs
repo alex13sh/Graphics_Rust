@@ -389,7 +389,7 @@ impl App {
                     }
                     
                     for d in devices_reconnect {
-                        if let Err(e) = reconnect_device(d).await {
+                        if let Err(e) = d.reconnect().await {
                             dbg!(e);
                         }
                     }
@@ -548,29 +548,6 @@ impl App {
     fn is_worked(&self) -> bool {
         self.is_worked
     }
-}
-
-async fn reconnect_device(d: Arc<Device>) -> DeviceResult {
-    log::trace!(target: "modbus::update::connect", "reconnect {:?}", &d);
-    println!("reconnect: {:?}", d.id());
-    use std::time::Duration;
-    use tokio::time::sleep;
-    let timeout = Duration::from_millis(200);
-    d.disconnect().await;
-    for _ in 0..20 {
-        let f = d.clone().connect();
-        let f_timeout = sleep(timeout);
-        tokio::select! {
-        res = f => {
-            
-            return res;
-        },
-        _ = f_timeout => {},
-        };
-    }
-    log::trace!(target: "modbus::update::connect", "timeout {:?}", &d);
-    println!("reconnect timeout: {:?}", d.id());
-    Err(DeviceError::TimeOut)
 }
 
 use half_complect::{HalfComplect};

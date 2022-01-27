@@ -29,8 +29,10 @@ pub mod value {
         }
     }
     
+
+
     pub fn hash_to_names(hash: &str) -> Option<(u16, String, String)> {
-        let res = match hash {
+        let res: (u16, String, String) = match hash {
         "Температура статора дв. М2/value" => (1, "МВ210-101".into(), "Температура статора дв. М2".into()),
         "Температура верх подшипника дв. М2/value" => (1, "МВ210-101".into(), "Температура верх подшипника дв. М2".into()),
         "Температура нижн подшипника дв. М2/value" => (1, "МВ210-101".into(), "Температура нижн подшипника дв. М2".into()),
@@ -49,8 +51,8 @@ pub mod value {
         "Вибродатчик дв. М1/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М1".into()),
         "Вибродатчик дв. М2/value" => (2, "МВ110-24.8АС".into(), "Виброскорость дв. М2".into()),
         
-//         "Битовая маска состояния выходов" => (3, "МК210-302".into(), "Битовая маска состояния выходов".into()),
-//         "Битовая маска состояния входов" => (3, "МК210-302".into(), "Битовая маска состояния входов".into()),
+            "Битовая маска состояния выходов" => (0, "МК210-302".into(), "Битовая маска состояния выходов".into()),
+            "Битовая маска состояния входов" => (0, "МК210-302".into(), "Битовая маска состояния входов".into()),
         "Клапан ШК1 открыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК1 открыт".into()),
         "Клапан ШК1 закрыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК1 закрыт".into()),
         "Клапан ШК2 открыт/read_bit_51" => (3, "МК210-302".into(), "Клапан ШК2 открыт".into()),
@@ -66,7 +68,7 @@ pub mod value {
         "Двигатель насоса вакуума 1/write_bit" => (3, "МК210-302".into(), "Двигатель насоса вакуума 1".into()),
         "Двигатель насоса вакуума 2/write_bit" => (3, "МК210-302".into(), "Двигатель насоса вакуума 2".into()),
         
-//         "Битовая маска состояния выходов" => (4, "МУ210-410".into(), "Битовая маска состояния выходов".into()),
+//             "Битовая маска состояния выходов" => (0, "МУ210-410".into(), "Битовая маска состояния выходов".into()),
         "Двигатель подачи материала в камеру/Частота высокочастотного ШИМ" => (4, "МУ210-410".into(), "Двигатель подачи материала в камеру".into()),
         "Направление вращения двигателя ШД/write_bit" => (4, "МУ210-410".into(), "Направление вращения двигателя ШД".into()),
         "Двигатель маслостанции М4/write_bit" => (4, "МУ210-410".into(), "Двигатель маслостанции М4".into()),
@@ -79,6 +81,8 @@ pub mod value {
         "Клапан насоса М5/write_bit" => (4, "МУ210-410".into(), "Клапан насоса М5".into()),
 
         "Значение уровня масла" => (7, "Уровень масла".into(), "Процентное значение уровня масла".into()),
+            "Нижний предел уровня масла" => (0, "Уровень масла".into(), "Нижний предел".into()),
+            "Верхний предел уровня масла" => (0, "Уровень масла".into(), "Верхний предел".into()),
         
         "ac4e9ff84c" => (5, "Invertor".into(), "Наработка двигателя (мин)".into()),
         "b735f11d88" => (5, "Invertor".into(), "Наработка двигателя (дни)".into()),
@@ -101,10 +105,24 @@ pub mod value {
         "6) Invertor/2206H" => (6, "Invertor".into(), "Индикация текущей выходной мощности (P)".into()),
         "6) Invertor/2207H" => (6, "Invertor".into(), "Индикация рассчитанной (с PG) скорости".into()),
         "6) Invertor/5b28faeb8d" => (6, "Invertor".into(), "Температура радиатора".into()),
+
+        "invertor_top/ac4e9ff84c" => (6, "Invertor".into(), "Наработка двигателя (мин)".into()),
+        "invertor_top/b735f11d88" => (6, "Invertor".into(), "Наработка двигателя (дни)".into()),
+        "invertor_top/4c12e17ba3" => (6, "Invertor".into(), "Заданная частота (F)".into()),
+        "invertor_top/4bd5c4e0a9" => (6, "Invertor".into(), "Скорость двигателя".into()),
+        "invertor_top/5146ba6795" => (6, "Invertor".into(), "Выходной ток (A)".into()),
+        "invertor_top/Напряжение на шине DC" => (6, "Invertor".into(), "Напряжение на шине DC".into()),
+        "invertor_top/5369886757" => (6, "Invertor".into(), "Выходное напряжение (E)".into()),
+        "invertor_top/2206H" => (6, "Invertor".into(), "Индикация текущей выходной мощности (P)".into()),
+        "invertor_top/2207H" => (6, "Invertor".into(), "Индикация рассчитанной (с PG) скорости".into()),
+        "invertor_top/5b28faeb8d" => (6, "Invertor".into(), "Температура радиатора".into()),
         
         _ => (0, "".into(), "".into()),
         };
         if res.0 == 0 {
+            if res.1.is_empty() {
+                dbg!(hash);
+            }
             None
         } else {
             Some(res)
@@ -112,12 +130,24 @@ pub mod value {
     }
 }
 
-pub mod stream {
+pub mod iterator {
     use crate::value::*;
-    use futures::{Stream, StreamExt};
     pub fn raw_to_elk(raw_values: impl Iterator<Item=LogValueRawOld> ) -> impl Iterator<Item=LogValueHum> {
         raw_values.filter_map(|v| super::value::value_date_convert_try(v))
     }
+
+    pub fn value_date_shift_time<VT>(lines: impl Iterator<Item=ValueDate<VT>>, shift_hour: i64) -> impl Iterator<Item=ValueDate<VT>> {
+        lines.map(move |l| ValueDate {
+            date_time: l.date_time + chrono::Duration::hours(shift_hour),
+            value: l.value,
+        })
+    }
+}
+
+pub mod stream {
+    use crate::value::*;
+    use futures::{Stream, StreamExt};
+
     
     pub fn values_to_line<V>(values: impl Stream<Item=ValueDate<V>>) -> impl Stream<Item=ValuesLine<V>> {
         use crate::utils::{DateTime, date_time_now};
@@ -194,6 +224,22 @@ pub mod stream {
                 date_time: l.date_time,
                 values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
             }
+        })
+    }
+
+    pub fn values_line_shift_time<VT>(lines: impl Stream<Item=ValuesLine<VT>>, shift_hour: i64) -> impl Stream<Item=ValuesLine<VT>>
+    {
+        lines.map(move |l| ValuesLine {
+            date_time: l.date_time + chrono::Duration::hours(shift_hour),
+            values: l.values,
+        })
+    }
+
+    pub fn value_date_shift_time<VT>(lines: impl Stream<Item=ValueDate<VT>>, shift_hour: i64) -> impl Stream<Item=ValueDate<VT>>
+    {
+        lines.map(move |l| ValueDate {
+            date_time: l.date_time + chrono::Duration::hours(shift_hour),
+            value: l.value,
         })
     }
 }

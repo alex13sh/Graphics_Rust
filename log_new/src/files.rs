@@ -131,7 +131,7 @@ pub mod csv {
         use crate::value::ValueDate;
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_04_08_2021__12_27_52_673792376";
         if let Some(values) = read_values(&format!("{}.csv", file_path)) {
-            let values = crate::convert::stream::raw_to_elk(values);
+            let values = crate::convert::iterator::raw_to_elk(values);
             write_values(&format!("{}_elk.csv", file_path), values).unwrap();
         }
 //         assert!(false);
@@ -156,14 +156,16 @@ pub mod csv {
                 read_values(file_path)?
             ))
         })
-        .map(|(dt, values)| (dt, crate::convert::stream::raw_to_elk(values)))
+        .map(|(dt, values)| (dt, crate::convert::iterator::raw_to_elk(values)))
+        .map(|(dt, values)| (dt, crate::convert::iterator::value_date_shift_time(values, 3)) )
         .for_each(
             |(dt, values)| {
                 write_values(dir_elk
                     .join(date_time_to_string_name_short(&dt)).with_extension("csv"), 
                     values).unwrap();
             }
-        )
+        );
+        assert!(false);
     }
     
     #[test]
@@ -171,7 +173,7 @@ pub mod csv {
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = read_values(&format!("{}.csv", file_path)) {
             use crate::convert::stream::*;
-            let values = crate::convert::stream::raw_to_elk(values);
+            let values = crate::convert::iterator::raw_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
             let lines = values_line_to_hashmap(lines);
             futures::executor::block_on( write_values_async(format!("{}_table.csv", file_path), lines).unwrap() );
@@ -295,7 +297,7 @@ pub mod excel {
     use crate::value::ElkValuesLine;
     pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Stream<Item=ElkValuesLine>) -> impl Future<Output=()> {
         use crate::async_channel::*;
-        use crate::convert::stream::*;
+        use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
         
         let lines = crate::stat_info::simple::filter_half_low(values_line);
@@ -330,7 +332,7 @@ pub mod excel {
     
     #[test]
     fn test_convert_csv_raw_to_excel() {
-        use crate::convert::stream::*;
+        use crate::convert::{stream::*, iterator::*};
         
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {

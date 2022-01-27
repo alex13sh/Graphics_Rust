@@ -36,7 +36,7 @@ pub struct LogSession {
 impl LogSession {
     pub fn new() -> Self {
         Self {
-            log_dir: utils::get_file_path("log/"),
+            log_dir: utils::get_file_path("log/values/"),
             date_time: utils::date_time_now(),
             values_elk: None,
             values_raw: None,
@@ -95,7 +95,7 @@ impl LogSession {
         let elk = self.values_elk.as_ref().unwrap();
         let values = values_from_line(elk.subscribe());
         let file_path = self.log_dir
-            .join("csv_elk").join(&self.date_time_str())
+            .join("csv").join(&self.date_time_str())
             .with_extension("csv");
         write_values_async(file_path,
             values).unwrap()

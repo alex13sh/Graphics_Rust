@@ -34,6 +34,10 @@ fn log_init() {
         .add_filter_allow_str("dozator")
         .set_time_format_str("%H:%M:%S%.3f")
         .build();
+    let conf_modbus_update_ok = ConfigBuilder::new()
+        .add_filter_allow_str("modbus::update::ok")
+        .set_time_format_str("%H:%M:%S%.3f")
+        .build();
     CombinedLogger::init(
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
@@ -60,6 +64,11 @@ fn log_init() {
             WriteLogger::new(LevelFilter::Trace, conf_dozator,
                 File::create(logger::get_file_path(
                     &format!("simplelog/[{}]/dozator.log", dt)
+                )).unwrap()
+            ),
+            WriteLogger::new(LevelFilter::Trace, conf_modbus_update_ok,
+                File::create(logger::get_file_path(
+                    &format!("simplelog/[{}]/modbus_update_ok.log", dt)
                 )).unwrap()
             ),
         ]
@@ -385,6 +394,8 @@ impl App {
                             },
                             _ => {}
                             }
+                        } else if d2.id().id == 2 {
+                            log::info!(target: "modbus::update::ok", "Device: {:?}", d2.id());
                         }
                     }
                     

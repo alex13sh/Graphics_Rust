@@ -372,10 +372,19 @@ impl App {
                 // Добавить в очередь
                 self.devices_queue.insert(d.id().clone(), d);
             },
-            MessageMudbusUpdate::ModbusUpdateAsync => {                    
+            MessageMudbusUpdate::ModbusUpdateAsync => {
+                let f_update_new_values: Vec<_> = self.devices.iter()
+                    .cloned().map(Device::update_new_values)
+                    .collect();
                 // Обновлять устройства из очереди
                 let devices = std::mem::take(&mut self.devices_queue);
                 let devices_future = async move {
+                    for f in f_update_new_values {
+                        if let Err(err) = f.await {
+//                             println!("f_update_new_values err: {:?}", err);
+                        }
+                    }
+
                     let mut devices_reconnect = Vec::new();
                     for (_, d) in devices {
                         let d2 = d.clone();

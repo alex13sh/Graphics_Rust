@@ -386,8 +386,8 @@ impl App {
                             d.clone().update_async(UpdateReq::ReadOnlyOrLogable).await
                         }.await;
                         if let Err(e) = res {
-                            println!("Error: {:?} {:?}", &e, &d2);
-                            log::trace!(target: "modbus::update", "[error] {:?} {:?}", &e, &d2);
+                            println!("Error: {:?} {:?}", &e, d2.id());
+                            log::trace!(target: "modbus::update", "[error] {:?} {:?}", &e, d2.id());
                             match e {
                             DeviceError::TimeOut => {
                                 devices_reconnect.push(d2)

@@ -76,7 +76,7 @@ impl ModbusContext {
         let timeout = Duration::from_millis(
             if self.is_rtu {120*ranges_address.len()} else {200} as u64
         );
-        log::info!("timeout: {:?}", &timeout);
+//         log::info!("timeout: {:?}", &timeout);
         let timeout = sleep(timeout);
         
         let f = async {

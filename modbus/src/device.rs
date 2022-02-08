@@ -135,7 +135,7 @@ impl Device {
     }
 
     pub async fn update_async(self: Arc<Self>, req: UpdateReq) -> DeviceResult {
-//         trace!("pub async fn update_async");
+        trace!(target: "modbus::update::update_async", "{:?}", self.id());
 
         let mut try_ctx = self.ctx.try_lock();
         let try_ctx = try_ctx.as_mut()
@@ -154,7 +154,7 @@ impl Device {
 //         drop(ctx);
 //         info!("-> res");
         if res.is_err() {
-            log::error!(target: "modbus::update::update_async", "{:?}; {:?}", &res, self);
+            log::error!(target: "modbus::update::update_async", "{:?}; {:?}", &res, self.id());
 //             if self.address.is_tcp_ip() {
 //                 self.disconnect().await;
                 **try_ctx = None;

@@ -124,6 +124,7 @@ struct UI {
     pb_exit: button::State,
     pb_stop: button::State,
     pb_log_turn: button::State,
+    pb_save_invertor: button::State,
     pb_reconnect: button::State,
 }
 
@@ -151,7 +152,7 @@ pub enum Message {
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
     UpdateDevice(Arc<Device>), ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Option<DeviceResult>),
-    ModbusUpdateAsync_Invertor,
+    InvertorUpdateSave,
     ModbusConnect, ModbusConnectAnswer(Arc<Device>, DeviceResult),
 //     GraphicUpdate,
 }
@@ -226,7 +227,7 @@ impl Application for App {
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
-        let interval_update = if self.is_logging {100} else {500};
+        let interval_update = if self.is_logging {100} else {400};
         Subscription::batch(vec![
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
@@ -236,7 +237,7 @@ impl Application for App {
                     .map(|_| MessageMudbusUpdate::ModbusConnect)
                 } else {Subscription::none()},
 //                 time::every(std::time::Duration::from_secs(30*60))
-//                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
+//                 .map(|_| MessageMudbusUpdate::InvertorUpdateSave),
                 Self::sub_devices(self.devices.iter().cloned()),
             ]).map(Message::MessageUpdate),
             
@@ -371,10 +372,16 @@ impl Application for App {
             } else {
                 Text::new("Devices Connected").into()
             };
+        let pb_save_invertor: Element<_> = Button::new(&mut self.ui.pb_save_invertor, Text::new("Сохранить инвертор"))
+            .on_press(MessageMudbusUpdate::InvertorUpdateSave)
+            .into();
+        let pb_save_invertor: Element<_> = pb_save_invertor.map(Message::MessageUpdate);
+
         let row_exit = Row::new().spacing(20)
             .push(txt_status)
             .push(pb_log_turn)
             .push(pb_reconnect)
+            .push(pb_save_invertor)
             .push(Space::with_width(Length::Fill))
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
@@ -490,12 +497,19 @@ impl App {
 //                     .filter(|d| d.id().name != "Invertor")
                     .any(|d| !d.is_connect());
             },
-            MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
-//                 let d = self.devices.invertor_2.device();
-//                 Self::save_invertor(d.values_map());
-//                 let f = d.update_async(UpdateReq::All);
-//                 return Command::perform(f, move |res| Message::MessageUpdate(
-//                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
+            MessageMudbusUpdate::InvertorUpdateSave => {
+                let invertors: Vec<_> = self.devices.iter()
+                    .filter(|d| d.id().name == "Invertor")
+                    .cloned().collect();
+                let f = async move {
+                    for d in invertors {
+                        if let Ok(_) = d.clone().update_async(UpdateReq::All).await {
+                            Self::save_invertor(d.id(), d.values_map());
+                        }
+                    }
+                };
+                return Command::perform(f, move |res| Message::MessageUpdate(
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer(None)));
             },
             MessageMudbusUpdate::ModbusUpdateAsyncAnswer(res) => {
                 self.meln.properties.update_property(&self.meln.values);
@@ -584,23 +598,24 @@ impl App {
 //         self.txt_status = if warn {"Ошибка значений"} else {""}.into();
     }
 
-//     fn save_invertor(invertor_values: &ModbusValues) {
-//         let dt = logger::date_time_now();
-//         log::trace!("save_invertor date_time: {:?}", &dt);
-//         let dt = logger::date_time_to_string_name_short(&dt);
-//         let path = logger::get_file_path("tables/log/").join(dt).with_extension(".csv");
-//         log::trace!("path: {:?}", &path);
-//         let parametrs: Vec<_> = invertor_values.iter_values()
-//             .map(|(adr, v, id)| logger::InvertorParametr {
-//                 address: format!("({}, {})", adr/256, adr%256),
-//                 value: v,
-// //                 name: id.to_string(),
-//                 name: id.sensor_name.clone(),
-//             }).collect();
+    fn save_invertor(id: &DeviceID, invertor_values: &ModbusValues) {
+        let dt = logger::date_time_now();
+        log::trace!("save_invertor date_time: {:?}; id: {:?};", &dt, id);
+        let dt = logger::date_time_to_string_name_short(&dt);
+        let file_name = format!("{}) {}", id.id, dt);
+        let path = logger::get_file_path("tables/log/").join(file_name).with_extension(".csv");
+        log::trace!("path: {:?}", &path);
+        let parametrs: Vec<_> = invertor_values.iter_values()
+            .map(|(adr, v, id)| logger::value::device::InvertorParametr {
+                address: format!("({}, {})", adr/256, adr%256),
+                value: v,
+//                 name: id.to_string(),
+                name: id.sensor_name.clone(),
+            }).collect();
 //         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
 //             log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
 //         }
-//     }
+    }
 
     fn is_started(&self) -> bool {
         self.meln.properties.is_started.get()

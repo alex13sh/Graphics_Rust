@@ -4,7 +4,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-mod value;
+pub mod value;
 pub mod utils;
 mod files;
 mod async_channel;
@@ -13,7 +13,7 @@ mod convert;
 
 use utils::DateTimeFix;
 pub use value::{ValuesLine, Value};
-pub use utils::get_file_path;
+pub use utils::{get_file_path, date_time_to_string_name_short, date_time_now};
 pub use stat_info::simple::LogState;
 
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;

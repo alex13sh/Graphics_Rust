@@ -216,4 +216,10 @@ pub mod device {
          pub device_name: String,
          pub values: Box<[Value]>,
     }
+
+    pub struct InvertorParametr {
+        pub address: String,
+        pub value: u32,
+        pub name: String,
+    }
 }

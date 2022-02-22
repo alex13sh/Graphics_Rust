@@ -97,7 +97,7 @@ impl Device {
         *self.ctx.lock().await = super::ModbusContext
             ::new_async(&self.address, &self.values).await.map(Arc::new); 
         
-        if self.is_connect() {
+        if !self.is_connect() {
             return Err(DeviceError::ContextNull);
         }
         Ok(())
@@ -116,9 +116,9 @@ impl Device {
         println!("reconnect: {:?}", self.id());
         use std::time::Duration;
         use tokio::time::sleep;
-        let timeout = Duration::from_millis(200);
+        let timeout = Duration::from_millis(500);
         self.disconnect().await;
-        for _ in 0..20 {
+        for _ in 0..6 {
             let f = self.clone().connect();
             let f_timeout = sleep(timeout);
             tokio::select! {
@@ -135,7 +135,7 @@ impl Device {
     }
 
     pub async fn update_async(self: Arc<Self>, req: UpdateReq) -> DeviceResult {
-        trace!(target: "modbus::update::update_async", "{:?}", self.id());
+        log::trace!(target: "modbus::update", "update_async - {:?}", self.id());
 
         let mut try_ctx = self.ctx.try_lock();
         let try_ctx = try_ctx.as_mut()
@@ -160,6 +160,7 @@ impl Device {
                 **try_ctx = None;
 //             }
         }
+        log::trace!(target: "modbus::update", "res update_async - {:?}", self.id());
         res
     }
     

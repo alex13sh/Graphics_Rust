@@ -97,6 +97,7 @@ pub struct App {
     meln: meln_logic::Meln,
     is_worked: bool,
     txt_status: String,
+    devices_disconnect: bool, // Если устройства отключены, показать кнопку reconnect
     
     dvij_is_started: bool,
     klapans: ui::Klapans,
@@ -118,6 +119,7 @@ struct UI {
     pb_exit: button::State,
     pb_stop: button::State,
     pb_log_turn: button::State,
+    pb_reconnect: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -135,6 +137,7 @@ pub enum Message {
 //     InfoPaneUpdate(Option<(logger::structs::TableState, PathBuf)>),
     
     LoggingTurn(bool),
+    DevicesReconnect,
     MessageUpdate(MessageMudbusUpdate),
     MelnMessage(MelnMessage),
     ResultEmpty,
@@ -142,7 +145,7 @@ pub enum Message {
 
 #[derive(Debug, Clone)]
 pub enum MessageMudbusUpdate {
-    UpdateDevice(Arc<Device>), ModbusUpdateAsync, ModbusUpdateAsyncAnswer,
+    UpdateDevice(Arc<Device>), ModbusUpdateAsync, ModbusUpdateAsyncAnswer(Option<DeviceResult>),
     ModbusUpdateAsync_Invertor,
     ModbusConnect, ModbusConnectAnswer(Arc<Device>, DeviceResult),
 //     GraphicUpdate,
@@ -170,6 +173,7 @@ impl Application for App {
             ui: Default::default(),
             has_exit: false,
             txt_status: "".into(),
+            devices_disconnect: true,
 
             dvij_is_started: false,
             low: HalfComplect::new(&meln.values.half_bottom),
@@ -194,7 +198,7 @@ impl Application for App {
                         meln_fut.automation(), 
                         meln_fut.automation_mut()
                     );
-                    Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsyncAnswer)
+                    Message::MessageUpdate(MessageMudbusUpdate::ModbusUpdateAsyncAnswer(None))
                 }.into()
             ])
         )
@@ -247,6 +251,9 @@ impl Application for App {
         Message::ButtonExit => self.has_exit = true,
         Message::EmergencyStop => {
             self.meln.values.stop();
+        },
+        Message::DevicesReconnect => {
+        
         },
         Message::LowHalfComplectUI(m) => self.low.update(m, &meln.half_bottom),
         Message::TopHalfComplectUI(m) => self.top.update(m, &meln.half_top),
@@ -329,9 +336,18 @@ impl Application for App {
         let pb_log_turn = Button::new(&mut self.ui.pb_log_turn, Text::new("Логи включены"))
                 .style(style::Button::Check{checked: self.is_logging})
                 .on_press(Message::LoggingTurn(!self.is_logging));
-        let row_exit = Row::new()
+        let pb_reconnect: Element<_> = if self.devices_disconnect {
+            Button::new(&mut self.ui.pb_reconnect, Text::new("Reconnect Devices"))
+//                 .on_press(Message::DevicesReconnect)
+                .on_press(Message::MessageUpdate(MessageMudbusUpdate::ModbusConnect))
+                .style(ui::style::Button::Exit).into()
+            } else {
+                Text::new("Devices Connected").into()
+            };
+        let row_exit = Row::new().spacing(20)
             .push(txt_status)
             .push(pb_log_turn)
+            .push(pb_reconnect)
             .push(Space::with_width(Length::Fill))
             .push(Button::new(&mut self.ui.pb_exit, Text::new("Выход"))
                 .on_press(Message::ButtonExit)
@@ -373,12 +389,15 @@ impl App {
                 self.devices_queue.insert(d.id().clone(), d);
             },
             MessageMudbusUpdate::ModbusUpdateAsync => {
+                
                 let f_update_new_values: Vec<_> = self.devices.iter()
                     .cloned().map(Device::update_new_values)
                     .collect();
+                    
                 // Обновлять устройства из очереди
                 let devices = std::mem::take(&mut self.devices_queue);
                 let devices_future = async move {
+                
                     for f in f_update_new_values {
                         if let Err(err) = f.await {
 //                             println!("f_update_new_values err: {:?}", err);
@@ -399,7 +418,8 @@ impl App {
                             log::trace!(target: "modbus::update", "[error] {:?} {:?}", &e, d2.id());
                             match e {
                             DeviceError::TimeOut => {
-                                devices_reconnect.push(d2)
+                                devices_reconnect.push(d2);
+//                                 self.devices_disconnect = true;
                             },
                             _ => {}
                             }
@@ -408,15 +428,19 @@ impl App {
                         }
                     }
                     
+                    let mut res = None;
                     for d in devices_reconnect {
                         if let Err(e) = d.reconnect().await {
                             dbg!(e);
+//                             self.devices_disconnect = true;
+                            res = Some(Err(DeviceError::ContextNull));
                         }
                     }
+                    res
                 };
 
                 return Command::perform(devices_future, move |res| Message::MessageUpdate(
-                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer));
+                        MessageMudbusUpdate::ModbusUpdateAsyncAnswer(res)));
             },
             MessageMudbusUpdate::ModbusConnect => {
 //                 self.save_invertor();
@@ -427,6 +451,13 @@ impl App {
                     ));
             },
             MessageMudbusUpdate::ModbusConnectAnswer(d, res) => {
+                println!("id: {:?} - {:?}", d.id(), &res);
+//                 if res.is_ok() {
+//                     self.devices_disconnect = false;
+//                 }
+                self.devices_disconnect = self.devices.iter()
+                    .filter(|d| d.id().name != "Invertor")
+                    .any(|d| !d.is_connect());
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {
 //                 let d = self.devices.invertor_2.device();
@@ -435,10 +466,13 @@ impl App {
 //                 return Command::perform(f, move |res| Message::MessageUpdate(
 //                         MessageMudbusUpdate::ModbusUpdateAsyncAnswerDevice(d.clone(), res)));
             },
-            MessageMudbusUpdate::ModbusUpdateAsyncAnswer => {
+            MessageMudbusUpdate::ModbusUpdateAsyncAnswer(res) => {
                 self.meln.properties.update_property(&self.meln.values);
                 if self.is_logging {
                     self.proccess_values();
+                }
+                if let Some(res) = res {
+                    self.devices_disconnect = !res.is_ok();
                 }
             },
 //             MessageMudbusUpdate::GraphicUpdate => self.graph.update_svg();

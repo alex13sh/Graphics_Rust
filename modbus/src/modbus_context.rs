@@ -74,7 +74,7 @@ impl ModbusContext {
         let ranges_address = ranges_address.unwrap_or(&self.ranges_address);
         
         let timeout = Duration::from_millis(
-            if self.is_rtu {120*ranges_address.len()} else {200} as u64
+            if self.is_rtu {180*ranges_address.len()} else {100} as u64
         );
 //         log::info!("timeout: {:?}", &timeout);
         let timeout = sleep(timeout);

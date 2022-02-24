@@ -135,6 +135,9 @@ pub mod iterator {
     pub fn raw_to_elk(raw_values: impl Iterator<Item=LogValueRawOld> ) -> impl Iterator<Item=LogValueHum> {
         raw_values.filter_map(|v| super::value::value_date_convert_try(v))
     }
+    pub fn fullvalue_to_elk(raw_values: impl Iterator<Item=LogValueFull> ) -> impl Iterator<Item=LogValueHum> {
+        raw_values.filter_map(|v| super::value::value_date_convert_try(v))
+    }
 
     pub fn value_date_shift_time<VT>(lines: impl Iterator<Item=ValueDate<VT>>, shift_hour: i64) -> impl Iterator<Item=ValueDate<VT>> {
         lines.map(move |l| ValueDate {

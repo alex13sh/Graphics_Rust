@@ -234,7 +234,9 @@ pub mod excel {
         pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
             let mut values = values.enumerate().peekable();
             
-            let l = &std::pin::Pin::new(&mut values).peek().await.unwrap().1;
+            let l = if let Some(ref l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
+            else {return};
+
             self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + 0)
                     .set_value("Время");
             let dt_start = l.date_time.clone();
@@ -284,7 +286,7 @@ pub mod excel {
                 date_time: line.date_time,
                 values: line.values.into_vec().into_iter().filter(|v| {
                     match v.sensor_name.as_str() {
-                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" => true,
+                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" | "Выходное напряжение (E)" => true,
                     "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
                     sensor_name if sensor_name.starts_with("Температура") => true,
                     "Разрежение воздуха в системе" => true,
@@ -322,9 +324,11 @@ pub mod excel {
                 crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
             ).await;
             dbg!("await");
-            s.write_state((12,2), stat.unwrap());
-            f.save();
-            dbg!("save");
+            if let Some(stat) = stat {
+                s.write_state((12,2), stat);
+                f.save();
+                dbg!("save");
+            }
         };
         async move {
             let _ = join(f_to_channel, f_from_channel).await;
@@ -334,15 +338,65 @@ pub mod excel {
     #[test]
     fn test_convert_csv_raw_to_excel() {
         use crate::convert::{stream::*, iterator::*};
-        
+        use futures::future::join;
+
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
-            
+            let lines = values_line_to_simple(lines);
             let f = write_file(file_path, lines);
             futures::executor::block_on(f);
         }
+    }
+
+    #[test]
+    fn convert_csv_to_excel() {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use futures::join;
+
+        let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
+        let files = [
+            "2022_02_24-16_51_50",
+            "2022_02_24-17_01_08",
+            "2022_02_24-17_09_52",
+            "2022_02_24-17_28_14",
+            "2022_02_24-17_36_17",
+        ];
+
+        for name in files {
+            let file_path = format!("{}/{}", dir, name);
+
+            dbg!(format!("{}.csv", file_path));
+
+            if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
+                let values = fullvalue_to_elk(values);
+
+                let lines = values_to_line(futures::stream::iter(values));
+
+                let (s, l_top) = broadcast(10);
+                let f_to_channel = lines.map(|l| Ok(l)).forward(s);
+                let l_low = l_top.clone();
+//                 let l_low = lines;
+
+                let l_top = crate::stat_info::simple::filter_half_top(l_top);
+                let l_low = crate::stat_info::simple::filter_half_low(l_low);
+
+                let f_top = write_file(file_path.clone() + "_top.xlsx", l_top);
+                let f_low = write_file(file_path + "_low.xlsx", l_low);
+
+                let f = async {
+                    join!(
+                        f_to_channel,
+                        f_top,
+                        f_low);
+                };
+
+                futures::executor::block_on(f);
+            }
+        }
+        assert!(false);
     }
 }
 

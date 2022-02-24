@@ -79,6 +79,7 @@ impl <V> From<Box<[V]>> for ValuesLine <V> {
     }
 }
 
+pub type LogValueFull = ValueDate<Value>;
 pub type LogValueRaw = ValueDate<raw::Value>;
 pub type LogValueRawOld = ValueDate<raw::ValueOld>;
 pub type RawValuesLine = ValuesLine<raw::Value>;

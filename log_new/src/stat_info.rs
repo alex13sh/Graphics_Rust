@@ -128,6 +128,11 @@ pub mod simple {
                         sensor_name: sensor.into(),
                         value: v.value,
                     })
+                } else if v.sensor_name == "Разрежение воздуха в системе" {
+                    Some(Value {
+                        sensor_name: "Разрежение воздуха в системе".into(),
+                        value: v.value,
+                    })
                 } else {
                     None
                 }

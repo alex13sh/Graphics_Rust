@@ -284,9 +284,10 @@ pub mod excel {
                 date_time: line.date_time,
                 values: line.values.into_vec().into_iter().filter(|v| {
                     match v.sensor_name.as_str() {
-                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" => true,
-                    "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false, 
+                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" => true,
+                    "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
                     sensor_name if sensor_name.starts_with("Температура") => true,
+                    "Разрежение воздуха в системе" => true,
                     _ => false,
                     }
                 }).collect::<Vec<_>>().into_boxed_slice(),
@@ -295,12 +296,12 @@ pub mod excel {
     }
     
     use crate::value::ElkValuesLine;
-    pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Stream<Item=ElkValuesLine>) -> impl Future<Output=()> {
+    pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Stream<Item=SimpleValuesLine>) -> impl Future<Output=()> {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
         
-        let lines = crate::stat_info::simple::filter_half_low(values_line);
+        let lines = values_line; //crate::stat_info::simple::filter_half_low(values_line);
         
         let (s, l1) = broadcast(10);
         

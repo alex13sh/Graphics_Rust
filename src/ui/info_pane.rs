@@ -75,7 +75,7 @@ r#"
 Зона вибрации:      {}
 --
 "#
-    , info.time_work
+    , info.time_all
     , info.time_acel
     , info.hz_max
     , info.vibro_max

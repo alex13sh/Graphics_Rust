@@ -77,16 +77,26 @@ impl LogSession {
         }
     }
 
-    pub fn make_path_excel(&self) -> PathBuf {
+    pub fn make_path_excel(&self, suffix: &str) -> PathBuf {
         self.log_dir
-        .join("excel").join(&self.date_time_str())
+        .join("excel").join(&format!("{}_{}", self.date_time_str(), suffix))
         .with_extension("xlsx")
     }
-    pub fn write_excel(&self) -> impl Future<Output=()> {
+    pub fn write_excel_low(&self) -> impl Future<Output=()> {
         let elk = self.values_elk.as_ref().unwrap();
-        let file_path = self.make_path_excel();
-        files::excel::write_file(file_path,
-             elk.subscribe())
+        let file_path = self.make_path_excel("low");
+
+        let values_line = elk.subscribe();
+        let values_low = crate::stat_info::simple::filter_half_low(values_line);
+        files::excel::write_file(file_path, values_low)
+    }
+    pub fn write_excel_top(&self) -> impl Future<Output=()> {
+        let elk = self.values_elk.as_ref().unwrap();
+        let file_path = self.make_path_excel("top");
+
+        let values_line = elk.subscribe();
+        let values_top = crate::stat_info::simple::filter_half_top(values_line);
+        files::excel::write_file(file_path, values_top)
     }
 
     pub fn write_csv_elk(&self) -> impl Future<Output=()> {
@@ -134,12 +144,13 @@ impl LogSession {
 //             let _ = f.await;
 //         }
         let f1 = self.write_csv_elk();
-        let f2 = self.write_excel();
+        let f2l = self.write_excel_low();
+        let f2t = self.write_excel_top();
         let f3 = self.write_csv_raw();
         let f4 = self.write_csv_raw_diff();
         async move {
             futures::join!(
-                f1, f2, f3, f4
+                f1, f2l, f2t, f3, f4
             );
         }
     }

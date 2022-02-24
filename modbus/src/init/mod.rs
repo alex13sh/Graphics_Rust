@@ -274,7 +274,7 @@ pub fn make_invertor(ip_address: String) -> Device {
         name: "Invertor".into(),
         address: DeviceAddress::TcpIP(ip_address), // "192.168.1.7"
         config: DeviceConfig {
-            interval_update_in_sec: 0.5, // 500ms
+            interval_update_in_sec: 0.1, // 500ms
         },
         values: {
             let add_invertor_value = |name: &str, p: u16, adr: u16|

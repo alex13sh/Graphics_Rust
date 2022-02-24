@@ -217,7 +217,7 @@ impl Application for App {
     fn should_exit(&self) -> bool {
         self.has_exit
     }
-    fn scale_factor(&self) -> f64 {0.4}
+    fn scale_factor(&self) -> f64 {0.65}
 
     fn subscription(&self) -> Subscription<Self::Message> {
         let props = &self.meln.properties;
@@ -295,7 +295,7 @@ impl Application for App {
             if enb {
                 log_session.start();
 //                 let log_session = log_session.make_read().unwrap();
-                let file = log_session.make_path_excel();
+                let file = log_session.make_path_excel("low");
                 let f = log_session.write_full();
                 let f = async move {
                     f.await;
@@ -476,7 +476,7 @@ impl App {
 //                     self.devices_disconnect = false;
 //                 }
                 self.devices_disconnect = self.devices.iter()
-                    .filter(|d| d.id().name != "Invertor")
+//                     .filter(|d| d.id().name != "Invertor")
                     .any(|d| !d.is_connect());
             },
             MessageMudbusUpdate::ModbusUpdateAsync_Invertor => {

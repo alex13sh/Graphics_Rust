@@ -314,6 +314,7 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_invertor_value("Источник команд управления (HAND)",    0, 31), // 0 - 8 // 8 - Плата
 
                 add_float_invertor_value("Время усреднения показаний (Ток)",    0,48, 3),
+                add_invertor_value("Версия ПО (Дата)",    0,50),
             ];
 
             // P1
@@ -556,12 +557,14 @@ pub fn make_invertor(ip_address: String) -> Device {
 
                 add_float_invertor_value( "Коэффициент усиление Интегральный",      10,35, 2),
                 add_float_invertor_value( "Коэффициент усиление Пропорциональный",  10,36, 2),
+                add_invertor_value( "Управление режимом старт PM Sensorless Control Word",  10,37),
                 add_float_invertor_value( "Частота перехода с IF режима на PM ",  10,39, 2),
                 add_float_invertor_value( "PM в бессенсорном режиме. Частота перехода с IF без датчика на VF ",  10,40, 2),
                 add_float_invertor_value( "IF-режим постоянная времени фильтра низких частот",  10,41, 1),
                 add_float_invertor_value( "Время обнаружения начального отклонения",  10,42, 0),
                 add_float_invertor_value( "Длительность нулевого напряжения при старте",  10,49, 3),
 
+                add_invertor_value( "PM Initial Rotor Position Detection Method ",  10,53),
             ]);
             // Part 11
             reg.append(&mut vec![

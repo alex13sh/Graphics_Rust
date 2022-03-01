@@ -244,6 +244,12 @@ impl TryFrom<&Value> for f32 {
     }
 }
 
+impl Value {
+    pub fn value_as_f32(&self) -> f32 {
+        f32::try_from(self).unwrap()
+    }
+}
+
 impl From<Vec<ValueInit>> for ModbusValues {
     fn from(values: Vec<ValueInit>) -> Self {
         values.into_iter()

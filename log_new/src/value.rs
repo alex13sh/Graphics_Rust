@@ -200,13 +200,20 @@ pub mod invertor {
     #[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Ord, Eq, Copy)]
     pub struct InvertorAddress(pub u8, pub u8);
 
+    impl From<(u8, u8)> for InvertorAddress {
+        fn from(adr: (u8, u8)) -> Self {
+            InvertorAddress(adr.0, adr.1)
+        }
+    }
+
     #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct InvertorParametr {
     #[serde(deserialize_with = "adr_from_str")]
     #[serde(serialize_with = "adr_to_str")]
         pub address: InvertorAddress, //(u8, u8),
-        pub value: u32,
         pub name: String,
+        pub value: u32,
+        pub value_f32: f32,
     }
 
     use serde::{de, de::Error, Deserializer, Serializer};

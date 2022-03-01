@@ -247,9 +247,9 @@ impl Application for App {
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
 
-            if let Some(stream) = self.log_session.get_statistic_low() {
+            if let Some(stream) = self.log_session.get_statistic_top() {
                 Subscription::from_recipe(
-                    ui::animations::MyStream{name: "statistic_low".into(), stream: stream}
+                    ui::animations::MyStream{name: "statistic_top".into(), stream: stream}
                 ).map(ui::info_pane::Message::UpdateInfo)
                 .map(Message::InfoPane)
             } else {Subscription::none()},
@@ -603,18 +603,19 @@ impl App {
         log::trace!("save_invertor date_time: {:?}; id: {:?};", &dt, id);
         let dt = logger::date_time_to_string_name_short(&dt);
         let file_name = format!("{}) {}", id.id, dt);
-        let path = logger::get_file_path("tables/log/").join(file_name).with_extension(".csv");
+        let path = logger::get_file_path("log/invertor/").join(file_name).with_extension(".csv");
         log::trace!("path: {:?}", &path);
-        let parametrs: Vec<_> = invertor_values.iter_values()
-            .map(|(adr, v, id)| logger::value::device::InvertorParametr {
-                address: format!("({}, {})", adr/256, adr%256),
-                value: v,
-//                 name: id.to_string(),
+        let parametrs = invertor_values.iter_values()
+            .map(|(adr, id, v)| logger::value::invertor::InvertorParametr {
+                address: ((adr/256) as u8, (adr%256) as u8).into(),
                 name: id.sensor_name.clone(),
-            }).collect();
+                value: v.0,
+                value_f32: v.1,
+            });
 //         if let Err(e) = logger::csv::write_invertor_parametrs(&path, parametrs) {
 //             log::error!("logger::csv::write_invertor_parametrs: {:?}", e);
 //         }
+        logger::save_invertor(path, parametrs);
     }
 
     fn is_started(&self) -> bool {

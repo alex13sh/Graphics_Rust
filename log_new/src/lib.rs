@@ -168,3 +168,19 @@ impl LogSession {
         Some(stat_info::simple::calc(lines).boxed())
     }
 }
+
+use std::path::Path;
+pub type DeviceID = u8;
+impl LogSession {
+    pub fn save_invertor(&self, id: DeviceID, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
+        let dir = self.log_dir.join("invertor");
+        let file_name = format!("{} ({}).csv", self.date_time_str(), id);
+        let params = crate::convert::iterator::invertor_parametrs_sort(params);
+        files::csv::write_values(dir.join(file_name), params) ;
+    }
+}
+
+pub fn save_invertor(path: impl AsRef<Path>, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
+    let params = crate::convert::iterator::invertor_parametrs_sort(params);
+    files::csv::write_values(path, params);
+}

@@ -145,6 +145,12 @@ pub mod iterator {
             value: l.value,
         })
     }
+
+    pub fn invertor_parametrs_sort(params: impl Iterator<Item=invertor::InvertorParametr>) -> impl Iterator<Item=invertor::InvertorParametr> {
+        let mut arr: Vec<_> = params.collect();
+        arr.sort_by_key(|p| p.address);
+        arr.into_iter()
+    }
 }
 
 pub mod stream {

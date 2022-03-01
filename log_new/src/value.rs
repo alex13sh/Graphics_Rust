@@ -196,11 +196,39 @@ pub mod simple {
 
 pub mod invertor {
     use super::*;
+
+    #[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Ord, Eq, Copy)]
+    pub struct InvertorAddress(pub u8, pub u8);
+
     #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct InvertorParametr {
-        pub address: String, //(u8, u8),
+    #[serde(deserialize_with = "adr_from_str")]
+    #[serde(serialize_with = "adr_to_str")]
+        pub address: InvertorAddress, //(u8, u8),
         pub value: u32,
         pub name: String,
+    }
+
+    use serde::{de, de::Error, Deserializer, Serializer};
+    pub(crate) fn adr_from_str<'de, D>(deserializer: D) -> Result<InvertorAddress, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        let adr = s.trim_matches(|c| c == '(' || c==')').split_once(',').ok_or("Address Invalid").map_err(D::Error::custom)?;
+        Ok(InvertorAddress (
+            adr.0.trim().parse().map_err(D::Error::custom)?,
+            adr.1.trim().parse().map_err(D::Error::custom)?
+        ))
+    }
+
+    pub(crate) fn adr_to_str<S>(adr: &InvertorAddress, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+    //     let s = dt.to_rfc3339_opts(SecondsFormat::Millis, false);
+        let s = format!("({}, {})", adr.0, adr.1);
+        serializer.serialize_str(&s)
     }
 }
 

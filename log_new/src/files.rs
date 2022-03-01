@@ -400,6 +400,20 @@ pub mod excel {
     }
 }
 
+pub mod invertor {
+
+    #[test]
+    fn config_csv_sort() {
+        use crate::files::csv;
+        let dir = "/home/user/.local/share/graphicmodbus/tables/save_invertor_top";
+        let file_name = "22_11_2021 12_17_59.";
+
+        let params = csv::read_values(format!("{}/{}.csv", dir, file_name)).unwrap();
+        let params = crate::convert::iterator::invertor_parametrs_sort(params);
+        csv::write_values(format!("{}/{}_sort.csv", dir, file_name), params).unwrap();
+    }
+}
+
 mod inner {
     pub use futures::stream::{Stream, StreamExt};
     pub use std::path::{PathBuf, Path};

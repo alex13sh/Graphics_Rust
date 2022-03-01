@@ -150,7 +150,9 @@ impl LogSession {
         let f4 = self.write_csv_raw_diff();
         async move {
             futures::join!(
-                f1, f2l, f2t, f3, f4
+                f1,
+                f2l, f2t,
+                f3, f4
             );
         }
     }

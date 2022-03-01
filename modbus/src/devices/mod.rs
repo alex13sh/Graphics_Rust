@@ -18,18 +18,24 @@ pub struct Devices {
 impl Devices {
     pub fn new() -> Self {
         let devices: Vec<_> = vec![
+            init::make_owen_analog_2("192.168.1.13", 11).with_id(2),
+
             init::make_invertor("192.168.1.5".into()).with_id(5),
             init::make_invertor("192.168.1.6".into()).with_id(6),
         
-            init::make_i_digit("192.168.1.10".into()).with_id(3), 
+            init::make_i_digit("192.168.1.10".into()).with_id(3),
             init::make_o_digit("192.168.1.12".into()).with_id(4),
             init::make_owen_analog_1("192.168.1.11").with_id(1),
-            init::make_owen_analog_2("192.168.1.13", 11).with_id(2),
+
             init::make_pdu_rs("192.168.1.13", 12).with_id(7),
-            init::make_mkon("192.168.1.13", 1),
+//             init::make_mkon("192.168.1.13", 1),
         ].into_iter().map(MDevice::from).map(Arc::new).collect();
         
         let values = Self::init_values(&devices);
+
+//         let devices = devices.into_iter()
+//             .filter(|d| d.id().id == 2)
+//             .collect();
         
         Devices {
             values: values,

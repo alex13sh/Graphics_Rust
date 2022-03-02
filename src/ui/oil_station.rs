@@ -42,7 +42,7 @@ impl OilStation {
                     values.half_bottom.invertor.индикация_скорости.clone(),
 
                     values.half_bottom.vibro.clone(),
-                    // Давление воздуха в Клапанах
+                    values.klapans.давление_воздуха.clone(),
                     values.vacuum.vacuum.clone(),
                 ]
             },

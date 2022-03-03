@@ -12,17 +12,19 @@ struct MyKlapan {
     shk: String,
     name: String,
     enb: bool,
+    turn: bool,
     state: button::State,
 }
 struct MyButton {
     name: String,
-    enb: bool,
+    turn: bool,
     state: button::State,
 }
 
 pub struct Klapans {
     klapans: Vec<MyKlapan>,
     buttons: Vec<MyButton>,
+    enb: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -31,6 +33,7 @@ pub enum Message {
     ToggledKlapan(String, bool),
     PressButton(String),
     StatusChanged(meln_logic::watcher::VacuumStatus),
+//     ДавлениеВоздухаChanged(f32),
 }
 
 impl Klapans {
@@ -50,17 +53,19 @@ impl Klapans {
             "ШК в рабочее положение",
         ];
         Klapans {
+            enb: true,
             klapans: klapan_names.into_iter()
                 .map(|(shk, n)| MyKlapan {
                     shk: (*shk).into(),
                     name: (*n).into(),
-                    enb: false,
+                    enb: true,
+                    turn: false,
                     state: Default::default()
                 }).collect(),
             buttons: button_names.into_iter()
                 .map(|n| MyButton {
                     name: (*n).into(),
-                    enb: false,
+                    turn: false,
                     state: Default::default()
                 }).collect(),
         }
@@ -73,7 +78,7 @@ impl Klapans {
                 name: "Клапана".into(), 
                 sub: props.klapans_шк_send.subscribe()
             }
-        ).map(|(name, enb)| Message::ToggledKlapan(name, enb))
+        ).map(|(name, turn)| Message::ToggledKlapan(name, turn))
     }
 
     pub fn subscription_vacuum(&self, props: &meln_logic::watcher::VacuumStation) -> iced::Subscription<Message> {
@@ -87,15 +92,15 @@ impl Klapans {
         match message {
         Message::PressButton(name) => {
             let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
-            match (name.as_str(), pb.enb) {
+            match (name.as_str(), pb.turn) {
             ("Уменьшить давление", false) => {
-                pb.enb = true;
+                pb.turn = true;
                 values.davl_down();
             }, ("Увеличить давление", false) => {
-                pb.enb = true;
+                pb.turn = true;
                 values.davl_up();
             }, ("Увеличить давление" | "Уменьшить давление", true) => {
-                pb.enb = false;
+                pb.turn = false;
                 values.davl_dis();
             },
             _ => {}
@@ -112,9 +117,9 @@ impl Klapans {
             log::trace!(target: "meln_logic::vacuum","pb_name: {}", pb_name);
             for pb in &mut self.buttons {
                 if pb.name == pb_name {
-                    pb.enb = true;
+                    pb.turn = true;
                 } else {
-                    pb.enb = false;
+                    pb.turn = false;
                 }
             }
         }
@@ -126,10 +131,10 @@ impl Klapans {
         match message {
         Message::PressButton(name) => {
             let mut pb = self.buttons.iter_mut().find(|s| s.name==name).unwrap();
-            match (name.as_str(), pb.enb) {
+            match (name.as_str(), pb.turn) {
             ("ШК в рабочее положение", _) => {
-                pb.enb = !pb.enb;
-                values.ШК_в_рабочее_положение(pb.enb);
+                pb.turn = !pb.turn;
+                values.ШК_в_рабочее_положение(pb.turn);
             },
             _ => {}
             }
@@ -140,29 +145,41 @@ impl Klapans {
     
     pub fn update(&mut self, message: Message, values: &meln_logic::values::Klapans) {
         match message {
-        Message::ToggleKlapan(name, enb) => {
-            values.klapan_turn(name.as_str(), enb);
-        }
-        Message::ToggledKlapan(name, enb) => {
-            if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
-                v.enb = enb;
+        Message::ToggleKlapan(name, turn) => {
+            if let Err(_) = values.klapan_turn(name.as_str(), turn) {
+                self.enb = false;
+            } else {
+                self.enb = true;
             }
         }
+        Message::ToggledKlapan(name, turn) => {
+            if let Some(v) = self.klapans.iter_mut().find(|s| s.name==name) {
+                v.turn = turn;
+            }
+        },
+//         Message::ДавлениеВоздухаChanged(давление) => {
+//             if
+//         }
         _ => {}
         }
     }
 
     pub fn view(&mut self) -> Element<Message> {
+        let senb = self.enb;
+
         let controls_klapan = self.klapans.iter_mut()
             .fold(Row::new().spacing(5),
-                |row, MyKlapan {ref name, enb: ref check, state: pb, ..}|
+                |row, MyKlapan {ref name, ref enb, turn: ref check, state: pb, ..}|
                 row.push(Button::new(pb, Text::new(name))
-                .style(style::Button::Check{checked: *check})
+                .style(style::Button::Klapan {
+                    enabled: senb,
+                    checked: *check
+                })
                 .on_press(Message::ToggleKlapan(name.clone(), !check)))
             );
         let controls_buttons = self.buttons.iter_mut()
             .fold(Row::new().spacing(5),
-                |row, MyButton{ref name, enb: ref check, state: pb}|
+                |row, MyButton{ref name, turn: ref check, state: pb}|
                 row.push(Button::new(pb, Text::new(name))
                 .style(style::Button::Check{checked: *check})
                 .on_press(Message::PressButton(name.clone())))

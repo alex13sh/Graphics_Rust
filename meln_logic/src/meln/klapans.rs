@@ -40,14 +40,20 @@ impl From<&ModbusValues> for Klapans {
     }
 }
 
+pub enum KlapansError {
+    НедостаточноДавленияВоздуха,
+    НетОбратнойСвязи,
+}
+
 impl Klapans {
 
-    pub fn klapan_turn(&self, name: &str, enb: bool) {
-//         if self.давление_воздуха.is_error() {
-//             return;
-//         }
+    pub fn klapan_turn(&self, name: &str, enb: bool) -> Result<(), KlapansError> {
+        if self.давление_воздуха.is_error() {
+            return Err(KlapansError::НедостаточноДавленияВоздуха);
+        }
         
         self.klapans.get_value_arc(name).unwrap().set_bit(enb);
+        Ok(())
     }
     fn двигатель_компрессора_воздуха_turn(&self, enb: bool) {
         self.двигатель_компрессора_воздуха.set_bit(enb);

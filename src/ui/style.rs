@@ -1,40 +1,44 @@
 use iced::{button, container, Background, Color, Vector};
 
 pub enum Button {
-    Check { checked: bool },
+    Klapan {
+        enabled: bool,
+        checked: bool
+    },
+    Check {
+        checked: bool
+    },
     Exit
+}
+
+fn button_style_color(color: Color) -> button::Style {
+    button::Style {
+        background: Some(Background::Color(color)),
+        border_radius: 10_f32,
+        text_color: Color::WHITE,
+        ..button::Style::default()
+    }
+}
+
+fn button_style_checked(checked: bool) -> button::Style {
+    if checked {
+        button_style_color(Color::from_rgb8(150, 0,0))
+    } else {
+        button_style_color(Color::from_rgb8(0, 150, 0))
+    }
 }
 
 impl button::StyleSheet for Button {
     fn active(&self) -> button::Style {
+        let enabled = &true;
         match self {
-        Button::Check { checked } => if *checked {
-            button::Style {
-                background: Some(Background::Color(
-                    Color::from_rgb8(150, 0,0),
-                )),
-                border_radius: 10_f32,
-                text_color: Color::WHITE,
-                ..button::Style::default()
-            }
-        } else {
-            button::Style {
-                background: Some(Background::Color(
-                    Color::from_rgb8(0, 150, 0),
-                )),
-                border_radius: 10_f32,
-                text_color: Color::WHITE,
-                ..button::Style::default()
-            }
+        Button::Check { checked } => button_style_checked(*checked),
+        Button::Klapan { enabled, checked } => if *enabled {
+                button_style_checked(*checked)
+            } else {
+                button_style_color(Color::from_rgb8(150, 150, 150))
         },
-        Button::Exit => button::Style {
-            background: Some(Background::Color(
-                Color::from_rgb8(150, 0,0),
-            )),
-            border_radius: 10_f32,
-            text_color: Color::WHITE,
-            ..button::Style::default()
-        }
+        Button::Exit => button_style_color(Color::from_rgb8(150, 0,0)),
         }
     }
 

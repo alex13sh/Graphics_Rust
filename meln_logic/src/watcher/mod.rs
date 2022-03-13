@@ -11,7 +11,7 @@ pub use meln::{
     oil_station::watcher::OilStation,
     vacuum_station::watcher::{VacuumStation, Status as VacuumStatus},
     material::watcher::Material,
-    klapans::watcher::Klapans,
+    klapans::watcher::{Klapans, KlapansError},
 };
 
 pub use tokio::sync::watch::Receiver as Subscription;

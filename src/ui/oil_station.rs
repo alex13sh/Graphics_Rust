@@ -70,9 +70,8 @@ impl OilStation {
 
     pub fn subscription(&self, props: &meln_logic::watcher::OilStation) -> iced::Subscription<Message> {
         use super::animations::PropertyAnimation;
-        iced::Subscription::from_recipe(
-            PropertyAnimation::new("МаслоСтанция", props.motor.subscribe())
-        ).map(Message::OilMotor)
+        PropertyAnimation::new_sub("МаслоСтанция", props.motor.subscribe())
+            .map(Message::OilMotor)
     }
 
     pub fn update(&mut self, message: Message, values: &meln_logic::values::OilStation) {

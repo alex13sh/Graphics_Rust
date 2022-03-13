@@ -52,6 +52,15 @@ impl Meln {
         self.half_top.stop();
         self.half_bottom.stop();
     }
+
+
+    pub fn уменьшить_давление(&self) {
+        self.vacuum.davl_down();
+    }
+
+    pub fn ШК_в_рабочее_положение(&self, enb: bool) {
+//         self.material.ШК_в_рабочее_положение();
+    }
 }
 
 pub mod watcher {
@@ -235,7 +244,7 @@ pub mod watcher {
                     Измельчение_материала
                 } else {
                     let mut клапан_помольной_камеры = meln.material.клапан_помольной_камеры.subscribe();
-                    let mut клапан_нижнего_контейнера = meln.material.клапан_помольной_камеры.subscribe();
+                    let mut клапан_нижнего_контейнера = meln.material.клапан_нижнего_контейнера.subscribe();
                     changed_any!(клапан_помольной_камеры, клапан_нижнего_контейнера);
                     self
                 }

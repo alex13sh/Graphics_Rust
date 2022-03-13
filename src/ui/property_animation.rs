@@ -13,6 +13,14 @@ impl <T> PropertyAnimation<T> {
             sub: sub,
         }
     }
+    pub fn new_sub<H, E>(name: &str, sub: meln_logic::watcher::Subscription<T>) -> subscription::Subscription<H, E, T>
+        where H: std::hash::Hasher,
+        T: Clone + Send + Sync + 'static
+    {
+        subscription::Subscription::from_recipe(
+            Self::new(name, sub)
+        )
+    }
 }
 
 impl<H, I, T> subscription::Recipe<H, I> for PropertyAnimation<T>
@@ -50,6 +58,23 @@ where
 pub struct BroadcastAnimation<T> {
     pub name: String,
     pub sub: tokio::sync::broadcast::Receiver<T>,
+}
+
+impl <T> BroadcastAnimation<T> {
+    pub fn new(name: &str, sub: tokio::sync::broadcast::Receiver<T>) -> Self {
+        BroadcastAnimation {
+            name: name.to_owned(),
+            sub: sub,
+        }
+    }
+    pub fn new_sub<H, E>(name: &str, sub: tokio::sync::broadcast::Receiver<T>) -> subscription::Subscription<H, E, T>
+        where H: std::hash::Hasher,
+        T: Clone + Send + Sync + 'static
+    {
+        subscription::Subscription::from_recipe(
+            Self::new(name, sub)
+        )
+    }
 }
 
 impl<H, I, T> subscription::Recipe<H, I> for BroadcastAnimation<T>

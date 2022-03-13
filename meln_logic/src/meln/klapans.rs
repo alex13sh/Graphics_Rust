@@ -40,6 +40,7 @@ impl From<&ModbusValues> for Klapans {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum KlapansError {
     НедостаточноДавленияВоздуха,
     НетОбратнойСвязи,
@@ -58,6 +59,10 @@ impl Klapans {
     fn двигатель_компрессора_воздуха_turn(&self, enb: bool) {
         self.двигатель_компрессора_воздуха.set_bit(enb);
     }
+
+    pub fn ШК_в_рабочее_положение(&self, enb: bool) {
+
+    }
 }
 
 pub mod watcher {
@@ -65,6 +70,16 @@ pub mod watcher {
     use std::collections::HashMap;
     use tokio::sync::broadcast;
     
+    use bitflags::bitflags;
+
+    bitflags! {
+        #[derive(Default)]
+        pub struct KlapansError: u8 {
+            const НедостаточноДавленияВоздуха = 1<<0;
+            const НетОбратнойСвязи = 1<<1;
+        }
+    }
+
     pub struct Klapans {
         pub давление_воздуха: Property<f32>,
         
@@ -73,6 +88,8 @@ pub mod watcher {
         
         pub klapans_шк: HashMap<(String, String), Property<bool>>,
         pub klapans_шк_send: broadcast::Sender<(String, bool)>,
+
+        pub klapans_error: Property<KlapansError>,
     }
     impl Klapans {
         pub(crate) fn update_property(&self, values: &super::Klapans) {
@@ -81,6 +98,18 @@ pub mod watcher {
             }
             for ((шк, _n), p) in &self.klapans_шк {
                 p.set(values.klapans_шк.get_value_arc(&format!("Клапан {} открыт", шк)).unwrap().get_bit());
+            }
+
+            { // Обновление значения давления воздуха
+                use modbus::{Value, TryFrom};
+                let давление_воздуха: f32 = f32::try_from(&values.давление_воздуха as &Value).unwrap(); // todo: Обработка ошибок
+                self.давление_воздуха.set(давление_воздуха);
+            }
+            { // Обновление флага ошибки
+//                 self.klapans_error.set(Some(super::KlapansError::НедостаточноДавленияВоздуха));
+                let mut new_flags = self.klapans_error.get();
+                new_flags.set(KlapansError::НедостаточноДавленияВоздуха, values.давление_воздуха.is_error());
+                self.klapans_error.set(new_flags);
             }
         }
         
@@ -107,6 +136,14 @@ pub mod watcher {
                         }
                     }
                 });
+
+            let _fut_error = {
+                let mut sub = self.давление_воздуха.subscribe();
+                async move {
+                    sub.changed().await;
+                    let value = sub.borrow();
+//                     if *value
+            }};
             tokio::join!(
                 futures_util::future::join_all(futs1),
                 futures_util::future::join_all(futs2),
@@ -130,6 +167,8 @@ pub mod watcher {
                 klapans_send: broadcast::channel(16).0,
                 klapans_шк: klapan_names.iter().map(|&(шк, n)| ((шк.to_owned(), n.to_owned()), Property::<bool>::default())).collect(),
                 klapans_шк_send: broadcast::channel(16).0,
+
+                klapans_error: Property::default(),
             }
         }
     }

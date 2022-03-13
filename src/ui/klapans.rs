@@ -34,6 +34,7 @@ pub enum Message {
     PressButton(String),
     StatusChanged(meln_logic::watcher::VacuumStatus),
 //     ДавлениеВоздухаChanged(f32),
+    KlapansError(meln_logic::watcher::KlapansError),
 }
 
 impl Klapans {
@@ -72,13 +73,13 @@ impl Klapans {
     }
 
     pub fn subscription(&self, props: &meln_logic::watcher::Klapans) -> iced::Subscription<Message> {
-        use super::animations::BroadcastAnimation;
-        iced::Subscription::from_recipe(
-            BroadcastAnimation {
-                name: "Клапана".into(), 
-                sub: props.klapans_шк_send.subscribe()
-            }
-        ).map(|(name, turn)| Message::ToggledKlapan(name, turn))
+        use super::animations::*;
+        iced::Subscription::batch(vec![
+            PropertyAnimation::new_sub("Ошибка", props.klapans_error.subscribe())
+                .map(Message::KlapansError),
+            BroadcastAnimation::new_sub("Клапана", props.klapans_шк_send.subscribe())
+                .map(|(name, turn)| Message::ToggledKlapan(name, turn))
+        ])
     }
 
     pub fn subscription_vacuum(&self, props: &meln_logic::watcher::VacuumStation) -> iced::Subscription<Message> {
@@ -160,6 +161,10 @@ impl Klapans {
 //         Message::ДавлениеВоздухаChanged(давление) => {
 //             if
 //         }
+        Message::KlapansError(err) => {
+            // Если ошибки нет, то клавиши работают
+            self.enb = err.is_empty();
+        }
         _ => {}
         }
     }

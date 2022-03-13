@@ -28,6 +28,7 @@ impl Material {
         self.клапан_нижнего_контейнера.set_bit(enb);
         self.клапан_верхнего_контейнера.set_bit(enb);
         //self.set_klapan("Клапан подачи материала", enb); // ШК2
+        self.клапан_подачи_материала.set_bit(false);
         self.клапан_помольной_камеры.set_bit(enb);
     }
 }

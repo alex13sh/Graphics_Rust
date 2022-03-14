@@ -30,6 +30,11 @@ path = "./src/app_complex_simple_ui.rs"
 name = "app_config"
 path = "./src/app_config.rs"
 
+[profile.release]
+debug = false
+#opt-level = "s"
+#lto = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -51,7 +56,7 @@ simplelog = "0.10"
 logger = {path = "./log_new", package = "log_new"}
 modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
-graphic = {path = "./graphic"}
+#graphic = {path = "./graphic"}
 
 [patch.crates-io]
 iced = {git = "https://github.com/hecrj/iced", rev="391825788"}
@@ -70,7 +75,7 @@ members = [
 ]
 
 [features]
-default = ["graphic/plotters", "graphic/iced_backend"] #, "test"]
+#default = ["graphic/plotters", "graphic/iced_backend"] #, "test"]
 
 test = ["modbus/test"]
 

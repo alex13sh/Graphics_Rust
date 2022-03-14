@@ -84,6 +84,7 @@ pub mod watcher {
         pub klapans: Klapans,
         
         pub step: Property<MelnStep>,
+        pub is_start_err: Property<bool>,
     }
     
     impl Meln {
@@ -113,6 +114,13 @@ pub mod watcher {
                     let start_bottom = *start_bottom.borrow();
                     log::trace!("Meln is started: {:?}", start_top || start_bottom);
                     self.is_started.set(start_top || start_bottom);
+                    if start_top || start_bottom {
+                        if !MelnStep::check_step_work(self) {
+                            self.is_start_err.set(true);
+                        }
+                    } else {
+                        self.is_start_err.set(false);
+                    }
                 }
             };
 
@@ -120,7 +128,7 @@ pub mod watcher {
                 self.step.send(self.step.get());
                 loop {
                     let next_step = self.step.get()
-                        .check_next_step(self).await;
+                        .check_next_step_async(self).await;
                     log::trace!("Next Step: {:?}", &next_step);
                     self.step.set(next_step);
                 }
@@ -145,7 +153,7 @@ pub mod watcher {
                 match is_started {
                 false => {
                     values.vacuum.davl_dis();
-                    sleep(Duration::from_millis(10_000)).await;
+                    sleep(Duration::from_millis(5_000)).await;
                     values.oil.stop();
                 }
                 true => {
@@ -191,7 +199,61 @@ pub mod watcher {
     }
     
     impl MelnStep {
-        async fn check_next_step(self, meln: &Meln) -> Self {
+        fn check_step_3(meln: &Meln) -> bool {
+            true == meln.material.клапан_помольной_камеры.get() &&
+            true == meln.material.клапан_верхнего_контейнера.get() &&
+            true == meln.material.клапан_нижнего_контейнера.get()
+        }
+        fn check_step_work(meln: &Meln) -> bool {
+            meln.is_started.get() && meln.oil.motor.get() &&
+            Self::check_step_3(meln) &&
+            meln.material.dozator.motor.get()
+        }
+
+        fn check_next_step(self, meln: &Meln) -> Self {
+            use MelnStep::*;
+            match self {
+            Начало_работы => match (
+                    meln.material.клапан_помольной_камеры.get(),
+                    meln.material.клапан_верхнего_контейнера.get(),
+                    meln.material.клапан_нижнего_контейнера.get()
+                ) {
+                    (true, true, true) => Step_3,
+                    _ => self
+                },
+            // ШК в рабочее положение
+            Step_3 => match (
+                    meln.vacuum.motor.get(),
+                ) {
+                    (true,) => Откачка_воздуха_из_вакуумной_системы,
+                    _ => self
+                },
+            Откачка_воздуха_из_вакуумной_системы => match (
+                    meln.is_started.get(),
+                    meln.oil.motor.get(),
+                ) {
+                    (true, true) => Запуск_маслостанции_и_основных_двигателей,
+                    _ => self
+                },
+            Запуск_маслостанции_и_основных_двигателей => match (
+                    meln.material.dozator.motor.get(),
+                    meln.material.клапан_подачи_материала.get()
+                ) {
+                    (true, true) => Подача_материала,
+                    _ => self
+                },
+//             Подача_материала => match (
+//                     meln.material.клапан_помольной_камеры.get(),
+//                     meln.material.клапан_нижнего_контейнера.get(),
+//                 ) {
+//                 (true) => Измельчение_материала,
+//                 _ => self
+//                 },
+                _ => self
+            }
+        }
+
+        async fn check_next_step_async(self, meln: &Meln) -> Self {
             use MelnStep::*;
             #[allow(unused_must_use)]
             match self {

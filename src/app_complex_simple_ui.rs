@@ -113,6 +113,8 @@ pub struct App {
     devices_queue: HashMap<DeviceID, Arc<Device>>,
     log_session: LogSession,
     is_logging: bool,
+
+    is_error: bool,
 }
 
 
@@ -157,6 +159,7 @@ pub enum MessageMudbusUpdate {
 #[derive(Debug, Clone)]
 pub enum MelnMessage {
     IsStartedChanged(bool),
+    IsStartErrorChanged(bool),
     IsWorkedChanged(bool),
     OilMotorChanged(bool),
     NextStep(meln_logic::watcher::MelnStep),
@@ -193,6 +196,8 @@ impl Application for App {
             devices_queue: HashMap::new(),
             log_session: logger::LogSession::new(),
             is_logging: false,
+
+            is_error: false,
         },
         
             Command::batch(vec![
@@ -377,13 +382,17 @@ impl Application for App {
             .push(Space::with_height(Length::Fill))
             .push(row_exit);
 
-        Container::new(col)
+        let mut cont = Container::new(col)
             .width(Length::Fill)
             .height(Length::Fill)
             .padding(20)
             .center_x()
-            .center_y()
-            .into()
+            .center_y();
+        if self.is_error {
+            cont = cont.style(ui::style::WarnContainer);
+        }
+
+            cont.into()
     }
 }
 
@@ -503,19 +512,17 @@ impl App {
     fn sub_meln(props: &meln_logic::watcher::Meln) -> Subscription<MelnMessage> {
         use ui::animations::PropertyAnimation;
         Subscription::batch(vec![
-            Subscription::from_recipe(
-                PropertyAnimation::new("IsStarted", props.is_started.subscribe())
-            ).map(MelnMessage::IsStartedChanged),
-            Subscription::from_recipe(
-                PropertyAnimation::new("IsWorked", props.is_worked.subscribe())
-            ).map(MelnMessage::IsWorkedChanged),
-            Subscription::from_recipe(
-                PropertyAnimation::new("Steps", props.step.subscribe())
-            ).map(MelnMessage::NextStep),
+            PropertyAnimation::new_sub("IsStarted", props.is_started.subscribe())
+                .map(MelnMessage::IsStartedChanged),
+            PropertyAnimation::new_sub("IsStartError", props.is_start_err.subscribe())
+                .map(MelnMessage::IsStartErrorChanged),
+            PropertyAnimation::new_sub("IsWorked", props.is_worked.subscribe())
+                .map(MelnMessage::IsWorkedChanged),
+            PropertyAnimation::new_sub("Steps", props.step.subscribe())
+                .map(MelnMessage::NextStep),
 
-            Subscription::from_recipe(
-                PropertyAnimation::new("OilMotor", props.oil.motor.subscribe())
-            ).map(MelnMessage::OilMotorChanged),
+            PropertyAnimation::new_sub("OilMotor", props.oil.motor.subscribe())
+                .map(MelnMessage::OilMotorChanged),
         ])
     }
 
@@ -536,6 +543,7 @@ impl App {
 //             }
             return async move{Message::LoggingTurn(is_started)}.into();
         }
+        IsStartErrorChanged(err) => self.is_error = err,
         IsWorkedChanged(enb) => self.is_worked = enb,
         NextStep(step) => {
             self.txt_status = format!("{:?}",step);

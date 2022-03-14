@@ -68,6 +68,16 @@ impl container::StyleSheet for MainContainer {
     }
 }
 
+pub struct WarnContainer;
+impl container::StyleSheet for WarnContainer {
+    fn style(&self) -> container::Style {
+        container::Style {
+            background: Some(Background::Color([1.0, 0.8, 0.0].into())),
+            .. Default::default()
+        }
+    }
+}
+
 pub struct ValueContainer;
 impl container::StyleSheet for ValueContainer {
     fn style(&self) -> container::Style {

@@ -246,7 +246,13 @@ impl TryFrom<&Value> for f32 {
 
 impl Value {
     pub fn value_as_f32(&self) -> f32 {
-        f32::try_from(self).unwrap()
+        match f32::try_from(self) {
+        Ok(res) => res,
+        Err(err) => panic!("Value err: {:?}; for value: {:?}", err, self.id),
+        }
+    }
+    pub fn try_value_as_f32(&self) -> Option<f32> {
+        f32::try_from(self).ok()
     }
 }
 

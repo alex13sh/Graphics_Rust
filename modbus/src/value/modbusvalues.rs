@@ -48,11 +48,12 @@ impl ModbusValues {
     }
     
     pub fn iter_values(&self) -> impl Iterator<Item=(u16, &ValueID, (u32, f32))> + '_ {
-        self.0.iter().map(|(k, v)| (
+        self.0.iter().filter_map(|(k, v)| Some((
                 v.address(),
                 k,
-                (v.value(), v.value_as_f32())
+                (v.value(), v.try_value_as_f32()?)
             ))
+        )
     }
 }
 

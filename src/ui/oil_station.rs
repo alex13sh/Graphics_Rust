@@ -34,15 +34,15 @@ impl OilStation {
                     values.oil.уровень_масла.clone(),
                     values.oil.температура.clone(),
                     values.oil.давление_масла.clone(),
-                    
-                    values.half_top.invertor.индикация_мощности.clone(),
-                    values.half_bottom.invertor.выходной_ток.clone(),
-                    values.half_bottom.invertor.индикация_мощности.clone(),
-                    values.half_bottom.invertor.скорость_двигателя.clone(),
-                    values.half_bottom.invertor.индикация_скорости.clone(),
-
-                    values.half_bottom.vibro.clone(),
                     values.klapans.давление_воздуха.clone(),
+
+//                     values.half_top.invertor.индикация_мощности.clone(),
+//                     values.half_bottom.invertor.выходной_ток.clone(),
+                    values.half_bottom.invertor.индикация_мощности.clone(),
+//                     values.half_bottom.invertor.скорость_двигателя.clone(),
+                    values.half_bottom.invertor.индикация_скорости.clone(),
+                    values.half_bottom.vibro.clone(),
+
                     values.vacuum.vacuum.clone(),
                 ]
             },

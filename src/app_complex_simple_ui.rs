@@ -231,8 +231,10 @@ impl Application for App {
             Subscription::batch(vec![
                 time::every(std::time::Duration::from_millis(interval_update))
                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync),
-//                 time::every(std::time::Duration::from_secs(20))
-//                 .map(|_| MessageMudbusUpdate::ModbusConnect),
+                if self.devices_disconnect && !self.is_logging {
+                    time::every(std::time::Duration::from_secs(10))
+                    .map(|_| MessageMudbusUpdate::ModbusConnect)
+                } else {Subscription::none()},
 //                 time::every(std::time::Duration::from_secs(30*60))
 //                 .map(|_| MessageMudbusUpdate::ModbusUpdateAsync_Invertor),
                 Self::sub_devices(self.devices.iter().cloned()),

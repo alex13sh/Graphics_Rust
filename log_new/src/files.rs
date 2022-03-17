@@ -302,38 +302,66 @@ pub mod excel {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
-        
-        let lines = values_line; //crate::stat_info::simple::filter_half_low(values_line);
-        
+
+        async move {
+            let file_path = file_path.as_ref();
+            let mut f = File::create(file_path.with_extension("xlsx"));
+            let s = f.open_sheet("Sheet1");
+            let l1 = write_file_inner(values_line, s);
+            l1.await;
+        }
+    }
+
+    fn write_file_inner<'f>(lines: impl Stream<Item=SimpleValuesLine> +'f, mut sheet: Sheet<'f>) -> impl Future<Output=()> +'f {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use futures::future::join;
+
         let (s, l1) = broadcast(10);
-        
+
         let f_to_channel = lines.map(|l| Ok(l)).forward(s);
         let l2 = l1.clone();
         let f_from_channel = async move {
-            let file_path = file_path.as_ref();
             let l1 = filter_half(l1);
             let l1 = values_simple_line_to_hashmap(l1);
 //                 let l2 = crate::stat_info::simple::filter_half_low(l2);
 //                 let l2 = values_line_to_simple(l2);
-            
-            let mut f = File::create(file_path.with_extension("xlsx"));
-            let mut s = f.open_sheet("Sheet1");
-            dbg!(file_path);
+
             let (_, stat) = join(
-                s.write_values((1,1), l1),
+                sheet.write_values((1,1), l1),
                 crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
             ).await;
             dbg!("await");
             if let Some(stat) = stat {
-                s.write_state((12,2), stat);
-                f.save();
-                dbg!("save");
+                sheet.write_state((12,2), stat);
             }
         };
         async move {
             let _ = join(f_to_channel, f_from_channel).await;
         }
     }
+
+    pub fn write_file_2<V>(file_path: impl AsRef<Path> + 'static, vl_top: V, vl_low: V) -> impl Future<Output=()>
+        where V: Stream<Item=SimpleValuesLine>
+    {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use futures::future::join;
+
+        async move {
+            let file_path = file_path.as_ref();
+            let mut f = File::create(file_path.with_extension("xlsx"));
+            let s1 = f.open_sheet("Sheet1");
+            let s2 = f.open_sheet("Sheet2");
+
+            let l1 = write_file_inner(vl_top, s1);
+    //         let l2 = list(vl_low, s2);
+
+//             let _ = join(l1, l2).await;
+            l1.await;
+        }
+    }
+
     
     #[test]
     fn test_convert_csv_raw_to_excel() {

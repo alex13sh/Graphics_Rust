@@ -194,6 +194,8 @@ pub mod csv {
 }
 
 pub mod excel {
+    use futures::future::BoxFuture;
+    use futures::FutureExt;
     use umya_spreadsheet::structs::*;
 //     use excel::*;
     use super::inner::*;
@@ -230,11 +232,20 @@ pub mod excel {
         ws: &'f mut Worksheet
     }
     
-    impl <'f> Sheet <'f> {
-        pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+    
+    trait SheetExt {
+        fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) -> BoxFuture<'_, ()> ;
+        fn write_state(&mut self, pos: (usize, usize), state: LogState);
+    }  
+
+    impl <'f> SheetExt for Sheet <'f> {
+        fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin)
+            -> BoxFuture<'_, ()>
+        {
+            async {
             let mut values = values.enumerate().peekable();
             
-            let l = if let Some(ref l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
+            let l = if let Some(l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
             else {return};
 
             self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + 0)
@@ -254,8 +265,9 @@ pub mod excel {
                     self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1 + row+1).set_value(v);
                 }
             };
+            }.boxed()
         }
-        pub fn write_state(&mut self, pos: (usize, usize), state: LogState) {
+        fn write_state(&mut self, pos: (usize, usize), state: LogState) {
             let mut fields = Vec::new();
             fields.push(("Время запуска", state.date_time.unwrap().to_string()));
             fields.push(("Время работы (сек)", state.time_all.to_string()));
@@ -352,7 +364,7 @@ pub mod excel {
             let file_path = file_path.as_ref();
             let mut f = File::create(file_path.with_extension("xlsx"));
             let s1 = f.open_sheet("Sheet1");
-            let s2 = f.open_sheet("Sheet2");
+            // let s2 = f.open_sheet("Sheet2");
 
             let l1 = write_file_inner(vl_top, s1);
     //         let l2 = list(vl_low, s2);

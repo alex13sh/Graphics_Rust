@@ -215,14 +215,11 @@ pub mod excel {
         pub fn save(&self) {
             umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path).unwrap();
         }
-        pub fn open_sheet<Sh>(&mut self, name: &'static str) -> Sheet<Sh> 
-            where Sh: SheetInner
+        pub fn open_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> 
         {
-            Sheet {
-//                 file: self,
-//                 name: name,
-                ws: self.book.get_sheet_by_name_mut(name).unwrap(),
-            }
+            Sheet::from(
+                self.book.get_sheet_by_name_mut(name).unwrap()
+            )
         }
     }
     
@@ -243,13 +240,41 @@ pub mod excel {
     }
     impl SheetInner for &mut Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
-            self.get_cell_by_column_and_row_mut(col, row)
+            <Worksheet as SheetInner>::get_cell_by_column_and_row_mut(self, col, row)
         }
     }
     
+    impl <Sh> From<Sh> for Sheet<Sh> 
+        where Sh: SheetInner
+    {
+        fn from(v: Sh) -> Self {
+            Self {
+                ws: v
+            }
+        }
+    }
+
+    impl Sheet <Worksheet> {
+        pub fn new(_name: &str) -> Self {
+            let mut ws = Worksheet::default();
+            // ws.set_title(name.into());
+            Self {
+                ws
+            }
+        }
+    }
+
     impl <Sh> Sheet <Sh> 
         where Sh: SheetInner
     {
+        // pub fn new() -> Self 
+        //     where Sh: Default
+        // {
+        //     let mut ws = Default::default();
+        //     Self {
+        //         ws: ws
+        //     }
+        // }
         pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
             let mut values = values.enumerate().peekable();
             
@@ -360,7 +385,7 @@ pub mod excel {
         }
     }
 
-    pub fn write_file_2<V>(file_path: impl AsRef<Path> + 'static, vl_top: V, vl_low: V) -> impl Future<Output=()>
+    pub fn write_file_2<V>(file_path: impl AsRef<Path> + 'static, vl_top: V, _vl_low: V) -> impl Future<Output=()>
         where V: Stream<Item=SimpleValuesLine>
     {
         use crate::async_channel::*;
@@ -370,8 +395,10 @@ pub mod excel {
         async move {
             let file_path = file_path.as_ref();
             let mut f = File::create(file_path.with_extension("xlsx"));
-            let s1 = f.open_sheet("Sheet1");
-            let s2 = f.open_sheet("Sheet2");
+            // let s1 = f.open_sheet("Sheet1");
+            let s1: Sheet<Worksheet> = Sheet::new("Sheet1");
+            let s2: Sheet<Worksheet> = Sheet::new("Sheet2");
+            // let s2 = f.open_sheet("Sheet2");
 
             let l1 = write_file_inner(vl_top, s1);
     //         let l2 = list(vl_low, s2);
@@ -434,10 +461,11 @@ pub mod excel {
                 let f_low = write_file(file_path + "_low.xlsx", l_low);
 
                 let f = async {
-                    join!(
+                    let _ = join!(
                         f_to_channel,
                         f_top,
-                        f_low);
+                        f_low
+                    );
                 };
 
                 futures::executor::block_on(f);

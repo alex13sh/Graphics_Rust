@@ -217,8 +217,13 @@ pub mod excel {
         }
         pub fn open_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> 
         {
-            Sheet::from(
+            let sht = if self.book.get_sheet_by_name_mut(name).is_ok() {
                 self.book.get_sheet_by_name_mut(name).unwrap()
+            } else {
+                self.book.new_sheet(name).unwrap()
+            };
+            Sheet::from(
+                sht
             )
         }
     }
@@ -353,10 +358,11 @@ pub mod excel {
             let s = f.open_sheet("Sheet1");
             let l1 = write_file_inner(values_line, s);
             l1.await;
+            f.save();
         }
     }
 
-    fn write_file_inner<'f, Sh: SheetInner + 'f>(lines: impl Stream<Item=SimpleValuesLine> +'f, mut sheet: Sheet<Sh>) -> impl Future<Output=()> +'f {
+    fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> , mut sheet: Sheet<Sh>) -> impl Future<Output=()> {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
@@ -385,27 +391,18 @@ pub mod excel {
         }
     }
 
-    pub fn write_file_2<V>(file_path: impl AsRef<Path> + 'static, vl_top: V, _vl_low: V) -> impl Future<Output=()>
-        where V: Stream<Item=SimpleValuesLine>
+    pub async fn write_file_2(file_path: impl AsRef<Path> + 'static, vl_top: impl Stream<Item=SimpleValuesLine>, vl_low: impl Stream<Item=SimpleValuesLine>)
     {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
+        use futures::executor::block_on;
 
-        async move {
-            let file_path = file_path.as_ref();
-            let mut f = File::create(file_path.with_extension("xlsx"));
-            // let s1 = f.open_sheet("Sheet1");
-            let s1: Sheet<Worksheet> = Sheet::new("Sheet1");
-            let s2: Sheet<Worksheet> = Sheet::new("Sheet2");
-            // let s2 = f.open_sheet("Sheet2");
-
-            let l1 = write_file_inner(vl_top, s1);
-    //         let l2 = list(vl_low, s2);
-
-//             let _ = join(l1, l2).await;
-            l1.await;
-        }
+        let file_path = file_path.as_ref();
+        let mut f = File::create(file_path.with_extension("xlsx"));
+        write_file_inner(vl_top, f.open_sheet("Верхний двигатель")).await;
+        write_file_inner(vl_low, f.open_sheet("Нижний двигатель")).await;
+        f.save();
     }
 
     
@@ -470,6 +467,39 @@ pub mod excel {
 
                 futures::executor::block_on(f);
             }
+        }
+        assert!(false);
+    }
+
+    #[test]
+    fn convert_csv_to_excel_2() {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use crate::stat_info::simple::*;
+        use futures::join;
+
+        let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
+        let files = [
+            "2022_03_22-17_17_18",
+//             "2022_02_24-17_01_08",
+        ];
+
+        for name in files {
+            let file_path_ = format!("{}/{}", dir, name);
+            let file_path = format!("{}.csv", file_path_);
+
+//             dbg!(format!("{}.csv", file_path));
+
+            let half = |path| {
+                dbg!(&path);
+                let values = crate::files::csv::read_values(path).unwrap();
+                let values = fullvalue_to_elk(values);
+                values_to_line(futures::stream::iter(values))
+            };
+            let values_top = filter_half_top(half(file_path.clone()));
+            let values_low = filter_half_low(half(file_path.clone()));
+            let f = write_file_2(file_path, values_top, values_low);
+            futures::executor::block_on(f);
         }
         assert!(false);
     }

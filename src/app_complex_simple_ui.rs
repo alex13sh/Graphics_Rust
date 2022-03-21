@@ -246,6 +246,7 @@ impl Application for App {
             self.dozator.subscription(&props.material.dozator).map(Message::DozatorUI),
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
+            self.oil_station.subscription(&props.oil).map(Message::OilStation),
 
             if let Some(stream) = self.log_session.get_statistic_top() {
                 Subscription::from_recipe(

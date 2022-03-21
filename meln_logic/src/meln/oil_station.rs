@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use modbus::{ValueArc, ModbusValues};
+use modbus::ValueFloatError;
 
 pub struct OilStation {
     pub температура: ValueArc,
@@ -30,31 +31,52 @@ impl OilStation {
     pub fn motor_turn(&self, enb: bool) {
         self.motor.set_bit(enb);
     }
-    pub fn температура(&self) -> f32 {
+    pub fn температура(&self) -> Result<f32, ValueFloatError> {
         use modbus::{Value, TryFrom};
-        f32::try_from(&self.температура as &Value).unwrap() // todo: Обработка ошибок
+        f32::try_from(&self.температура as &Value) // todo: Обработка ошибок
     }
-    pub fn давление_масла(&self) -> f32 {
+    pub fn давление_масла(&self) -> Result<f32, ValueFloatError> {
         use modbus::{Value, TryFrom};
-        f32::try_from(&self.давление_масла as &Value).unwrap() // todo: Обработка ошибок
+        f32::try_from(&self.давление_масла as &Value) // todo: Обработка ошибок
     }
 }
 
 pub mod watcher {
     use crate::watcher::Property;
-    
+
+    use bitflags::bitflags;
+    bitflags! {
+        #[derive(Default)]
+        pub struct OilStationError: u8 {
+            const НедостаточноДавленияМасла = 1<<0;
+            const ВысокаяТемператураМасла = 1<<1;
+        }
+    }
+
     #[derive(Default)]
     pub struct OilStation {
         pub температура: Property<f32>,
         pub давление_масла: Property<f32>,
         pub уровень_масла: Property<u32>,
         pub motor: Property<bool>,
+
+        // TODO: Использовать в отображении статуса аппарата
+        pub error: Property<OilStationError>,
     }
     
     impl OilStation {
         pub(crate) fn update_property(&self, values: &super::OilStation) {
-            self.температура.set(values.температура());
-            self.давление_масла.set(values.давление_масла());
+            let mut err_flags = self.error.get();
+            if let Ok(v) = values.температура() {
+                self.температура.set(v);
+            }
+            err_flags.set(OilStationError::ВысокаяТемператураМасла, values.температура.is_error());
+            if let Ok(v) = values.давление_масла() {
+                self.давление_масла.set(v);
+            }
+            err_flags.set(OilStationError::НедостаточноДавленияМасла, values.давление_масла.is_error());
+            self.error.set(err_flags);
+
             self.уровень_масла.set(values.уровень_масла.value());
 //             log::trace!("motor get_bit: {}", values.motor.get_bit());
             self.motor.set(values.motor.get_bit());

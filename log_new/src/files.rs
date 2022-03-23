@@ -215,6 +215,15 @@ pub mod excel {
         pub fn save(&self) {
             umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path).unwrap();
         }
+
+        pub fn first_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> {
+            self.book.set_sheet_title(0, name).unwrap();
+            let sht = self.book.get_sheet_mut(0);
+            // sht.set_title(name);
+            Sheet::from(
+                sht
+            )
+        }
         pub fn open_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> 
         {
             let sht = if self.book.get_sheet_by_name_mut(name).is_ok() {
@@ -225,6 +234,18 @@ pub mod excel {
             Sheet::from(
                 sht
             )
+        }
+        pub fn set_sheet(&mut self, mut ws: Worksheet, name: &'static str) {
+            let sht = if self.book.get_sheet_by_name_mut(name).is_ok() {
+                self.book.get_sheet_by_name_mut(name).unwrap()
+            } else {
+                self.book.new_sheet(name).unwrap()
+            };
+            std::mem::swap(sht, &mut ws);
+        }
+        pub fn set_first_sheet(&mut self, ws: Worksheet, name: &'static str) {
+            self.book.set_sheet_title(0, name).unwrap();
+            self.set_sheet(ws, name);
         }
     }
     
@@ -260,8 +281,8 @@ pub mod excel {
     }
 
     impl Sheet <Worksheet> {
-        pub fn new(_name: &str) -> Self {
-            let mut ws = Worksheet::default();
+        pub fn new() -> Self {
+            let ws = Worksheet::default();
             // ws.set_title(name.into());
             Self {
                 ws
@@ -329,19 +350,23 @@ pub mod excel {
     
     use crate::value::SimpleValuesLine;
     pub fn filter_half(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
+        filter_lines(vin, |sensor_name|
+            match sensor_name {
+            "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" | "Выходное напряжение (E)" => true,
+            "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
+            sensor_name if sensor_name.starts_with("Температура") => true,
+            "Разрежение воздуха в системе" => true,
+            _ => false,
+        })
+
+    }
+
+    fn filter_lines(vin: impl Stream<Item=SimpleValuesLine>, f: fn(&str) -> bool) -> impl Stream<Item=SimpleValuesLine> {
         use futures::StreamExt;
-        vin.map(|line| {
+        vin.map(move |line| {
             SimpleValuesLine {
                 date_time: line.date_time,
-                values: line.values.into_vec().into_iter().filter(|v| {
-                    match v.sensor_name.as_str() {
-                    "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" | "Выходное напряжение (E)" => true,
-                    "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
-                    sensor_name if sensor_name.starts_with("Температура") => true,
-                    "Разрежение воздуха в системе" => true,
-                    _ => false,
-                    }
-                }).collect::<Vec<_>>().into_boxed_slice(),
+                values: line.values.into_vec().into_iter().filter(|v| f(v.sensor_name.as_str()) ).collect::<Vec<_>>().into_boxed_slice(),
             }
         })
     }
@@ -403,6 +428,80 @@ pub mod excel {
         write_file_inner(vl_top, f.open_sheet("Верхний двигатель")).await;
         write_file_inner(vl_low, f.open_sheet("Нижний двигатель")).await;
         f.save();
+    }
+
+    pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Stream<Item=ElkValuesLine>) {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use crate::stat_info::simple::*;
+        use futures::join;
+
+        let (s, lines_sink) = broadcast(10);
+        let f_to_channel_1 = lines.map(|l| Ok(l)).forward(s);
+        let lines_top = filter_half_top(lines_sink.clone());
+        let lines_low = filter_half_low(lines_sink);
+        
+        let (s, lines_sink) = broadcast(10);
+        let f_to_channel_2 = lines_top.map(|l| Ok(l)).forward(s);
+        let lines_top_1 = lines_sink.clone();
+        let lines_top_2 = lines_sink;
+
+        let (s, lines_sink) = broadcast(10);
+        let f_to_channel_3 = lines_low.map(|l| Ok(l)).forward(s);
+        let lines_low_1 = lines_sink.clone();
+        let lines_low_2 = lines_sink;
+
+        let f_list_top = async move {
+            let mut ws = Worksheet::default();
+            let sht = Sheet::from(&mut ws);
+            write_file_inner(lines_top_1, sht).await;
+            ws
+        };
+
+        let f_list_low = async move {
+            let mut ws = Worksheet::default();
+            let sht = Sheet::from(&mut ws);
+            write_file_inner(lines_low_1, sht).await;
+            ws
+        };
+
+        let f_list_first = async move {
+            let mut ws = Worksheet::default();
+            let mut sht = Sheet::from(&mut ws);
+
+            let lines_top_2 = filter_lines(lines_top_2, |sensor_name| {
+                !sensor_name.starts_with("Температура")
+            });
+            let lines_low_2 = filter_lines(lines_low_2, |sensor_name| {
+                !sensor_name.starts_with("Температура")
+            });
+
+            let lines_top_2 = values_simple_line_to_hashmap(lines_top_2);
+            let lines_low_2 = values_simple_line_to_hashmap(lines_low_2);
+
+            // let _ = join!(
+                sht.write_values((1,1), lines_top_2).await;
+                sht.write_values((10,1), lines_low_2).await;
+            // );
+            ws
+        };
+
+        let f = async move {
+            let (
+                _, _, _,
+                ws_top, ws_low,
+            )  = join!(
+                f_to_channel_1, f_to_channel_2, f_to_channel_3,
+                f_list_top, f_list_low,
+            );
+            let ws_1 = f_list_first.await;
+            let mut f = File::create(file_path.as_ref().with_extension("xlsx"));
+            f.set_first_sheet(ws_1, "Summary");
+            f.set_sheet(ws_top, "Верхний двигатель");
+            f.set_sheet(ws_low, "Нижний двигатель");
+            f.save();
+        };
+        f.await;
     }
 
     
@@ -496,9 +595,7 @@ pub mod excel {
                 let values = fullvalue_to_elk(values);
                 values_to_line(futures::stream::iter(values))
             };
-            let values_top = filter_half_top(half(file_path.clone()));
-            let values_low = filter_half_low(half(file_path.clone()));
-            let f = write_file_2(file_path, values_top, values_low);
+            let f = write_file_3(file_path.clone(), half(file_path.clone()));
             futures::executor::block_on(f);
         }
         assert!(false);

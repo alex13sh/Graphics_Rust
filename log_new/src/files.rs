@@ -231,14 +231,6 @@ pub mod excel {
             umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path).unwrap();
         }
 
-        pub fn first_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> {
-            self.book.set_sheet_title(0, name).unwrap();
-            let sht = self.book.get_sheet_mut(0);
-            // sht.set_title(name);
-            Sheet::from(
-                sht
-            )
-        }
         pub fn open_sheet(&mut self, name: &'static str) -> Sheet<&mut Worksheet> 
         {
             let sht = if self.book.get_sheet_by_name_mut(name).is_ok() {
@@ -252,7 +244,7 @@ pub mod excel {
         }
         pub fn set_sheet(&mut self, mut ws: Worksheet, name: &'static str) {
             ws.set_title(name);
-            self.book.add_sheet(ws);
+            self.book.add_sheet(ws).unwrap();
         }
     }
     
@@ -266,12 +258,17 @@ pub mod excel {
     pub struct Sheet<Sh: SheetInner> {
 //         file: &'f mut File,
 //         name: &'static str,
-        ws: Sh
+        ws: Sh,
+        rows: u32,
     }
 
     pub trait SheetInner {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell;
         fn calculation_auto_width(&mut self);
+
+        fn get_column_by_name(&self, name: &str) -> Option<u32>;
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String>;
+        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>);
     }
 
     impl SheetInner for Worksheet {
@@ -281,6 +278,43 @@ pub mod excel {
         fn calculation_auto_width(&mut self) {
             self.calculation_auto_width();
         }
+
+        fn get_column_by_name(&self, name: &str) -> Option<u32> {
+            for col in 1.. {
+                let v = self.get_value_by_column_and_row(col, 1);
+                if v.is_empty() {
+                    return None;
+                } else if v.as_str() == name {
+                    return Some(col);
+                }
+            }
+            None
+        }
+
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String> {
+            let title = self.get_title();
+            let rows = rows + 1;
+            columns.into_iter().map(|name| {
+                let column = self.get_column_by_name(name).unwrap();
+                let column_char = ('A' as u8 + column as u8 - 1) as char;
+                format!("{title}!${column}$2:${column}{rows}", title=title, column = column_char, rows = rows)
+            }).collect()
+        }
+        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>) {
+            let mut from_marker = umya_spreadsheet::structs::drawing::spreadsheet::MarkerType::default();
+            let mut to_marker = umya_spreadsheet::structs::drawing::spreadsheet::MarkerType::default();
+            from_marker.set_coordinate(from);
+            to_marker.set_coordinate(to);
+            
+            let mut chart = umya_spreadsheet::structs::Chart::default();
+            chart.new_chart(
+                umya_spreadsheet::structs::ChartType::LineChart,
+                from_marker,
+                to_marker,
+                area,
+            );
+            self.get_worksheet_drawing_mut().add_chart_collection(chart);
+        }
     }
     impl SheetInner for &mut Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
@@ -289,6 +323,15 @@ pub mod excel {
         fn calculation_auto_width(&mut self) {
             <Worksheet as SheetInner>::calculation_auto_width(self);
         }
+        fn get_column_by_name(&self, name: &str) -> Option<u32> {
+            <Worksheet as SheetInner>::get_column_by_name(self, name)
+        }
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String> {
+            <Worksheet as SheetInner>::make_coordinates_columns(self, columns, rows)
+        }
+        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>) {
+            <Worksheet as SheetInner>::new_chart_liner(self, from, to, area);
+        }
     }
     
     impl <Sh> From<Sh> for Sheet<Sh> 
@@ -296,7 +339,8 @@ pub mod excel {
     {
         fn from(v: Sh) -> Self {
             Self {
-                ws: v
+                ws: v,
+                rows: 0,
             }
         }
     }
@@ -306,33 +350,15 @@ pub mod excel {
             let ws = Worksheet::default();
             // ws.set_title(name.into());
             Self {
-                ws
+                ws,
+                rows: 0,
             }
         }
     }
 
-    // impl Sheet <&mut Worksheet> {
-    //     pub fn new_2() -> (Worksheet, Self) {
-    //         let mut ws = Worksheet::default();
-    //         // ws.set_title(name.into());
-    //         let s = Self {
-    //             ws: &mut ws
-    //         };
-    //         (ws, s)
-    //     }
-    // }
-
     impl <Sh> Sheet <Sh> 
         where Sh: SheetInner
     {
-        // pub fn new() -> Self 
-        //     where Sh: Default
-        // {
-        //     let mut ws = Default::default();
-        //     Self {
-        //         ws: ws
-        //     }
-        // }
         pub async fn write_values(&mut self, values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
             let pos = (1, 1);
             let mut values = values.enumerate().peekable();
@@ -347,6 +373,7 @@ pub mod excel {
             for (col, name) in l.values.keys().enumerate() {
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1).set_value(name);
             }
+            self.rows += 1;
         
             // self.ws.calculation_auto_width();
 
@@ -358,6 +385,7 @@ pub mod excel {
                 for (col, v) in l.values.values().enumerate() {
                     self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1 + row+1).set_value(v);
                 }
+                self.rows += 1;
             };
         }
         pub fn write_state(&mut self, pos: (usize, usize), state: LogState) {
@@ -380,6 +408,17 @@ pub mod excel {
                 self.ws.get_cell_by_column_and_row_mut(pos.0+2, row).set_value(format!("{:.2}", f.1.0));
                 self.ws.get_cell_by_column_and_row_mut(pos.0+3, row).set_value(format!("{:.2}", f.1.1));
             }
+        }
+
+        pub fn draw_graphic(&mut self, pos: (u32, u32), columns: &[&str]) {
+            let area_chart_series_list = self.ws.make_coordinates_columns(columns, self.rows);
+            let area_chart_series_list = area_chart_series_list.iter().map(String::as_str).collect();
+            dbg!(&area_chart_series_list);
+            // vec![
+            //     "Sheet1!$A$1:$A$10",
+            //     "Sheet1!$B$1:$B$10",
+            // ];
+            self.ws.new_chart_liner("M20", "AH60", area_chart_series_list);
         }
     }
     
@@ -462,6 +501,11 @@ pub mod excel {
             dbg!("await");
             if let Some(stat) = stat {
                 sheet.write_state((14,2), stat);
+                sheet.draw_graphic((13, 20), &[
+                    "Виброскорость",
+                    "Выходной ток (A)", "Индикация текущей выходной мощности (P)",
+                    "Скорость двигателя",
+                ]);
             }
         };
         async move {
@@ -510,6 +554,7 @@ pub mod excel {
 
         let f_list_top = async move {
             let mut ws = Worksheet::default();
+            ws.set_title("Верхний двигатель");
             let sht = Sheet::from(&mut ws);
             // dbg!(Instant::now());
             write_file_inner(lines_top_1, sht).await;
@@ -519,6 +564,7 @@ pub mod excel {
 
         let f_list_low = async move {
             let mut ws = Worksheet::default();
+            ws.set_title("Нижний двигатель");
             let sht = Sheet::from(&mut ws);
             // dbg!(Instant::now());
             write_file_inner(lines_low_1, sht).await;

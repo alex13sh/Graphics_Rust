@@ -208,3 +208,8 @@ pub fn save_invertor(path: impl AsRef<Path>, params: impl Iterator<Item=value::i
     let params = crate::convert::iterator::invertor_parametrs_sort(params);
     files::csv::write_values(path, params);
 }
+
+pub mod test {
+
+    pub use crate::files::excel::convert_csv_to_excel_2;
+}

@@ -199,6 +199,8 @@ pub mod excel {
     use super::inner::*;
     use crate::LogState;
     use crate::value::simple;
+
+    use coarse_prof::profile;
     
     pub struct File {
         book: Spreadsheet,
@@ -241,7 +243,9 @@ pub mod excel {
             } else {
                 self.book.new_sheet(name).unwrap()
             };
+            let id = sht.get_sheet_id();
             std::mem::swap(sht, &mut ws);
+            // self.book.set_sheet_title(id, name).unwrap();
         }
         pub fn set_first_sheet(&mut self, ws: Worksheet, name: &'static str) {
             self.book.set_sheet_title(0, name).unwrap();
@@ -249,6 +253,13 @@ pub mod excel {
         }
     }
     
+
+impl Drop for File {
+    fn drop(&mut self) {
+        coarse_prof::write(&mut std::io::stdout()).unwrap();
+    }
+}
+
     pub struct Sheet<Sh: SheetInner> {
 //         file: &'f mut File,
 //         name: &'static str,
@@ -266,6 +277,7 @@ pub mod excel {
     }
     impl SheetInner for &mut Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
+            profile!("SheetInner::get_cell_by_column_and_row_mut");
             <Worksheet as SheetInner>::get_cell_by_column_and_row_mut(self, col, row)
         }
     }
@@ -290,6 +302,17 @@ pub mod excel {
         }
     }
 
+    // impl Sheet <&mut Worksheet> {
+    //     pub fn new_2() -> (Worksheet, Self) {
+    //         let mut ws = Worksheet::default();
+    //         // ws.set_title(name.into());
+    //         let s = Self {
+    //             ws: &mut ws
+    //         };
+    //         (ws, s)
+    //     }
+    // }
+
     impl <Sh> Sheet <Sh> 
         where Sh: SheetInner
     {
@@ -302,6 +325,7 @@ pub mod excel {
         //     }
         // }
         pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+            profile!("Sheet::write_values");
             let mut values = values.enumerate().peekable();
             
             let l = if let Some(ref l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
@@ -316,6 +340,7 @@ pub mod excel {
             }
         
             while let Some((row, l)) = values.next().await {
+                profile!("Sheet::write_values::while");
                 let time = l.date_time.timestamp_millis() - dt_start.timestamp_millis();
                 let time = (time as f32 / 100.0).round() / 10.0;
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + row+1)
@@ -370,6 +395,16 @@ pub mod excel {
             }
         })
     }
+
+    fn join_lines_2(lines_1: impl Stream<Item=SimpleValuesLine>, lines_2: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
+        lines_1.zip(lines_2).map(|(l1, l2)| {
+            SimpleValuesLine {
+                date_time: l1.date_time,
+                values: l1.values.into_vec().into_iter().chain(l2.values.into_vec().into_iter())
+                    .collect::<Vec<_>>().into_boxed_slice(),
+            }
+        })
+    }
     
     use crate::value::ElkValuesLine;
     pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Stream<Item=SimpleValuesLine>) -> impl Future<Output=()> {
@@ -392,7 +427,7 @@ pub mod excel {
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
 
-        let (s, l1) = broadcast(10);
+        let (s, l1) = broadcast(500);
 
         let f_to_channel = lines.map(|l| Ok(l)).forward(s);
         let l2 = l1.clone();
@@ -425,28 +460,32 @@ pub mod excel {
 
         let file_path = file_path.as_ref();
         let mut f = File::create(file_path.with_extension("xlsx"));
+        // let sht_1 = Sheet::new();
+        // write_file_inner(vl_top, sht_1).await;
         write_file_inner(vl_top, f.open_sheet("Верхний двигатель")).await;
         write_file_inner(vl_low, f.open_sheet("Нижний двигатель")).await;
         f.save();
     }
 
     pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Stream<Item=ElkValuesLine>) {
+        use std::time::Instant;
+
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use crate::stat_info::simple::*;
         use futures::join;
 
-        let (s, lines_sink) = broadcast(10);
+        let (s, lines_sink) = broadcast(4000);
         let f_to_channel_1 = lines.map(|l| Ok(l)).forward(s);
         let lines_top = filter_half_top(lines_sink.clone());
         let lines_low = filter_half_low(lines_sink);
         
-        let (s, lines_sink) = broadcast(10);
+        let (s, lines_sink) = broadcast(4000);
         let f_to_channel_2 = lines_top.map(|l| Ok(l)).forward(s);
         let lines_top_1 = lines_sink.clone();
         let lines_top_2 = lines_sink;
 
-        let (s, lines_sink) = broadcast(10);
+        let (s, lines_sink) = broadcast(4000);
         let f_to_channel_3 = lines_low.map(|l| Ok(l)).forward(s);
         let lines_low_1 = lines_sink.clone();
         let lines_low_2 = lines_sink;
@@ -454,17 +493,41 @@ pub mod excel {
         let f_list_top = async move {
             let mut ws = Worksheet::default();
             let sht = Sheet::from(&mut ws);
+            // dbg!(Instant::now());
             write_file_inner(lines_top_1, sht).await;
+            dbg!(Instant::now());
             ws
         };
 
         let f_list_low = async move {
             let mut ws = Worksheet::default();
             let sht = Sheet::from(&mut ws);
+            // dbg!(Instant::now());
             write_file_inner(lines_low_1, sht).await;
+            dbg!(Instant::now());
             ws
         };
 
+        /* let f_list_first = async move {
+        //     let mut ws = Worksheet::default();
+        //     let mut sht = Sheet::from(&mut ws);
+
+        //     let lines_top_2 = filter_lines(lines_top_2, |sensor_name| {
+        //         !sensor_name.starts_with("Температура")
+        //     });
+        //     let lines_low_2 = filter_lines(lines_low_2, |sensor_name| {
+        //         !sensor_name.starts_with("Температура")
+        //     });
+
+        //     let lines_top_2 = values_simple_line_to_hashmap(lines_top_2);
+        //     let lines_low_2 = values_simple_line_to_hashmap(lines_low_2);
+
+        //     // let _ = join!(
+        //         sht.write_values((1,1), lines_top_2).await;
+        //         sht.write_values((10,1), lines_low_2).await;
+        //     // );
+        //     ws
+        // }; */
         let f_list_first = async move {
             let mut ws = Worksheet::default();
             let mut sht = Sheet::from(&mut ws);
@@ -476,30 +539,34 @@ pub mod excel {
                 !sensor_name.starts_with("Температура")
             });
 
-            let lines_top_2 = values_simple_line_to_hashmap(lines_top_2);
-            let lines_low_2 = values_simple_line_to_hashmap(lines_low_2);
+            let lines = join_lines_2(lines_top_2, lines_low_2);
 
-            // let _ = join!(
-                sht.write_values((1,1), lines_top_2).await;
-                sht.write_values((10,1), lines_low_2).await;
-            // );
+            let lines = values_simple_line_to_hashmap(lines);
+            // dbg!(Instant::now());
+            sht.write_values((1,1), lines).await;
+            dbg!(Instant::now());
             ws
         };
 
         let f = async move {
+            dbg!(Instant::now());
             let (
                 _, _, _,
                 ws_top, ws_low,
+                ws_1,
             )  = join!(
                 f_to_channel_1, f_to_channel_2, f_to_channel_3,
                 f_list_top, f_list_low,
+                f_list_first,
             );
-            let ws_1 = f_list_first.await;
+            // let ws_1 = f_list_first.await;
             let mut f = File::create(file_path.as_ref().with_extension("xlsx"));
+            dbg!(Instant::now());
             f.set_first_sheet(ws_1, "Summary");
             f.set_sheet(ws_top, "Верхний двигатель");
             f.set_sheet(ws_low, "Нижний двигатель");
             f.save();
+            dbg!(Instant::now());
         };
         f.await;
     }
@@ -520,19 +587,16 @@ pub mod excel {
         }
     }
 
-    #[test]
-    fn convert_csv_to_excel() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn convert_csv_to_excel() {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use futures::join;
 
         let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
         let files = [
-            "2022_02_24-16_51_50",
-            "2022_02_24-17_01_08",
-            "2022_02_24-17_09_52",
-            "2022_02_24-17_28_14",
-            "2022_02_24-17_36_17",
+            "2022_03_22-17_17_18",
+//             "2022_02_24-17_01_08",
         ];
 
         for name in files {
@@ -545,7 +609,7 @@ pub mod excel {
 
                 let lines = values_to_line(futures::stream::iter(values));
 
-                let (s, l_top) = broadcast(10);
+                let (s, l_top) = broadcast(500);
                 let f_to_channel = lines.map(|l| Ok(l)).forward(s);
                 let l_low = l_top.clone();
 //                 let l_low = lines;
@@ -564,14 +628,14 @@ pub mod excel {
                     );
                 };
 
-                futures::executor::block_on(f);
+                // futures::executor::block_on(f);
+                f.await;
             }
         }
-        assert!(false);
+        // assert!(false);
     }
 
-    #[test]
-    fn convert_csv_to_excel_2() {
+    pub async fn convert_csv_to_excel_2() {
         use crate::async_channel::*;
         use crate::convert::{stream::*, iterator::*};
         use crate::stat_info::simple::*;
@@ -596,9 +660,15 @@ pub mod excel {
                 values_to_line(futures::stream::iter(values))
             };
             let f = write_file_3(file_path.clone(), half(file_path.clone()));
-            futures::executor::block_on(f);
+            // futures::executor::block_on(f);
+            f.await;
         }
-        assert!(false);
+        // assert!(false);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_convert_csv_to_excel_2() {
+        convert_csv_to_excel_2().await;
     }
 }
 

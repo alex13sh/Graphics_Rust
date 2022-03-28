@@ -271,16 +271,23 @@ pub mod excel {
 
     pub trait SheetInner {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell;
+        fn calculation_auto_width(&mut self);
     }
 
     impl SheetInner for Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
             self.get_cell_by_column_and_row_mut(col as u32, row as u32)
         }
+        fn calculation_auto_width(&mut self) {
+            self.calculation_auto_width();
+        }
     }
     impl SheetInner for &mut Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
             <Worksheet as SheetInner>::get_cell_by_column_and_row_mut(self, col, row)
+        }
+        fn calculation_auto_width(&mut self) {
+            <Worksheet as SheetInner>::calculation_auto_width(self);
         }
     }
     
@@ -340,6 +347,8 @@ pub mod excel {
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1).set_value(name);
             }
         
+            // self.ws.calculation_auto_width();
+
             while let Some((row, l)) = values.next().await {
                 let time = l.date_time.timestamp_millis() - dt_start.timestamp_millis();
                 let time = (time as f32 / 100.0).round() / 10.0;
@@ -375,23 +384,31 @@ pub mod excel {
     
     use crate::value::SimpleValuesLine;
     pub fn filter_half(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
-        filter_lines(vin, |sensor_name|
-            match sensor_name {
+        filter_lines_map(vin, |sensor_name| {
+            let b = match sensor_name {
             "Виброскорость" | "Выходной ток (A)" | "Скорость двигателя" | "Индикация текущей выходной мощности (P)" | "Выходное напряжение (E)" => true,
             "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
             sensor_name if sensor_name.starts_with("Температура") => true,
             "Разрежение воздуха в системе" => true,
             _ => false,
-        })
+        };
+        if b {
+            Some(sensor_name.to_owned())
+        } else {
+            None
+        }
+    })
 
     }
 
-    fn filter_lines(vin: impl Stream<Item=SimpleValuesLine>, f: fn(&str) -> bool) -> impl Stream<Item=SimpleValuesLine> {
+    fn filter_lines_map(vin: impl Stream<Item=SimpleValuesLine>, f: fn(&str) -> Option<String>) -> impl Stream<Item=SimpleValuesLine> {
         use futures::StreamExt;
         vin.map(move |line| {
             SimpleValuesLine {
                 date_time: line.date_time,
-                values: line.values.into_vec().into_iter().filter(|v| f(v.sensor_name.as_str()) ).collect::<Vec<_>>().into_boxed_slice(),
+                values: line.values.into_vec().into_iter().filter_map(|mut v| {
+                    v.sensor_name = f(v.sensor_name.as_str())?; Some(v)
+                } ).collect::<Vec<_>>().into_boxed_slice(),
             }
         })
     }
@@ -532,17 +549,39 @@ pub mod excel {
             let mut ws = Worksheet::default();
             let mut sht = Sheet::from(&mut ws);
 
-            let lines_top_2 = filter_lines(lines_top_2, |sensor_name| {
-                !sensor_name.starts_with("Температура")
+            let lines_top_2 = filter_half(lines_top_2);
+            let lines_top_2 = filter_lines_map(lines_top_2, |sensor_name| {
+                if !sensor_name.starts_with("Температура") {
+                    Some(sensor_name.to_owned() + " (Верх.)")
+                } else {
+                    None
+                }
             });
-            let lines_low_2 = filter_lines(lines_low_2, |sensor_name| {
-                !sensor_name.starts_with("Температура")
+            
+            // let lines_top_2 = lines_top_2.inspect(|l| {
+            //     let lines_top_2 = &l.values;
+            //     dbg!("lines_top_2", lines_top_2);
+            // });
+
+            let lines_low_2 = filter_half(lines_low_2);
+            let lines_low_2 = filter_lines_map(lines_low_2, |sensor_name| {
+                if !sensor_name.starts_with("Температура") {
+                    Some(sensor_name.to_owned() + " (Ниж.)")
+                } else {
+                    None
+                }
             });
 
             let lines = join_lines_2(lines_top_2, lines_low_2);
 
+            // let lines = lines.inspect(|l| {
+            //     dbg!("lines", l.values.iter().map(|v| v.sensor_name.clone()));
+            // });
+
             let lines = values_simple_line_to_hashmap(lines);
             // dbg!(Instant::now());
+            // let lines = lines.take(1);
+
             sht.write_values((1,1), lines).await;
             dbg!(Instant::now());
             ws

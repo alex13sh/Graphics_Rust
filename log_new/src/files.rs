@@ -210,9 +210,22 @@ pub mod excel {
     impl File {
         pub fn create(file_path: impl AsRef<Path>) -> Self {
             Self {
-                book: umya_spreadsheet::new_file(),
+                book: Self::new_file(),
                 file_path: file_path.as_ref().into(),
             }
+        }
+        fn new_file() -> Spreadsheet {
+
+            // let mut spreadsheet = Spreadsheet::default();
+            // // spreadsheet.set_theme(Theme::get_defalut_value());
+            // // spreadsheet.set_stylesheet_defalut_value();
+            // spreadsheet
+            let mut sht = umya_spreadsheet::new_file();
+            let pos = sht.get_sheet_collection().iter().position(|ws| ws.get_title() == "Sheet1");
+            if let Some(index) = pos {
+                sht.get_sheet_collection_mut().remove(index);
+            }
+            sht
         }
         pub fn save(&self) {
             umya_spreadsheet::writer::xlsx::write(&self.book, &self.file_path).unwrap();
@@ -238,26 +251,17 @@ pub mod excel {
             )
         }
         pub fn set_sheet(&mut self, mut ws: Worksheet, name: &'static str) {
-            let sht = if self.book.get_sheet_by_name_mut(name).is_ok() {
-                self.book.get_sheet_by_name_mut(name).unwrap()
-            } else {
-                self.book.new_sheet(name).unwrap()
-            };
             ws.set_title(name);
-            std::mem::swap(sht, &mut ws);
-        }
-        pub fn set_first_sheet(&mut self, ws: Worksheet, name: &'static str) {
-            self.book.set_sheet_title(0, name).unwrap();
-            self.set_sheet(ws, name);
+            self.book.add_sheet(ws);
         }
     }
     
 
-impl Drop for File {
-    fn drop(&mut self) {
-        coarse_prof::write(&mut std::io::stdout()).unwrap();
-    }
-}
+// impl Drop for File {
+//     fn drop(&mut self) {
+//         coarse_prof::write(&mut std::io::stdout()).unwrap();
+//     }
+// }
 
     pub struct Sheet<Sh: SheetInner> {
 //         file: &'f mut File,
@@ -276,7 +280,6 @@ impl Drop for File {
     }
     impl SheetInner for &mut Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
-            profile!("SheetInner::get_cell_by_column_and_row_mut");
             <Worksheet as SheetInner>::get_cell_by_column_and_row_mut(self, col, row)
         }
     }
@@ -324,7 +327,6 @@ impl Drop for File {
         //     }
         // }
         pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
-            profile!("Sheet::write_values");
             let mut values = values.enumerate().peekable();
             
             let l = if let Some(ref l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
@@ -339,7 +341,6 @@ impl Drop for File {
             }
         
             while let Some((row, l)) = values.next().await {
-                profile!("Sheet::write_values::while");
                 let time = l.date_time.timestamp_millis() - dt_start.timestamp_millis();
                 let time = (time as f32 / 100.0).round() / 10.0;
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + row+1)
@@ -561,7 +562,7 @@ impl Drop for File {
             // let ws_1 = f_list_first.await;
             let mut f = File::create(file_path.as_ref().with_extension("xlsx"));
             dbg!(Instant::now());
-            f.set_first_sheet(ws_1, "Summary");
+            f.set_sheet(ws_1, "Summary");
             f.set_sheet(ws_top, "Верхний двигатель");
             f.set_sheet(ws_low, "Нижний двигатель");
             f.save();

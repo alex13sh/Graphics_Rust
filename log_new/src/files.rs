@@ -243,9 +243,8 @@ pub mod excel {
             } else {
                 self.book.new_sheet(name).unwrap()
             };
-            let id = sht.get_sheet_id();
+            ws.set_title(name);
             std::mem::swap(sht, &mut ws);
-            // self.book.set_sheet_title(id, name).unwrap();
         }
         pub fn set_first_sheet(&mut self, ws: Worksheet, name: &'static str) {
             self.book.set_sheet_title(0, name).unwrap();
@@ -272,7 +271,7 @@ impl Drop for File {
 
     impl SheetInner for Worksheet {
         fn get_cell_by_column_and_row_mut(&mut self, col:usize, row:usize)-> &mut Cell {
-            self.get_cell_by_column_and_row_mut(col, row)
+            self.get_cell_by_column_and_row_mut(col as u32, row as u32)
         }
     }
     impl SheetInner for &mut Worksheet {

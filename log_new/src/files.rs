@@ -333,7 +333,8 @@ pub mod excel {
         //         ws: ws
         //     }
         // }
-        pub async fn write_values(&mut self, pos: (usize, usize), values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+        pub async fn write_values(&mut self, values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+            let pos = (1, 1);
             let mut values = values.enumerate().peekable();
             
             let l = if let Some(ref l) = std::pin::Pin::new(&mut values).peek().await {&l.1}
@@ -455,12 +456,12 @@ pub mod excel {
 //                 let l2 = values_line_to_simple(l2);
 
             let (_, stat) = join(
-                sheet.write_values((1,1), l1),
+                sheet.write_values(l1),
                 crate::stat_info::simple::calc(l2).fold(None, |_, s| async{Some(s)})
             ).await;
             dbg!("await");
             if let Some(stat) = stat {
-                sheet.write_state((12,2), stat);
+                sheet.write_state((14,2), stat);
             }
         };
         async move {
@@ -525,26 +526,6 @@ pub mod excel {
             ws
         };
 
-        /* let f_list_first = async move {
-        //     let mut ws = Worksheet::default();
-        //     let mut sht = Sheet::from(&mut ws);
-
-        //     let lines_top_2 = filter_lines(lines_top_2, |sensor_name| {
-        //         !sensor_name.starts_with("Температура")
-        //     });
-        //     let lines_low_2 = filter_lines(lines_low_2, |sensor_name| {
-        //         !sensor_name.starts_with("Температура")
-        //     });
-
-        //     let lines_top_2 = values_simple_line_to_hashmap(lines_top_2);
-        //     let lines_low_2 = values_simple_line_to_hashmap(lines_low_2);
-
-        //     // let _ = join!(
-        //         sht.write_values((1,1), lines_top_2).await;
-        //         sht.write_values((10,1), lines_low_2).await;
-        //     // );
-        //     ws
-        // }; */
         let f_list_first = async move {
             let mut ws = Worksheet::default();
             let mut sht = Sheet::from(&mut ws);
@@ -557,11 +538,6 @@ pub mod excel {
                     None
                 }
             });
-            
-            // let lines_top_2 = lines_top_2.inspect(|l| {
-            //     let lines_top_2 = &l.values;
-            //     dbg!("lines_top_2", lines_top_2);
-            // });
 
             let lines_low_2 = filter_half(lines_low_2);
             let lines_low_2 = filter_lines_map(lines_low_2, |sensor_name| {
@@ -574,15 +550,11 @@ pub mod excel {
 
             let lines = join_lines_2(lines_top_2, lines_low_2);
 
-            // let lines = lines.inspect(|l| {
-            //     dbg!("lines", l.values.iter().map(|v| v.sensor_name.clone()));
-            // });
-
             let lines = values_simple_line_to_hashmap(lines);
             // dbg!(Instant::now());
             // let lines = lines.take(1);
 
-            sht.write_values((1,1), lines).await;
+            sht.write_values(lines).await;
             dbg!(Instant::now());
             ws
         };

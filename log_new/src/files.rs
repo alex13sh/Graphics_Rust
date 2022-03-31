@@ -119,7 +119,7 @@ pub mod csv {
         ).or_else(|_|
             DateTimeFix::parse_from_str(file_name, "+value_%d_%m_%Y__%H_%M_%S_%.f_filter_0.1.csv %z")
         )
-        .inspect_err(|e| {dbg!(e);})
+        // .inspect_err(|e| {dbg!(e);})
         .ok();
         dbg!(&res);
         res
@@ -267,8 +267,8 @@ pub mod excel {
         fn calculation_auto_width(&mut self);
 
         fn get_column_by_name(&self, name: &str) -> Option<u32>;
-        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String>;
-        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>);
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<(String, String)>;
+        fn new_chart_liner(&mut self, from: &str, to: &str, area_time: &str, names: Vec<&str>, area: Vec<&str>);
     }
 
     impl SheetInner for Worksheet {
@@ -291,16 +291,19 @@ pub mod excel {
             None
         }
 
-        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String> {
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<(String, String)> {
             let title = self.get_title();
             let rows = rows + 1;
             columns.into_iter().map(|name| {
                 let column = self.get_column_by_name(name).unwrap();
                 let column_char = ('A' as u8 + column as u8 - 1) as char;
-                format!("{title}!${column}$2:${column}{rows}", title=title, column = column_char, rows = rows)
+                (
+                    format!("{title}!${column}$1", title=title, column = column_char),
+                    format!("{title}!${column}$2:${column}${rows}", title=title, column = column_char, rows = rows)
+                )
             }).collect()
         }
-        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>) {
+        fn new_chart_liner(&mut self, from: &str, to: &str, area_time: &str, names: Vec<&str>, area: Vec<&str>) {
             let mut from_marker = umya_spreadsheet::structs::drawing::spreadsheet::MarkerType::default();
             let mut to_marker = umya_spreadsheet::structs::drawing::spreadsheet::MarkerType::default();
             from_marker.set_coordinate(from);
@@ -313,6 +316,9 @@ pub mod excel {
                 to_marker,
                 area,
             );
+            chart_axis_x(&mut chart, area_time);
+            chart_series(&mut chart, names);
+            chart_style(&mut chart);
             self.get_worksheet_drawing_mut().add_chart_collection(chart);
         }
     }
@@ -326,11 +332,11 @@ pub mod excel {
         fn get_column_by_name(&self, name: &str) -> Option<u32> {
             <Worksheet as SheetInner>::get_column_by_name(self, name)
         }
-        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<String> {
+        fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<(String, String)> {
             <Worksheet as SheetInner>::make_coordinates_columns(self, columns, rows)
         }
-        fn new_chart_liner(&mut self, from: &str, to: &str, area: Vec<&str>) {
-            <Worksheet as SheetInner>::new_chart_liner(self, from, to, area);
+        fn new_chart_liner(&mut self, from: &str, to: &str, area_time: &str, names: Vec<&str>, area: Vec<&str>) {
+            <Worksheet as SheetInner>::new_chart_liner(self, from, to, area_time, names, area);
         }
     }
     
@@ -343,6 +349,56 @@ pub mod excel {
                 rows: 0,
             }
         }
+    }
+
+    fn chart_style(chart: &mut Chart) {
+        let graph = chart.get_two_cell_anchor_mut().get_graphic_frame_mut().as_mut().unwrap()
+            .get_graphic_mut().get_graphic_data_mut().get_chart_space_mut();
+        let chart = graph.get_chart_mut().get_plot_area_mut().get_line_chart_mut().as_mut().unwrap();
+        chart.get_show_marker_mut().set_val(false);
+        chart.get_grouping_mut().set_val(umya_spreadsheet::structs::drawing::charts::GroupingValues::Standard);
+        // let shape = chart.get_area_chart_series_list_mut().get_area_chart_series_mut()[0].get_shape_properties_mut().as_mut().unwrap();
+        for series in chart.get_area_chart_series_list_mut().get_area_chart_series_mut() {
+            let marker = umya_spreadsheet::structs::drawing::charts::Marker::default();
+        // dbg!(&marker);
+            series.set_marker(marker);
+            // let string = series.get_category_axis_data_mut().as_mut().unwrap()
+            //     .get_string_reference_mut().get_formula_mut();
+            // string.set_address_str("");
+        }
+
+        // 
+        // dbg!(chart.get_area_chart_series_list());
+    }
+
+    fn chart_axis_2(chart: &mut Chart) {
+         
+    }
+
+    fn chart_series(chart: &mut Chart, names: Vec<&str>) {
+        let graph = chart.get_two_cell_anchor_mut().get_graphic_frame_mut().as_mut().unwrap()
+            .get_graphic_mut().get_graphic_data_mut().get_chart_space_mut();
+        let chart = graph.get_chart_mut().get_plot_area_mut().get_line_chart_mut().as_mut().unwrap();
+        let series_list = chart.get_area_chart_series_list_mut().get_area_chart_series_mut();    
+
+        for (series, name) in series_list.into_iter().zip(names.into_iter()) {
+            // let mut category = umya_spreadsheet::structs::drawing::charts::CategoryAxisData::default();
+            // let string = category.get_string_reference_mut().get_formula_mut();
+            // string.set_address_str(name);
+            // series.set_category_axis_data(category);
+        }
+    }  
+
+    fn chart_axis_x(chart: &mut Chart, area_time: &str) {
+        let graph = chart.get_two_cell_anchor_mut().get_graphic_frame_mut().as_mut().unwrap()
+        .get_graphic_mut().get_graphic_data_mut().get_chart_space_mut();
+        let chart = graph.get_chart_mut().get_plot_area_mut().get_line_chart_mut().as_mut().unwrap();
+        let series_list = chart.get_area_chart_series_list_mut().get_area_chart_series_mut();
+
+        let mut category = umya_spreadsheet::structs::drawing::charts::CategoryAxisData::default();
+        let string = category.get_string_reference_mut().get_formula_mut();
+        string.set_address_str(area_time);
+        series_list.get_mut(0).unwrap().set_category_axis_data(category);
     }
 
     impl Sheet <Worksheet> {
@@ -373,7 +429,7 @@ pub mod excel {
             for (col, name) in l.values.keys().enumerate() {
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1).set_value(name);
             }
-            self.rows += 1;
+            // self.rows += 1;
         
             // self.ws.calculation_auto_width();
 
@@ -411,14 +467,19 @@ pub mod excel {
         }
 
         pub fn draw_graphic(&mut self, pos: (u32, u32), columns: &[&str]) {
-            let area_chart_series_list = self.ws.make_coordinates_columns(columns, self.rows);
-            let area_chart_series_list = area_chart_series_list.iter().map(String::as_str).collect();
+            let area_time = self.ws.make_coordinates_columns(&["Время"], self.rows).swap_remove(0).1;
+
+            let chart_series_list = self.ws.make_coordinates_columns(columns, self.rows);
+            let area_chart_series_list = chart_series_list.iter()
+                .map(|&(_, ref area)| area.as_str()).collect();
+            let name_series_list = chart_series_list.iter()
+                .map(|&(ref name, _)| name.as_str()).collect();
             dbg!(&area_chart_series_list);
             // vec![
             //     "Sheet1!$A$1:$A$10",
             //     "Sheet1!$B$1:$B$10",
             // ];
-            self.ws.new_chart_liner("M20", "AH60", area_chart_series_list);
+            self.ws.new_chart_liner("M20", "AH60", &area_time, name_series_list, area_chart_series_list);
         }
     }
     
@@ -727,6 +788,11 @@ pub mod excel {
     async fn test_convert_csv_to_excel_2() {
         convert_csv_to_excel_2().await;
     }
+    #[test]
+    fn test_block_convert_csv_to_excel_2() {
+        futures::executor::block_on(convert_csv_to_excel_2());
+    }
+
 }
 
 pub mod invertor {

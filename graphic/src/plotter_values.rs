@@ -1,7 +1,7 @@
 use plotters::prelude::*;
 use std::collections::BTreeMap;
 
-type LineSeries = BTreeMap<String, Vec<crate::DatePoint>>;
+type LineSeries = BTreeMap<String, crate::LineSeries>;
 
 mod tests {
     use std::collections::hash_map::Entry;
@@ -22,7 +22,7 @@ mod tests {
         
         let mut series = LineSeries::new();
         for name in names {
-            series.entry(name.to_string()).or_default();
+            series.entry(name.to_string()).or_insert(crate::LineSeries::new(name));
         }
         // let lines = std::pin::Pin::new(&mut lines);
         let mut lines = lines.boxed();
@@ -30,7 +30,7 @@ mod tests {
             for (name, value) in line.values {
                 // series.entry(name).or_default().push(value);
                 if let std::collections::btree_map::Entry::Occupied(ref mut ent) = series.entry(name) {
-                    ent.get_mut().push(crate::DatePoint {
+                    ent.get_mut().addPoint(crate::DatePoint {
                         date_time: line.date_time,
                         value
                     });

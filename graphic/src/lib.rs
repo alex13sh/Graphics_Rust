@@ -58,11 +58,11 @@ impl Graphic {
         for name in names {
             self.series.insert(name.to_string(), LineSeries{
                 name: (*name).into(),
-                graphic_name: graphic_name.into(),
+                // graphic_name: graphic_name.into(),
                 graphic_second: second,
-                color: iced_native::Color::BLACK,
+                // color: iced_native::Color::BLACK,
                 points: Vec::new(),
-                min_max_value: None,
+                // min_max_value: None,
             });
         };
     }
@@ -97,7 +97,7 @@ impl Graphic {
 
         if let Some(ser) = self.series.get_mut(name) {
             ser.points = values;
-            ser.calc_min_max_value();
+            // ser.calc_min_max_value();
         }
     
         self.view_port = ViewPort {
@@ -229,22 +229,35 @@ impl Graphic {
 #[derive(Debug)]
 struct LineSeries {
     name: String,
-    graphic_name: String,
     graphic_second: bool,
-    color: iced_native::Color,
+    // color: iced_native::Color,
     points: Vec<DatePoint>,
-    min_max_value: Option<(f32, f32)>,
+    // min_max_value: Option<(f32, f32)>,
 }
 
 impl LineSeries {
-    fn calc_min_max_value(&mut self) -> Option<(f32, f32)> {
-        let min = self.points.iter()
-            .min_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
-        let max = self.points.iter()
-            .max_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
-        self.min_max_value = Some((min, max));
-        self.min_max_value
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            graphic_second: false,
+            points: Vec::new(),
+        }
     }
+    pub fn with_graphic_second(mut self, is_second: bool) -> Self {
+        self.graphic_second = is_second;
+        self
+    }
+    pub fn addPoint(&mut self, point: DatePoint) {
+        self.points.push(point);
+    }
+//     fn calc_min_max_value(&mut self) -> Option<(f32, f32)> {
+//         let min = self.points.iter()
+//             .min_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
+//         let max = self.points.iter()
+//             .max_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;
+//         self.min_max_value = Some((min, max));
+//         self.min_max_value
+//     }
 }
 
 

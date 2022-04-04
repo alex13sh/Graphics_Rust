@@ -6,10 +6,10 @@
 
 pub mod value;
 pub mod utils;
-mod files;
+pub mod files;
 mod async_channel;
-mod stat_info;
-mod convert;
+pub mod stat_info;
+pub mod convert;
 
 pub use utils::DateTimeFix;
 pub use value::{ValuesLine, Value};

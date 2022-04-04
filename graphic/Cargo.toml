@@ -34,3 +34,6 @@ default = ["plotters", "iced_backend"]
 
 # [profile.release]
 # debug = true
+
+[dev-dependencies]
+futures = "*"

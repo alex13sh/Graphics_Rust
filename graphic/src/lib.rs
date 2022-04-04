@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
+mod plotter_values;
+
 use iced::{
     canvas::{
         self, Cache, Canvas, Cursor, Event, Frame, Geometry, Path, Stroke,
@@ -114,7 +116,7 @@ impl Graphic {
     }
     
     #[cfg(any(not(feature = "plotters"), feature = "iced_backend"))]
-    pub fn view<'a>(&'a mut self) -> Element<'a, Message> {
+    pub fn view(&mut self) -> Element<Message> {
         Canvas::new(self)
             .width(Length::Units(1800))
             .height(Length::Units(850))
@@ -141,54 +143,7 @@ impl canvas::Program<Message> for Graphic {
         (iced::canvas::event::Status::Ignored , None)
     }
     
-    #[cfg(not(feature = "plotters"))]
-    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-//         dbg!(&self.state.series);
-
-        let grid = self.grid_cache.draw(bounds.size(), |frame| {
-            let lines = Path::new(|p| {
-                let step_x = 100;
-                let h = bounds.size().height;
-                for x in (1..=10).map(|x| (x*step_x) as f32) {
-                    p.move_to(Point{x: x, y: 0_f32});
-                    p.line_to(Point{x: x, y: h});
-                }
-                
-                let step_y = 100;
-                let w = bounds.size().width;
-                for y in (1..=10).map(|y| (y*step_y) as f32) {
-                    p.move_to(Point{x: 0_f32, y: y});
-                    p.line_to(Point{x: w, y: y});
-                }
-            });
-            frame.stroke(&lines, Stroke::default().with_width(1.0));
-        });
-        
-//         dbg!(&bounds);
-        let lines = self.lines_cache.draw(bounds.size(), |frame| {
-            let lines = Path::new(|path| {
-                for s in self.series.iter() {
-                    if s.points.len() < 2 {continue;}
-                    
-                    let points = self.view_port.get_slice_points(&s.points);
-                    let mut itr = averge_iterator(points, 200);                    
-//                     let mut itr = points.iter();
-
-                    let (x, y) = self.view_port.calc_point(&itr.next().unwrap(), bounds.size());
-                    path.move_to(Point{x: x, y: y});
-                    
-                    for p in itr {
-                        let (x, y) = self.view_port.calc_point(&p, bounds.size());
-                        path.line_to(Point{x: x, y: y});
-                        path.move_to(Point{x: x, y: y});
-                    }
-                }
-            });
-            frame.stroke(&lines, Stroke::default().with_width(2.0));
-        });
-        
-        vec![grid, lines]
-    }
+    
 
     #[cfg(feature = "iced_backend")]
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
@@ -208,6 +163,67 @@ impl canvas::Program<Message> for Graphic {
         });
         vec![plot]
     }
+
+}
+
+impl Graphic {
+    /*
+    fn update_plotters<B, BE>(&self, back: B,
+        seconds_range: core::ops::Range<f32>, is_log: bool)
+        where
+            BE: std::error::Error + Send + Sync,
+            B: plotters::prelude::DrawingBackend<ErrorType=BE>,
+    {
+        use plotters::prelude::*;
+        let root_area = back.into_drawing_area();
+        root_area.fill(&WHITE).unwrap();
+
+        let cc_build = |on, graphic_name: &str, range_1| {
+            ChartBuilder::on(on)
+            .x_label_area_size(25)
+            .y_label_area_size(40)
+            .right_y_label_area_size(40)
+            .margin(5)
+//             .margin_right(20)
+            .caption(
+                graphic_name, // date name
+                ("sans-serif", 20).into_font(),
+            ).build_ranged(
+                seconds_range.clone(),
+                range_1
+            ).unwrap()
+        };
+
+        let mut cc_speed = {
+            let mut cc = cc_build(&a_speed, "Скорость",
+            0_f32..25_000_f32)
+            .set_secondary_coord(seconds_range.clone(),
+            0_f32..25_f32);
+            cc.configure_mesh()
+                .x_labels(20).y_labels(8)
+                .y_desc("Скорость (об./м)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
+                .draw().unwrap();
+            cc.configure_secondary_axes()
+                .x_labels(20).y_labels(10)
+                .y_desc("Вибрация (м/с^2)")
+                .y_label_formatter(&|x| format!("{:2.}", x))
+                .draw().unwrap();
+                cc};
+
+        let mut cc_amper = {
+            let mut cc = cc_build(&a_amp, "Ток",
+            0_f32..120_f32);
+//             .set_secondary_coord(seconds_range.clone(), 0_f32..25_f32);
+            cc.configure_mesh()
+                .x_labels(5).y_labels(12)
+//                 .y_desc("Ток (об./м)")
+                .y_label_formatter(&|x| format!("{}", *x as u32))
+                .draw().unwrap();
+            cc};
+
+
+    } */
 }
 
 #[derive(Debug)]

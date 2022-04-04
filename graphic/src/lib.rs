@@ -1,6 +1,8 @@
 #![allow(dead_code, unused_imports)]
+#![feature(map_first_last)]
 
 mod plotter_values;
+mod file;
 
 use iced::{
     canvas::{
@@ -249,6 +251,9 @@ impl LineSeries {
     }
     pub fn addPoint(&mut self, point: DatePoint) {
         self.points.push(point);
+    }
+    pub fn get_points(&self) -> &[DatePoint] {
+        &self.points
     }
 //     fn calc_min_max_value(&mut self) -> Option<(f32, f32)> {
 //         let min = self.points.iter()

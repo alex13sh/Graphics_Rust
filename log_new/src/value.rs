@@ -39,6 +39,7 @@ impl <V> std::ops::Deref for ValueDate<V> {
 //     }
 // }
 
+/// Values from Row
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValuesLine<Value> {
     #[serde(deserialize_with = "date_time_from_str")]
@@ -77,6 +78,12 @@ impl <V> From<Box<[V]>> for ValuesLine <V> {
             values: v,
         }
     }
+}
+
+/// Values from Column
+pub struct ValuesSeries<Value> {
+    pub series_name: String,
+    pub values: Vec<ValueDate<Value>>,
 }
 
 pub type LogValueFull = ValueDate<Value>;

@@ -11,10 +11,11 @@ mod async_channel;
 mod stat_info;
 mod convert;
 
-use utils::DateTimeFix;
+pub use utils::DateTimeFix;
 pub use value::{ValuesLine, Value};
 pub use utils::{get_file_path, date_time_to_string_name_short, date_time_now};
 pub use stat_info::simple::LogState;
+pub use async_channel::Receiver as Reciv;
 
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 

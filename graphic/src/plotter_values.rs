@@ -36,7 +36,24 @@ where
             range_Y
         ).unwrap()
         };
-    let mut chart = cc_build(&root_area, "Graphic", 0.0..100.0);
+    let mut cc_speed = {
+        let mut cc = cc_build(&root_area, "Скорость",
+        0_f32..75_f32)
+        .set_secondary_coord(seconds_range.clone(),
+        0_f32..25_000_f32);
+        cc.configure_mesh()
+            .x_labels(20).y_labels(8)
+            .y_desc("")
+            .y_label_formatter(&|x| format!("{:2.}", x))
+            .draw().unwrap();
+        cc.configure_secondary_axes()
+            .x_labels(20).y_labels(10)
+            .y_desc("Скорость (об./м)")
+            .y_label_formatter(&|x| format!("{}", *x as u32))
+            .draw().unwrap();
+            cc};
+
+    // let mut chart = cc_build(&root_area, "Graphic", 0.0..100.0);
 
     for (s, c) in series.filter(|s| s.points.len() >=2 ).zip(0..) {
         let points = &s.points;
@@ -45,8 +62,18 @@ where
             points.iter().map(|p| (dlt_time_f32(&date_start, p.date_time), p.value)),
                 &Palette99::pick(c),
             );
-        chart.draw_series(ls).unwrap();
+        if s.is_graphic_second() {
+            cc_speed.draw_secondary_series(ls).unwrap()
+        } else {
+            cc_speed.draw_series(ls).unwrap()
+        }
+            .label(&s.name)
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));;
     }
+    cc_speed.configure_series_labels()
+    .background_style(&WHITE.mix(0.8))
+    .border_style(&BLACK)
+    .draw().unwrap();
 }
 
 mod tests {
@@ -92,8 +119,9 @@ mod tests {
         let name = "2022_03_22-17_17_18";
         let file_path = format!("{}/{}", dir, name);
 
-        let series = futures::executor::block_on(open_csv(&file_path, 
+        let mut series = futures::executor::block_on(open_csv(&file_path, 
             &["Виброскорость", "Выходной ток (A)", "Скорость двигателя"])).unwrap();
+        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
         // dbg!(&series);
 
         let mut date_time_start; //= seconds_range.first().unwrap().date_time.clone();
@@ -106,7 +134,7 @@ mod tests {
             0.0..last_time
         };
         let mut svg_text = String::new();
-        let back = super::SVGBackend::with_string(&mut svg_text, (1280, 720));
+        let back = super::SVGBackend::with_string(&mut svg_text, (1920, 720));
         super::draw_series(back, seconds_range, series.values());
         crate::file::save_svg(&svg_text, date_time_start);
     }

@@ -249,6 +249,13 @@ impl LineSeries {
         self.graphic_second = is_second;
         self
     }
+    pub fn set_graphic_second(&mut self, is_second: bool) -> &mut Self {
+        self.graphic_second = is_second;
+        self
+    }
+    pub fn is_graphic_second(&self) -> bool {
+        self.graphic_second
+    }
     pub fn addPoint(&mut self, point: DatePoint) {
         self.points.push(point);
     }

@@ -4,7 +4,7 @@ use core::ops::Range;
 
 type LineSeries = BTreeMap<String, crate::LineSeries>;
 
-fn draw_series<'a, B, BE>(back: B, seconds_range: Range<f32>, series: impl Iterator<Item=&'a crate::LineSeries>) 
+fn draw_series<'a, B, BE>(back: B, name: &str, seconds_range: Range<f32>, series: impl Iterator<Item=&'a crate::LineSeries>) 
 where
     BE: std::error::Error + Send + Sync,
     B: plotters::prelude::DrawingBackend<ErrorType=BE>,
@@ -37,17 +37,17 @@ where
         ).unwrap()
         };
     let mut cc_speed = {
-        let mut cc = cc_build(&root_area, "Скорость",
-        0_f32..75_f32)
+        let mut cc = cc_build(&root_area, name, //"Скорость",
+        0_f32..60_f32)
         .set_secondary_coord(seconds_range.clone(),
-        0_f32..25_000_f32);
+        0_f32..20_000_f32);
         cc.configure_mesh()
             .x_labels(20).y_labels(8)
             .y_desc("")
             .y_label_formatter(&|x| format!("{:2.}", x))
             .draw().unwrap();
         cc.configure_secondary_axes()
-            .x_labels(20).y_labels(10)
+            .x_labels(20).y_labels(20)
             .y_desc("Скорость (об./м)")
             .y_label_formatter(&|x| format!("{}", *x as u32))
             .draw().unwrap();
@@ -60,7 +60,7 @@ where
         let date_start = points.first().unwrap().date_time.clone();
         let ls = plotters::prelude::LineSeries::new(
             points.iter().map(|p| (dlt_time_f32(&date_start, p.date_time), p.value)),
-                &Palette99::pick(c),
+            &Palette99::pick(c),
             );
         if s.is_graphic_second() {
             cc_speed.draw_secondary_series(ls).unwrap()
@@ -78,6 +78,7 @@ where
 
 mod tests {
     use std::collections::hash_map::Entry;
+    use std::collections::BTreeMap;
 
     use super::LineSeries;
 
@@ -86,11 +87,22 @@ mod tests {
     use log_new::files::csv::*;
     use log_new::convert::{stream::*, iterator::*};
 
-    async fn open_csv(file_path: &str, names: &[&str]) -> Option<LineSeries> {
+    enum Engine {
+        Top,
+        Low,
+        TopLow,
+    }
+
+    async fn open_csv(file_path: &str, eng: Engine, names: &[&str]) -> Option<LineSeries> {
         let values = read_values(format!("{}.csv", file_path))?;
         let values = fullvalue_to_elk(values);
         let lines = values_to_line(futures::stream::iter(values));
-        let lines = log_new::stat_info::simple::filter_half_low(lines);
+        let lines = match eng {
+            Engine::Top => log_new::stat_info::simple::filter_half_top(lines).boxed(),
+            Engine::Low => log_new::stat_info::simple::filter_half_low(lines).boxed(),
+            _ => log_new::stat_info::simple::filter_half_top(lines).boxed(),
+        };
+         
         let lines = values_simple_line_to_hashmap_f32(lines); 
         
         let mut series = LineSeries::new();
@@ -113,15 +125,43 @@ mod tests {
         Some(series)
     }
 
+    fn open_top_low(file_path: &str, names: &[&str]) -> Option<LineSeries> {
+        let mut series = futures::executor::block_on(
+            open_csv(&file_path, Engine::Low, names))?;
+        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
+        series.get_mut("Индикация текущей выходной мощности (P)").unwrap().convert_to_i32();
+
+        let mut series_full: LineSeries = series.into_iter()
+        .map(|(name, mut s)|{
+            let name = name + " Низ.";
+            s.name = name.clone();
+            (name, s)
+        }).collect();
+
+        let mut series = futures::executor::block_on(
+            open_csv(&file_path, Engine::Top, names))?;
+        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
+        series.get_mut("Индикация текущей выходной мощности (P)").unwrap().convert_to_i32();
+
+        let mut series: LineSeries = series.into_iter()
+        .map(|(name, mut s)|{
+            let name = name + " Верх.";
+            s.name = name.clone();
+            (name, s)
+        }).collect();
+        series_full.append(&mut series);
+        Some(series_full)
+    }
+
     #[test]
     fn test_plot_half() {
         let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
-        let name = "2022_03_22-17_17_18";
+        let name = "2022_03_29-13_58_12";
         let file_path = format!("{}/{}", dir, name);
 
-        let mut series = futures::executor::block_on(open_csv(&file_path, 
-            &["Виброскорость", "Выходной ток (A)", "Скорость двигателя"])).unwrap();
-        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
+        let series = open_top_low(&file_path, 
+            &["Виброскорость", "Скорость двигателя",
+            "Выходной ток (A)", "Индикация текущей выходной мощности (P)"]).unwrap();
         // dbg!(&series);
 
         let mut date_time_start; //= seconds_range.first().unwrap().date_time.clone();
@@ -134,8 +174,22 @@ mod tests {
             0.0..last_time
         };
         let mut svg_text = String::new();
-        let back = super::SVGBackend::with_string(&mut svg_text, (1920, 720));
-        super::draw_series(back, seconds_range, series.values());
+        let back = super::SVGBackend::with_string(&mut svg_text, (1920, 900));
+        super::draw_series(back, name, seconds_range, series.values());
         crate::file::save_svg(&svg_text, date_time_start);
+    }
+    
+    #[test]
+    fn test_inskape() {
+        use std::process::Command;
+        let mut cmd = Command::new("/usr/bin/inkscape");
+            // cmd.arg("-z").arg("-d 320")
+            // .arg(format!("/home/user/projects/rust/SimpleUI_Rust/graphic/{}.svg", svg_name))
+            // .arg("-e").arg(format!("/home/user/projects/rust/SimpleUI_Rust/graphic/{}.png", svg_name));
+            cmd.arg("--version");
+        dbg!(&cmd);
+        let cmd = cmd.spawn();
+        dbg!(&cmd);
+        cmd.unwrap();
     }
 }

@@ -5,10 +5,11 @@ pub fn save_svg(svg_text: &str, date_time: crate::DateTime) {
     f.write(svg_text.as_bytes());
     f.flush();
     
-        // use std::process::Command;
-        // let _ = Command::new("inkscape")
-        //     .arg("-z").arg("-d 320")
-        //     .arg(format!("./plot/{}.svg", svg_name))
-        //     .arg("-e").arg(format!("./plot/{}.png", svg_name))
-        //     .spawn().unwrap();
+        use std::process::Command;
+        let mut cmd = Command::new("inkscape");
+            cmd.arg("-z").arg("-d 320")
+            .arg(format!("./{}.svg", svg_name))
+            .arg("-e").arg(format!("./{}.png", svg_name));
+        dbg!(&cmd);
+            cmd.spawn().unwrap();
 }

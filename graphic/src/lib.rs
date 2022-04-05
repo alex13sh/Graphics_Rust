@@ -262,6 +262,13 @@ impl LineSeries {
     pub fn get_points(&self) -> &[DatePoint] {
         &self.points
     }
+    pub fn convert_to_i32(&mut self) {
+        for point in &mut self.points {
+            if point.value > 3200.0 {
+                point.value = 6553.5 - point.value;
+             }
+        }
+    }
 //     fn calc_min_max_value(&mut self) -> Option<(f32, f32)> {
 //         let min = self.points.iter()
 //             .min_by(|a, b| a.value.partial_cmp(&b.value).unwrap())?.value;

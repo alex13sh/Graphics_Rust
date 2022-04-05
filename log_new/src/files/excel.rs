@@ -145,7 +145,7 @@ impl <Sh> Sheet <Sh>
         }
     }
 
-    pub fn draw_graphic(&mut self, pos: (u32, u32), columns: &[&str]) {
+    pub fn draw_graphic(&mut self, pos: (&str, &str), columns: &[&str]) {
         let area_time = self.ws.make_coordinates_columns(&["Время"], self.rows).swap_remove(0).1;
 
         let chart_series_list = self.ws.make_coordinates_columns(columns, self.rows);
@@ -158,7 +158,7 @@ impl <Sh> Sheet <Sh>
         //     "Sheet1!$A$1:$A$10",
         //     "Sheet1!$B$1:$B$10",
         // ];
-        self.ws.new_chart_liner("M20", "AH60", &area_time, name_series_list, area_chart_series_list);
+        self.ws.new_chart_liner(pos.0, pos.1, &area_time, name_series_list, area_chart_series_list);
     }
 }
 
@@ -241,7 +241,8 @@ fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> 
         dbg!("await");
         if let Some(stat) = stat {
             sheet.write_state((14,2), stat);
-            sheet.draw_graphic((13, 20), &[
+            sheet.draw_graphic(("M20", "AH60"), // (13, 20)
+            &[
                 "Виброскорость",
                 "Выходной ток (A)", "Индикация текущей выходной мощности (P)",
                 "Скорость двигателя",
@@ -314,6 +315,7 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
 
     let f_list_first = async move {
         let mut ws = Worksheet::default();
+        ws.set_title("Summary");
         let mut sht = Sheet::from(&mut ws);
 
         let lines_top_2 = filter_half(lines_top_2);
@@ -341,6 +343,14 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
         // let lines = lines.take(1);
 
         sht.write_values(lines).await;
+        sht.draw_graphic(("N3", "AJ41"), // (13, 20)
+            &[
+                "Виброскорость (Верх.)", "Виброскорость (Ниж.)",
+                "Выходной ток (A) (Верх.)", "Выходной ток (A) (Ниж.)", 
+                "Индикация текущей выходной мощности (P) (Верх.)", "Индикация текущей выходной мощности (P) (Ниж.)",
+                "Скорость двигателя (Верх.)", "Скорость двигателя (Ниж.)",
+            ]);
+
         dbg!(Instant::now());
         ws
     };

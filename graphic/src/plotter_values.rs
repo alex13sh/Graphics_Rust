@@ -76,6 +76,35 @@ where
     .draw().unwrap();
 }
 
+async fn lines2series(
+        lines:  impl futures::Stream<Item=log_new::value::SimpleValuesLine> + Send,
+        names: &[&str]
+    ) -> LineSeries {
+
+    use futures::StreamExt;
+    use log_new::convert::{stream::*, iterator::*};
+
+    let lines = values_simple_line_to_hashmap_f32(lines);
+    let mut series = LineSeries::new();
+    for name in names {
+        series.entry(name.to_string()).or_insert(crate::LineSeries::new(name));
+    }
+    // let lines = std::pin::Pin::new(&mut lines);
+    let mut lines = lines.boxed();
+    while let Some(line) = lines.next().await {
+        for (name, value) in line.values {
+            // series.entry(name).or_default().push(value);
+            if let std::collections::btree_map::Entry::Occupied(ref mut ent) = series.entry(name) {
+                ent.get_mut().addPoint(crate::DatePoint {
+                    date_time: line.date_time,
+                    value
+                });
+            }
+        }
+    }
+    series
+}
+
 mod tests {
     use std::collections::hash_map::Entry;
     use std::collections::BTreeMap;
@@ -102,26 +131,9 @@ mod tests {
             Engine::Low => log_new::stat_info::simple::filter_half_low(lines).boxed(),
             _ => log_new::stat_info::simple::filter_half_top(lines).boxed(),
         };
-         
-        let lines = values_simple_line_to_hashmap_f32(lines); 
-        
-        let mut series = LineSeries::new();
-        for name in names {
-            series.entry(name.to_string()).or_insert(crate::LineSeries::new(name));
-        }
-        // let lines = std::pin::Pin::new(&mut lines);
-        let mut lines = lines.boxed();
-        while let Some(line) = lines.next().await {
-            for (name, value) in line.values {
-                // series.entry(name).or_default().push(value);
-                if let std::collections::btree_map::Entry::Occupied(ref mut ent) = series.entry(name) {
-                    ent.get_mut().addPoint(crate::DatePoint {
-                        date_time: line.date_time,
-                        value
-                    });
-                }
-            }
-        }
+
+        let series = super::lines2series(lines, names).await;
+
         Some(series)
     }
 

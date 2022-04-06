@@ -78,8 +78,13 @@ impl LogSession {
     }
 
     pub fn make_path_excel(&self, suffix: &str) -> PathBuf {
+        let name = if suffix.is_empty() {
+            self.date_time_str()
+        } else {
+            format!("{}_{}", self.date_time_str(), suffix)
+        };
         self.log_dir
-        .join("excel").join(&format!("{}_{}", self.date_time_str(), suffix))
+        .join("excel").join(&name)
         .with_extension("xlsx")
     }
     pub fn write_excel_low(&self) -> impl Future<Output=()> {

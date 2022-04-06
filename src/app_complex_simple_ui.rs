@@ -247,9 +247,9 @@ impl Application for App {
             self.klapans.subscription(&props.klapans).map(Message::KlapansUI),
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
 
-            if let Some(stream) = self.log_session.get_statistic_top() {
+            if let Some(stream) = self.log_session.get_statistic_low() {
                 Subscription::from_recipe(
-                    ui::animations::MyStream{name: "statistic_top".into(), stream: stream}
+                    ui::animations::MyStream{name: "statistic_low".into(), stream: stream}
                 ).map(ui::info_pane::Message::UpdateInfo)
                 .map(Message::InfoPane)
             } else {Subscription::none()},
@@ -303,7 +303,7 @@ impl Application for App {
             if enb {
                 log_session.start();
 //                 let log_session = log_session.make_read().unwrap();
-                let file = log_session.make_path_excel("low");
+                let file = log_session.make_path_excel("");
                 let f = log_session.write_full();
                 let f = async move {
                     f.await;

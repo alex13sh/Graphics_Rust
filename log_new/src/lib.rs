@@ -1,20 +1,21 @@
 #![feature(explicit_generic_args_with_impl_trait)]
-#![feature(result_option_inspect)]
+// #![feature(result_option_inspect)]
 
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
 pub mod value;
 pub mod utils;
-mod files;
+pub mod files;
 mod async_channel;
-mod stat_info;
-mod convert;
+pub mod stat_info;
+pub mod convert;
 
-use utils::DateTimeFix;
+pub use utils::DateTimeFix;
 pub use value::{ValuesLine, Value};
 pub use utils::{get_file_path, date_time_to_string_name_short, date_time_now};
 pub use stat_info::simple::LogState;
+pub use async_channel::Receiver as Reciv;
 
 pub(crate) type MyResult<T=()> = Result<T, Box<dyn std::error::Error>>;
 
@@ -98,6 +99,20 @@ impl LogSession {
         let values_top = crate::stat_info::simple::filter_half_top(values_line);
         files::excel::write_file(file_path, values_top)
     }
+    pub fn write_excel_2(&self) -> impl Future<Output=()> {
+        // use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use crate::stat_info::simple::*;
+        let file_path = self.make_path_raw();
+        let half = |path| {
+            let values = crate::files::csv::read_values(path).unwrap();
+            let values = fullvalue_to_elk(values);
+            values_to_line(futures::stream::iter(values))
+        };
+        let values_top = filter_half_top(half(file_path.clone()));
+        let values_low = filter_half_low(half(file_path.clone()));
+        files::excel::write_file_2(file_path, values_top, values_low)
+    }
 
     pub fn write_csv_elk(&self) -> impl Future<Output=()> {
         use convert::stream::*;
@@ -110,14 +125,19 @@ impl LogSession {
         write_values_async(file_path,
             values).unwrap()
     }
+
+    pub fn make_path_raw(&self) -> PathBuf {
+        self.log_dir
+        .join("csv_raw").join(&self.date_time_str())
+        .with_extension("csv")
+    }
+    
     pub fn write_csv_raw(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
         let raw = self.values_raw.as_ref().unwrap();
         let values = values_from_line(raw.subscribe());
-        let file_path = self.log_dir
-            .join("csv_raw").join(&self.date_time_str())
-            .with_extension("csv");
+        let file_path = self.make_path_raw();
         write_values_async(file_path, 
             values).unwrap()
     }
@@ -133,7 +153,7 @@ impl LogSession {
             values).unwrap()
     }
 
-    pub fn write_full(&self) -> impl Future<Output=()> {
+    pub fn write_full(&self) -> impl Future<Output=()> + Send {
 //         let f = futures::future::join_all(vec![
 //             self.write_csv_elk(),
 //             self.write_excel(),
@@ -144,14 +164,19 @@ impl LogSession {
 //             let _ = f.await;
 //         }
         let f1 = self.write_csv_elk();
-        let f2l = self.write_excel_low();
-        let f2t = self.write_excel_top();
+//         let f2l = self.write_excel_low();
+//         let f2t = self.write_excel_top();
         let f3 = self.write_csv_raw();
+        let f2tl = self.write_excel_2();
+        let f3 = async move {
+            f3.await;
+            f2tl.await;
+        };
         let f4 = self.write_csv_raw_diff();
         async move {
             futures::join!(
                 f1,
-                f2l, f2t,
+//                 f2l, f2t,
                 f3, f4
             );
         }
@@ -183,4 +208,9 @@ impl LogSession {
 pub fn save_invertor(path: impl AsRef<Path>, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
     let params = crate::convert::iterator::invertor_parametrs_sort(params);
     files::csv::write_values(path, params);
+}
+
+pub mod test {
+
+    pub use crate::files::excel::convert_csv_to_excel_2;
 }

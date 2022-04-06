@@ -12,10 +12,10 @@ iced = { version = "0.3",  features = ["canvas", "svg"] }
 iced_native = { version = "0.3"}
 
 futures = "0.3.12"
-chrono = "0.4"
+
 coarse-prof = {version = "0.2.4"} #, path = "../coarse-prof-0.2.4"}
 
-log = {path = "../log"}
+log_new = {path = "../log_new"}
 
 [dependencies.plotters]
 #path = "../plotters"
@@ -34,3 +34,6 @@ default = ["plotters", "iced_backend"]
 
 # [profile.release]
 # debug = true
+
+[dev-dependencies]
+futures = "*"

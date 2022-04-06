@@ -39,6 +39,7 @@ impl <V> std::ops::Deref for ValueDate<V> {
 //     }
 // }
 
+/// Values from Row
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ValuesLine<Value> {
     #[serde(deserialize_with = "date_time_from_str")]
@@ -79,7 +80,14 @@ impl <V> From<Box<[V]>> for ValuesLine <V> {
     }
 }
 
+/// Values from Column
+pub struct ValuesSeries<Value> {
+    pub series_name: String,
+    pub values: Vec<ValueDate<Value>>,
+}
+
 pub type LogValueFull = ValueDate<Value>;
+pub type LogValuesFull = ValuesLine<Value>;
 pub type LogValueRaw = ValueDate<raw::Value>;
 pub type LogValueRawOld = ValueDate<raw::ValueOld>;
 pub type RawValuesLine = ValuesLine<raw::Value>;
@@ -185,12 +193,30 @@ pub mod simple {
     
     use std::collections::BTreeMap;
     #[derive(Serialize, Deserialize, Debug, Clone)]
-    pub struct ValuesMap {
+    pub struct ValuesMap <Value = String> {
         #[serde(deserialize_with = "date_time_from_str")]
         #[serde(serialize_with = "date_time_to_str")]
         pub date_time: DateTimeFix,
         #[serde(flatten)]
-        pub values: BTreeMap<String, String>,
+        pub values: BTreeMap<String, Value>,
+    }
+
+    impl From<super::SimpleValuesLine> for ValuesMap<String> {
+        fn from(l: super::SimpleValuesLine) -> Self {
+            simple::ValuesMap {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
+            }
+        }
+    }
+
+    impl From<super::SimpleValuesLine> for ValuesMap<f32> {
+        fn from(l: super::SimpleValuesLine) -> Self {
+            simple::ValuesMap {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, v.value)).collect(),
+            }
+        }
     }
 }
 

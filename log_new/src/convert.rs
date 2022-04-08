@@ -251,4 +251,6 @@ pub mod stream {
             value: l.value,
         })
     }
+
+//     pub fn stream_split(lines: impl Stream<Item=ValuesLine<VT>>) ->
 }

@@ -4,6 +4,7 @@
 #[cfg(feature = "plotters")]
 mod plotter_values;
 mod file;
+pub use file::csv2svg;
 
 #[cfg(feature = "gui")]
 mod gui;

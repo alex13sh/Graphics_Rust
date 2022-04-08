@@ -57,7 +57,7 @@ impl LogSession {
     pub fn relate_path(&self, rel: &str) -> PathBuf {
         self.log_dir.join(rel)
     }
-    fn date_time_str(&self) -> String {
+    pub fn date_time_str(&self) -> String {
         utils::date_time_to_string_name_short(&self.date_time)
     }
     

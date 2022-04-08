@@ -304,9 +304,11 @@ impl Application for App {
                 log_session.start();
 //                 let log_session = log_session.make_read().unwrap();
                 let file = log_session.make_path_excel("low");
+                let file_name = log_session.date_time_str();
                 let f = log_session.write_full();
                 let f = async move {
                     f.await;
+                    graphic::csv2svg(&file_name);
                     file
                 };
                 return Command::perform(f, |path| Message::InfoPane(ui::info_pane::Message::UpdateFile(path)));

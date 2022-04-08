@@ -108,6 +108,7 @@ async fn lines2series(
 mod tests {
     use std::collections::hash_map::Entry;
     use std::collections::BTreeMap;
+    use std::path::Path;
 
     use super::LineSeries;
 
@@ -122,8 +123,8 @@ mod tests {
         TopLow,
     }
 
-    async fn open_csv(file_path: &str, eng: Engine, names: &[&str]) -> Option<LineSeries> {
-        let values = read_values(format!("{}.csv", file_path))?;
+    async fn open_csv(file_path: impl AsRef<Path>, eng: Engine, names: &[&str]) -> Option<LineSeries> {
+        let values = read_values(file_path.as_ref().with_extension("csv"))?;
         let values = fullvalue_to_elk(values);
         let lines = values_to_line(futures::stream::iter(values));
         let lines = match eng {
@@ -137,7 +138,7 @@ mod tests {
         Some(series)
     }
 
-    fn open_top_low(file_path: &str, names: &[&str]) -> Option<LineSeries> {
+    fn open_top_low(file_path: impl AsRef<Path>, names: &[&str]) -> Option<LineSeries> {
         let mut series = futures::executor::block_on(
             open_csv(&file_path, Engine::Low, names))?;
         series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);

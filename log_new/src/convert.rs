@@ -209,10 +209,7 @@ pub mod stream {
     
     pub fn values_line_to_hashmap(lines: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=simple::ValuesMap> {
         lines.map(|l| {
-            simple::ValuesMap {
-                date_time: l.date_time,
-                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
-            }
+            simple::ValuesMap::from(l)
         })
     }
     
@@ -254,4 +251,6 @@ pub mod stream {
             value: l.value,
         })
     }
+
+//     pub fn stream_split(lines: impl Stream<Item=ValuesLine<VT>>) ->
 }

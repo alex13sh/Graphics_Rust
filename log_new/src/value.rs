@@ -218,6 +218,15 @@ pub mod simple {
             }
         }
     }
+
+    impl From<super::ElkValuesLine> for ValuesMap<String> {
+        fn from(l: super::ElkValuesLine) -> Self {
+            simple::ValuesMap {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| (v.sensor_name, format!("{:.2}", v.value))).collect(),
+            }
+        }
+    }
 }
 
 pub mod invertor {

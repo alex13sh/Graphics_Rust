@@ -2,7 +2,7 @@ use plotters::prelude::*;
 use std::collections::BTreeMap;
 use core::ops::Range;
 
-fn draw_series<'a, B, BE>(back: B, name: &str, seconds_range: Range<f32>, series: impl Iterator<Item=&'a crate::LineSeries>) 
+pub(crate) fn draw_series<'a, B, BE>(back: B, name: &str, seconds_range: Range<f32>, series: impl Iterator<Item=&'a crate::LineSeries>)
 where
     BE: std::error::Error + Send + Sync,
     B: plotters::prelude::DrawingBackend<ErrorType=BE>,
@@ -75,38 +75,14 @@ where
 }
 
 
-mod tests {
 
-    use crate::file::{
-        Engine, LineSeries,
-        open_top_low,
-        save_svg,
-    };
+mod tests {
 
     #[test]
     fn test_plot_half() {
-        let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
+//         let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
         let name = "2022_03_29-13_58_12";
-        let file_path = format!("{}/{}", dir, name);
-
-        let series = open_top_low(&file_path, 
-            &["Виброскорость", "Скорость двигателя",
-            "Выходной ток (A)", "Индикация текущей выходной мощности (P)"]).unwrap();
-        // dbg!(&series);
-
-        let mut date_time_start; //= seconds_range.first().unwrap().date_time.clone();
-        let seconds_range = {
-            let seconds_range = series.first_key_value().as_ref().unwrap().1.get_points();
-            date_time_start = seconds_range.first().unwrap().date_time.clone();
-            // seconds_range.first().unwrap().date_time..seconds_range.last().unwrap().date_time
-            let last_time = seconds_range.last().unwrap().date_time.timestamp_millis() - seconds_range.first().unwrap().date_time.timestamp_millis();
-            let last_time = (last_time as f32 / 100.0).round() / 10.0;
-            0.0..last_time
-        };
-        let mut svg_text = String::new();
-        let back = super::SVGBackend::with_string(&mut svg_text, (1920*3/4, 900*3/4));
-        super::draw_series(back, name, seconds_range, series.values());
-        save_svg(&svg_text, date_time_start);
+        crate::file::csv2svg(name);
     }
     
     #[test]

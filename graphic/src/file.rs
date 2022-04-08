@@ -1,3 +1,27 @@
+
+pub fn csv2svg(name: &str) {
+    let dir_csv = log_new::get_file_path("log/values/csv_raw");
+    let file_path = dir_csv.join(name).with_extension("csv");
+    dbg!(&file_path);
+    let series = open_top_low(&file_path,
+        &["Виброскорость", "Скорость двигателя",
+        "Выходной ток (A)", "Индикация текущей выходной мощности (P)"]).unwrap();
+
+    let mut date_time_start; //= seconds_range.first().unwrap().date_time.clone();
+    let seconds_range = {
+        let seconds_range = series.first_key_value().as_ref().unwrap().1.get_points();
+        date_time_start = seconds_range.first().unwrap().date_time.clone();
+        // seconds_range.first().unwrap().date_time..seconds_range.last().unwrap().date_time
+        let last_time = seconds_range.last().unwrap().date_time.timestamp_millis() - seconds_range.first().unwrap().date_time.timestamp_millis();
+        let last_time = (last_time as f32 / 100.0).round() / 10.0;
+        0.0..last_time
+    };
+    let mut svg_text = String::new();
+    let back = plotters::prelude::SVGBackend::with_string(&mut svg_text, (1920*3/4, 900*3/4));
+    crate::plotter_values::draw_series(back, name, seconds_range, series.values());
+    save_svg(&svg_text, date_time_start);
+}
+
 pub fn save_svg(svg_text: &str, date_time: crate::DateTime) {
 
     let dir = log_new::get_file_path("log/plot");

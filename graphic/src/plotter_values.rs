@@ -2,8 +2,6 @@ use plotters::prelude::*;
 use std::collections::BTreeMap;
 use core::ops::Range;
 
-type LineSeries = BTreeMap<String, crate::LineSeries>;
-
 fn draw_series<'a, B, BE>(back: B, name: &str, seconds_range: Range<f32>, series: impl Iterator<Item=&'a crate::LineSeries>) 
 where
     BE: std::error::Error + Send + Sync,
@@ -76,95 +74,14 @@ where
     .draw().unwrap();
 }
 
-async fn lines2series(
-        lines:  impl futures::Stream<Item=log_new::value::SimpleValuesLine> + Send,
-        names: &[&str]
-    ) -> LineSeries {
-
-    use futures::StreamExt;
-    use log_new::convert::{stream::*, iterator::*};
-
-    let lines = values_simple_line_to_hashmap_f32(lines);
-    let mut series = LineSeries::new();
-    for name in names {
-        series.entry(name.to_string()).or_insert(crate::LineSeries::new(name));
-    }
-    // let lines = std::pin::Pin::new(&mut lines);
-    let mut lines = lines.boxed();
-    while let Some(line) = lines.next().await {
-        for (name, value) in line.values {
-            // series.entry(name).or_default().push(value);
-            if let std::collections::btree_map::Entry::Occupied(ref mut ent) = series.entry(name) {
-                ent.get_mut().addPoint(crate::DatePoint {
-                    date_time: line.date_time,
-                    value
-                });
-            }
-        }
-    }
-    series
-}
 
 mod tests {
-    use std::collections::hash_map::Entry;
-    use std::collections::BTreeMap;
-    use std::path::Path;
 
-    use super::LineSeries;
-
-    use futures::StreamExt;
-    use log_new::value::*;
-    use log_new::files::csv::*;
-    use log_new::convert::{stream::*, iterator::*};
-
-    enum Engine {
-        Top,
-        Low,
-        TopLow,
-    }
-
-    async fn open_csv(file_path: impl AsRef<Path>, eng: Engine, names: &[&str]) -> Option<LineSeries> {
-        let values = read_values(file_path.as_ref().with_extension("csv"))?;
-        let values = fullvalue_to_elk(values);
-        let lines = values_to_line(futures::stream::iter(values));
-        let lines = match eng {
-            Engine::Top => log_new::stat_info::simple::filter_half_top(lines).boxed(),
-            Engine::Low => log_new::stat_info::simple::filter_half_low(lines).boxed(),
-            _ => log_new::stat_info::simple::filter_half_top(lines).boxed(),
-        };
-
-        let series = super::lines2series(lines, names).await;
-
-        Some(series)
-    }
-
-    fn open_top_low(file_path: impl AsRef<Path>, names: &[&str]) -> Option<LineSeries> {
-        let mut series = futures::executor::block_on(
-            open_csv(&file_path, Engine::Low, names))?;
-        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
-        series.get_mut("Индикация текущей выходной мощности (P)").unwrap().convert_to_i32();
-
-        let mut series_full: LineSeries = series.into_iter()
-        .map(|(name, mut s)|{
-            let name = name + " Низ.";
-            s.name = name.clone();
-            (name, s)
-        }).collect();
-
-        let mut series = futures::executor::block_on(
-            open_csv(&file_path, Engine::Top, names))?;
-        series.get_mut("Скорость двигателя").unwrap().set_graphic_second(true);
-        series.get_mut("Индикация текущей выходной мощности (P)").unwrap().convert_to_i32();
-
-        let mut series: LineSeries = series.into_iter()
-        .map(|(name, mut s)|{
-            let name = name + " Верх.";
-            s.name = name.clone();
-            (name, s)
-        }).collect();
-        series_full.append(&mut series);
-        Some(series_full)
-    }
+    use crate::file::{
+        Engine, LineSeries,
+        open_top_low,
+        save_svg,
+    };
 
     #[test]
     fn test_plot_half() {
@@ -187,9 +104,9 @@ mod tests {
             0.0..last_time
         };
         let mut svg_text = String::new();
-        let back = super::SVGBackend::with_string(&mut svg_text, (1920, 900));
+        let back = super::SVGBackend::with_string(&mut svg_text, (1920*3/4, 900*3/4));
         super::draw_series(back, name, seconds_range, series.values());
-        crate::file::save_svg(&svg_text, date_time_start);
+        save_svg(&svg_text, date_time_start);
     }
     
     #[test]

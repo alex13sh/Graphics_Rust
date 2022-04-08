@@ -19,7 +19,7 @@ use log_new::date_time_now;
 
 
 #[derive(Debug)]
-struct LineSeries {
+pub struct LineSeries {
     name: String,
     graphic_second: bool,
     // color: iced_native::Color,

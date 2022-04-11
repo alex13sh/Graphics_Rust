@@ -119,6 +119,14 @@ impl LogSession {
         files::excel::write_file_2(file_path, values_top, values_low)
     }
 
+    pub fn write_excel_3(&self) -> impl Future<Output=()> {
+        let elk = self.values_elk.as_ref().unwrap();
+        let values_line = elk.subscribe();
+        let file_path = self.make_path_excel("");
+
+        files::excel::write_file_3(file_path, values_line)
+    }
+
     pub fn write_csv_elk(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
@@ -171,17 +179,19 @@ impl LogSession {
         let f1 = self.write_csv_elk();
 //         let f2l = self.write_excel_low();
 //         let f2t = self.write_excel_top();
+        let f2tl = self.write_excel_3();
         let f3 = self.write_csv_raw();
-        let f2tl = self.write_excel_2();
+//         let f2tl = self.write_excel_2();
         let f3 = async move {
             f3.await;
-            f2tl.await;
+//             f2tl.await;
         };
         let f4 = self.write_csv_raw_diff();
         async move {
             futures::join!(
                 f1,
 //                 f2l, f2t,
+                f2tl,
                 f3, f4
             );
         }

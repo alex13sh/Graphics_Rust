@@ -9,7 +9,8 @@ pub fn csv2svg(name: &str) {
 
     let mut date_time_start; //= seconds_range.first().unwrap().date_time.clone();
     let seconds_range = {
-        let seconds_range = series.first_key_value().as_ref().unwrap().1.get_points();
+        dbg!(series.keys());
+        let seconds_range = series.last_key_value().as_ref().unwrap().1.get_points();
         date_time_start = seconds_range.first().unwrap().date_time.clone();
         // seconds_range.first().unwrap().date_time..seconds_range.last().unwrap().date_time
         let last_time = seconds_range.last().unwrap().date_time.timestamp_millis() - seconds_range.first().unwrap().date_time.timestamp_millis();

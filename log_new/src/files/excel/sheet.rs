@@ -37,13 +37,17 @@ impl SheetInner for Worksheet {
     fn make_coordinates_columns(&self, columns: &[&str], rows: u32) -> Vec<(String, String)> {
         let title = self.get_title();
         let rows = rows + 1;
-        columns.into_iter().map(|name| {
-            let column = self.get_column_by_name(name).unwrap();
-            let column_char = ('A' as u8 + column as u8 - 1) as char;
-            (
-                format!("{title}!${column}$1", title=title, column = column_char),
-                format!("{title}!${column}$2:${column}${rows}", title=title, column = column_char, rows = rows)
-            )
+        columns.into_iter().filter_map(|name| {
+            if let Some(column) = self.get_column_by_name(name) {
+                let column_char = ('A' as u8 + column as u8 - 1) as char;
+                Some((
+                    format!("{title}!${column}$1", title=title, column = column_char),
+                    format!("{title}!${column}$2:${column}${rows}", title=title, column = column_char, rows = rows)
+                ))
+            } else {
+                println!("[ERROR] SheetInner::get_column_by_name: {}", name);
+                None
+            }
         }).collect()
     }
     fn new_chart_liner(&mut self, from: &str, to: &str, area_time: &str, names: Vec<&str>, area: Vec<&str>) {

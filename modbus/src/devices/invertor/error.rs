@@ -1,7 +1,14 @@
-#[derive(Debug, thiserror::Error)]
+
+impl Default for InvertorError {
+    fn default() -> Self {
+        InvertorError::None
+    }
+}
+
+#[derive(Debug, PartialEq, thiserror::Error)]
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-pub(super) enum InvertorError {
+pub enum InvertorError {
     #[error("Аварий не зафиксировано")]
     None = 0,
     #[error("Перегрузка по току во время разгона (ocA)")]

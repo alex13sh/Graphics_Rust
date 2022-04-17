@@ -1,10 +1,11 @@
-use super::{Device, DeviceError, ModbusValues};
+use super::{MDevice as Device, DeviceError, ModbusValues};
 use super::Value;
 use crate::ValueArc;
 
 use std::sync::Arc;
 
 mod error;
+pub use error::InvertorError;
 
 #[derive(Clone)]
 pub struct Invertor {
@@ -27,6 +28,8 @@ pub struct InvertorValues {
 
     pub индикация_скорости: ValueArc,
     pub индикация_мощности: ValueArc,
+
+    pub код_ошибки: ValueArc,
 }
 
 impl InvertorValues {
@@ -53,6 +56,8 @@ impl InvertorValues {
 
             индикация_скорости: values.get_value_arc("Индикация рассчитанной (с PG) скорости").unwrap(),
             индикация_мощности: values.get_value_arc("Индикация текущей выходной мощности (P)").unwrap(),
+
+            код_ошибки: values.get_value_arc("Код ошибки").unwrap(),
 
             values: values_,
         }
@@ -132,6 +137,11 @@ impl InvertorValues {
     pub fn get_speed_out_value(&self) -> Arc<Value> {
         self.индикация_скорости.clone()
     }
+
+    pub fn get_err(&self) -> InvertorError {
+        let err = self.код_ошибки.value() as u8;
+        unsafe {std::mem::transmute(err)}
+    }
 }
 
 // Configure
@@ -204,7 +214,7 @@ fn test_array_contsins() {
     assert_eq!([0,1, 3,4].contains(&1), true);
     assert_eq!([0,1, 3,4].contains(&2), false);
 }
-/*
+
 #[test]
 fn test_invertor_error() {
     let err_num = 2_u8;
@@ -213,7 +223,7 @@ fn test_invertor_error() {
     
     let err: InvertorError = unsafe { ::std::mem::transmute(4_u8) };
     assert_eq!("Замыкание на землю (GFF)", format!("{}", err));
-}*/
+}
 
 
 #[test]
@@ -226,7 +236,7 @@ fn invertor_values_bit() {
             "Команда задания частоты",
 //             "Выходной ток (A)", "Скорость двигателя",
         ];
-    let values = values.get_values_by_id(|id| 
+    let values = values.get_values_by_id(|id|
         values_str.iter().any(|&name|
             id.sensor_name.starts_with(name)
         )
@@ -234,4 +244,12 @@ fn invertor_values_bit() {
     dbg!(values.keys());
     let v_stop = values.get_value_arc("Stop").unwrap();
     assert_eq!(v_stop.name(), "Stop");
+}
+
+
+#[test]
+fn test_init() {
+    let dev = crate::init::make_invertor("192.168.1.5".into()).with_id(5);
+    let dev = Device::from(dev);
+    let dev = Invertor::from(dev);
 }

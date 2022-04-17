@@ -33,11 +33,11 @@ impl OilStation {
     }
     pub fn температура(&self) -> Result<f32, ValueFloatError> {
         use modbus::{Value, TryFrom};
-        f32::try_from(&self.температура as &Value) // todo: Обработка ошибок
+        f32::try_from(&self.температура as &Value)
     }
     pub fn давление_масла(&self) -> Result<f32, ValueFloatError> {
         use modbus::{Value, TryFrom};
-        f32::try_from(&self.давление_масла as &Value) // todo: Обработка ошибок
+        f32::try_from(&self.давление_масла as &Value)
     }
 }
 

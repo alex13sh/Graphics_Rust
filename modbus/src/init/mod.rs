@@ -452,6 +452,8 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_simple_invertor_value( "Уровень перегрева радиатора (OH)",  6, 15),
                 add_invertor_value( "Порог ограничения для функций токоограничения",  6, 16),
 
+                add_invertor_value( "Последняя запись об аварии", 6, 17),
+
                 add_float_invertor_value( "Заданная частота при аварии",  6,31, 2),
                 add_float_invertor_value( "Выходная частота при аварии",  6,32, 2),
                 add_simple_invertor_value( "Выходное напряжение при аварии",  6, 33),

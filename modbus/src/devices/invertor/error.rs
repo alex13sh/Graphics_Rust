@@ -1,7 +1,14 @@
-#[derive(Debug, thiserror::Error)]
+
+impl Default for InvertorError {
+    fn default() -> Self {
+        InvertorError::None
+    }
+}
+
+#[derive(Debug, PartialEq, thiserror::Error)]
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-pub(super) enum InvertorError {
+pub enum InvertorError {
     #[error("Аварий не зафиксировано")]
     None = 0,
     #[error("Перегрузка по току во время разгона (ocA)")]
@@ -108,7 +115,10 @@ pub(super) enum InvertorError {
     PcodE = 52,
      #[error("Коммуникационная ошибка (cE1)")]
     cE1 = 54,
-    // ...
+    #[error("Коммуникационная ошибка (cE2)")]
+    cE2 = 55,
+    #[error("Коммуникационная ошибка (cE3)")]
+    cE3 = 56,
     #[error("Коммуникационная ошибка (cE4)")]
     cE4 = 57,
     #[error("Превышено время ожидания коммуникации (cE10)")]
@@ -127,9 +137,30 @@ pub(super) enum InvertorError {
     ryF = 64,
     #[error("Ошибка PG карты (PGF5)")]
     PGF5 = 65,
+
+    #[error("Sensorless estimated speed have wrong direction")]
+    e68 = 68,
+    #[error("Sensorless estimated speed is over speed")]
+    e69 = 69,
+    #[error("Sensorless estimated speed deviated")]
+    e70 = 70,
+    #[error("Watchdog")]
+    wd = 71,
+    #[error("Channel 1 (STO1–SCM1) safety loop error (STL1)")]
+    STL1 = 72,
+
     
     #[error("Ошибка функции безопасного останова (S1)")]
     S1 = 73,
+
+    #[error("External brake error")]
+    e75 = 75,
+    #[error("Safe Torque Off (STO)")]
+    STO = 76,
+    #[error("Channel 2 (STO2–SCM2) safety loop error (STL2)")]
+    STL2 = 77,
+    #[error("Internal loop error (STL3)")]
+    STL3 = 78,
     
     #[error("Uocc Превышение тока U-фазы (мониторинг начинается при нажатии кнопки RUN, программная защита)")]
     Uocc = 79,
@@ -143,6 +174,20 @@ pub(super) enum InvertorError {
     OPHL_V = 83,
     #[error("OPHL обрыв выходной фазы W")]
     OPHL_W = 84,
+
+    #[error("PG-02U ABZ hardware disconnection")]
+    e85 = 85,
+    #[error("PG-02U UVW hardware disconnection")]
+    e86 = 86,
+    #[error("oL3 Low frequency overload protection")]
+    oL3 = 87,
+    #[error("RoPd initial rotor position detection error")]
+    RoPd = 89,
+    #[error("Inner PLC function is forced to stop")]
+    PLC = 90,
+    #[error("CPU error")]
+    CPU = 93,
+
     
     #[error("CGdE Превышение времени сторожевого запроса CANopen")]
     CGdE = 101,

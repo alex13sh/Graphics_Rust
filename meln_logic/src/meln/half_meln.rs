@@ -185,6 +185,8 @@ pub mod watcher {
         pub amper: Property<u32>,
         pub volt: Property<u32>,
         pub watt: Property<u32>,
+
+        pub error: Property<modbus::invertor::InvertorError>,
     }
     
     impl Invertor {
@@ -195,6 +197,8 @@ pub mod watcher {
             self.speed.set(speed);
             let amper: u32 = values.get_amper_out_value().value();
             self.amper.set(amper);
+
+            self.error.set(values.get_err());
         }
     }
     

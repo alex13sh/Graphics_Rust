@@ -44,16 +44,10 @@ pub fn save_svg(svg_text: &str, date_time: crate::DateTime) {
             .spawn().unwrap()
             .wait().unwrap();
 
-        let mut cmd = Command::new("tepe");
-        cmd.arg("send")
-            .arg("-t").arg("673166809:AAFK3kJQn9v40fttsbuAQ9PTT0396QER5uQ")
-            .arg("-c 420586828") // Чат со мной
-            .arg("-m").arg(&date_time)
-            .arg("--").arg(dir.join(&svg_name).with_extension("png"));
-        dbg!(&cmd);
-        cmd
-            .spawn().unwrap()
-            .wait().unwrap();
+    log_new::telegram::send_file(
+        &date_time,
+        dir.join(&svg_name).with_extension("png").to_str().unwrap()
+    );
 }
 
 pub type LineSeries = BTreeMap<String, crate::LineSeries>;

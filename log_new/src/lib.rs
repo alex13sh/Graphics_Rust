@@ -6,6 +6,7 @@
 
 pub mod value;
 pub mod utils;
+pub mod telegram;
 pub mod files;
 mod async_channel;
 pub mod stat_info;
@@ -34,8 +35,15 @@ pub struct LogSession {
     values_raw: Option<async_channel::Sender<value::ValuesLine<value::Value>>>,
 }
 
+impl Drop for LogSession {
+    fn drop(&mut self) {
+        telegram::send_text("Закрытие программы");
+    }
+}
+
 impl LogSession {
     pub fn new() -> Self {
+        telegram::send_text("Запуск программы");
         Self {
             log_dir: utils::get_file_path("log/values/"),
             date_time: utils::date_time_now(),
@@ -45,11 +53,15 @@ impl LogSession {
     }
 
     pub fn start(&mut self) {
+        telegram::send_text("Запуск логирования");
+
         self.values_elk = Some(async_channel::broadcast(20).0);
         self.values_raw = Some(async_channel::broadcast(20).0);
         self.date_time = utils::date_time_now();
     }
     pub fn stop(&mut self) {
+        telegram::send_text("Остановка логирования");
+
         self.values_elk = None;
         self.values_raw = None;
     }

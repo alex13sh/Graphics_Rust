@@ -76,6 +76,7 @@ impl Value {
         if let Ok(v) = v {
             match self.get_error_min_max() {
             (None, Some(max)) => max.red < v,
+            (Some(min), None) => v <= min.red,
             (Some(min), Some(max)) => max.red < v || min.red > v,
             _ => false,
             }

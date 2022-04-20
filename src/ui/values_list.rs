@@ -65,6 +65,12 @@ impl ValuesList {
                     [1.0, 0.0, 0.0],
             (None, Some(max)) if max.yellow <= value =>
                     [1.0, 1.0, 0.0],
+
+            (Some(min), None) if min.red >= value =>
+                    [1.0, 0.0, 0.0],
+            (Some(min), None) if min.yellow >= value <= value =>
+                    [1.0, 1.0, 0.0],
+
             (Some(min), Some(max)) if min.red >= value || max.red <= value =>
                     [1.0, 0.0, 0.0],
             (Some(min), Some(max)) if min.yellow >= value || max.yellow <= value =>

@@ -1,4 +1,4 @@
-use modbus::{Value, ValueArc, ModbusValues, ValueError, ValueFloatResult};
+use modbus::{Value, ValueArc, ModbusValues, ValueError, ErrorStatus, ValueFloatResult};
 use super::style;
 
 use std::collections::{BTreeMap};
@@ -52,30 +52,18 @@ impl ValuesList {
     }
     fn view_value<'a, Message: 'a>(value: &ValueArc, style: &Style) -> Element<'a, Message> {
         pub use std::convert::TryFrom;
-        let err = value.get_error_min_max();
+        let err = value.get_error_status();
         let name = value.name();
         let suffix_name = if let Some(txt) = value.suffix_name() {format!("({})", txt)} else {String::from("")};
-        let value = f32::try_from(&value as &modbus::Value);
+        let value = value.try_value_as_f32();
         let color;
         let txt_value;
         match value {
         Ok(value) => {
             color = match err {
-            (None, Some(max)) if max.red <= value =>
-                    [1.0, 0.0, 0.0],
-            (None, Some(max)) if max.yellow <= value =>
-                    [1.0, 1.0, 0.0],
-
-            (Some(min), None) if min.red >= value =>
-                    [1.0, 0.0, 0.0],
-            (Some(min), None) if min.yellow >= value <= value =>
-                    [1.0, 1.0, 0.0],
-
-            (Some(min), Some(max)) if min.red >= value || max.red <= value =>
-                    [1.0, 0.0, 0.0],
-            (Some(min), Some(max)) if min.yellow >= value || max.yellow <= value =>
-                    [1.0, 1.0, 0.0],
-            _ => [0.0, 0.8, 0.0],
+            ErrorStatus::Error =>   [1.0, 0.0, 0.0],
+            ErrorStatus::Warning => [1.0, 1.0, 0.0],
+            ErrorStatus::None =>    [0.0, 0.8, 0.0]
             };
             txt_value = format!("Value: {:.2} {}", value, suffix_name);
         },

@@ -141,6 +141,19 @@ impl From<(i32, i32)> for ValueError {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ErrorStatus {
+    None,
+    Warning,
+    Error,
+}
+
+impl ErrorStatus {
+    pub fn is_error(&self) -> bool {
+        self == &ErrorStatus::Error
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ValueDirect {
     Read {
@@ -193,6 +206,36 @@ impl ValueDirect {
             self
         }
     }
+
+    pub fn get_error_status(&self, value: f32) -> ErrorStatus {
+        if let ValueDirect::Read {min, max} = self {
+            if let Some(max) = max {
+                if max.red <= value {
+                    return ErrorStatus::Error;
+                }
+            }
+            if let Some(min) = min {
+                if min.red >= value {
+                    return ErrorStatus::Error;
+                }
+            }
+
+            if let Some(max) = max {
+                if max.yellow <= value {
+                    return ErrorStatus::Warning;
+                }
+            }
+            if let Some(min) = min {
+                if min.yellow >= value {
+                    return ErrorStatus::Warning;
+                }
+            }
+
+            ErrorStatus::None
+        } else {
+            ErrorStatus::None
+        }
+    }
 }
 
 #[test]
@@ -202,6 +245,23 @@ fn test_read_error_init() {
         min: None,
         max: Some( ValueError {yellow: 8.0, red: 10.0})
     });
+}
+
+#[test]
+fn test_error_status() {
+    let dir = ValueDirect::read().err_max((8,10).into());
+    assert_eq!(dir.get_error_status(5.0), ErrorStatus::None);
+    assert_eq!(dir.get_error_status(8.0), ErrorStatus::Warning);
+    assert_eq!(dir.get_error_status(10.0), ErrorStatus::Error);
+    assert_eq!(dir.get_error_status(12.0), ErrorStatus::Error);
+
+    let dir = ValueDirect::read().err_min((6,3).into());
+    assert_eq!(dir.get_error_status(8.0), ErrorStatus::None);
+    assert_eq!(dir.get_error_status(6.0), ErrorStatus::Warning);
+    assert_eq!(dir.get_error_status(5.0), ErrorStatus::Warning);
+    assert_eq!(dir.get_error_status(3.0), ErrorStatus::Error);
+    assert_eq!(dir.get_error_status(2.0), ErrorStatus::Error);
+
 }
 
 #[derive(Debug, Clone)]

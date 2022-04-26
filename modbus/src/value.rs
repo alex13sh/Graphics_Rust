@@ -71,15 +71,18 @@ impl Value {
         }
     }
     pub fn is_error(&self) -> bool {
+        self.get_error_status().is_error()
+    }
+
+    pub fn get_error_status(&self) -> init::ErrorStatus {
         use std::convert::TryFrom;
         let v = f32::try_from(self);
+
         if let Ok(v) = v {
-            match self.get_error_min_max() {
-            (None, Some(max)) => max.red < v,
-            (Some(min), Some(max)) => max.red < v || min.red > v,
-            _ => false,
-            }
-        } else {true}
+            self.direct.get_error_status(v)
+        } else {
+            init::ErrorStatus::Error
+        }
     }
 
     pub fn is_log(&self) -> bool {
@@ -251,8 +254,8 @@ impl Value {
         Err(err) => panic!("Value err: {:?}; for value: {:?}", err, self.id),
         }
     }
-    pub fn try_value_as_f32(&self) -> Option<f32> {
-        f32::try_from(self).ok()
+    pub fn try_value_as_f32(&self) -> Result<f32, ValueFloatError> {
+        f32::try_from(self)
     }
 }
 

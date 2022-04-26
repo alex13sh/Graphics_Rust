@@ -8,7 +8,7 @@ pub mod device;
 pub mod devices;
 
 pub use value::*;
-pub use init::ValueError;
+pub use init::{ValueError, ErrorStatus};
 pub use device::*;
 pub use devices::*;
 

@@ -51,7 +51,7 @@ impl ModbusValues {
         self.0.iter().filter_map(|(k, v)| Some((
                 v.address(),
                 k,
-                (v.value(), v.try_value_as_f32()?)
+                (v.value(), v.try_value_as_f32().ok()?)
             ))
         )
     }

@@ -49,9 +49,9 @@ pub enum KlapansError {
 impl Klapans {
 
     pub fn klapan_turn(&self, name: &str, enb: bool) -> Result<(), KlapansError> {
-        if self.давление_воздуха.is_error() {
-            return Err(KlapansError::НедостаточноДавленияВоздуха);
-        }
+//         if self.давление_воздуха.is_error() {
+//             return Err(KlapansError::НедостаточноДавленияВоздуха);
+//         }
         
         self.klapans.get_value_arc(name).unwrap().set_bit(enb);
         Ok(())

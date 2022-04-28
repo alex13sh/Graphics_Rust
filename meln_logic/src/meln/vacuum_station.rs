@@ -10,6 +10,7 @@ pub struct VacuumStation {
     
     клапан_напуска: ValueArc,
     клапан_насоса: ValueArc,
+    клапан_помольной_камеры: ValueArc,
 }
 
 impl From<&ModbusValues> for VacuumStation {
@@ -20,6 +21,7 @@ impl From<&ModbusValues> for VacuumStation {
             motor_2: values.get_value_arc("Двигатель насоса вакуума 2").unwrap(),
             клапан_напуска: values.get_value_arc("Клапан напуска").unwrap(),
             клапан_насоса: values.get_value_arc("Клапан насоса М5").unwrap(),
+            клапан_помольной_камеры: values.get_value_arc("Клапан помольной камеры").unwrap(),
         }
     }
 }
@@ -46,6 +48,8 @@ impl VacuumStation {
     }
     // Увеличить давление
     pub fn davl_up(&self) {
+        // Закрыть клапан помольной камеры
+        self.клапан_помольной_камеры.set_bit(false);
         // Если включёны насосы
         self.davl_dis();
         

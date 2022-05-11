@@ -1,4 +1,14 @@
-use crate::value::*;
+pub use super::{
+    filter_half_top,
+    filter_half_low,
+};
+
+use crate::value::{
+    self,
+    simple::Value, SimpleValuesLine,
+    LogValueSimple,
+};
+
 use std::collections::HashMap;
 use futures::{Stream, StreamExt};
 
@@ -37,7 +47,7 @@ impl LogState {
         }
     }
     fn apply_value(&mut self, value: LogValueSimple) {
-        use simple::{Value, ValueStr};
+        use value::simple::{Value, ValueStr};
         let dt = value.date_time;
         let sdt = self.date_time.as_ref().unwrap();
         match value.value.as_ref() {
@@ -78,66 +88,4 @@ pub fn calc(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=LogStat
     })
 }
 
-pub fn filter_half_top(vin: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
-    use simple::Value;
-    vin.map(|line| {
-        let dt = line.date_time;
-        let values = line.values.into_vec();
-        let values: Vec<_> = values.into_iter().filter_map(|v| {
-            if v.device_name == "Invertor" && v.device_id == 6 {
-                Some(Value {
-                    sensor_name: v.sensor_name,
-                    value: v.value,
-                })
-            } else if let Some(sensor) = v.sensor_name.strip_suffix(" дв. М2") {
-                Some(Value {
-                    sensor_name: sensor.into(),
-                    value: v.value,
-                })
-            } else {
-                None
-            }
-        }).collect();
-        SimpleValuesLine {
-            date_time: dt,
-            values: values.into_boxed_slice(),
-        }
-    })
-}
 
-pub fn filter_half_low(vin: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item=SimpleValuesLine> {
-    use simple::Value;
-    vin.map(|line| {
-        let dt = line.date_time;
-        let values = line.values.into_vec();
-        let values: Vec<_> = values.into_iter().filter_map(|v| {
-            if v.device_name == "Invertor" && v.device_id == 5 {
-                Some(Value {
-                    sensor_name: v.sensor_name,
-                    value: v.value,
-                })
-            } else if let Some(sensor) = v.sensor_name.strip_suffix(" дв. М1") {
-                Some(Value {
-                    sensor_name: sensor.into(),
-                    value: v.value,
-                })
-            } else if let Some(sensor) = v.sensor_name.strip_suffix(" двигатель М1") {
-                Some(Value {
-                    sensor_name: sensor.into(),
-                    value: v.value,
-                })
-            } else if v.sensor_name == "Разрежение воздуха в системе" {
-                Some(Value {
-                    sensor_name: "Разрежение воздуха в системе".into(),
-                    value: v.value,
-                })
-            } else {
-                None
-            }
-        }).collect();
-        SimpleValuesLine {
-            date_time: dt,
-            values: values.into_boxed_slice(),
-        }
-    })
-}

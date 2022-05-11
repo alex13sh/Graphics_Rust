@@ -12,8 +12,9 @@ use crate::utils::{
     DateTimeFix as DateTime,
     date_time_now
 };
-
-type TimeInterval = f32;
+use utils::{
+    DateTimeRange
+};
 
 struct StateInfo {
     material_time: TimeInterval,
@@ -32,7 +33,7 @@ struct MaxValues {
 #[derive(Default)]
 struct Energy {
     sum_watt: f32,
-    time: TimeInterval,
+    time: DateTimeRange,
 }
 
 struct WattBeforeMaterial {
@@ -58,5 +59,39 @@ impl StateMaterial {
 
     fn finish(self) {
 
+    }
+
+mod utils {
+    pub type TimeInterval = f32;
+
+    pub enum DateTimeRange {
+        None,
+        Start(DateTime),
+        Range(DateTime, DateTime),
+    }
+
+    impl Default for DateTimeRange {
+        fn default() -> Self {
+            DateTimeRange::None
+        }
+    }
+
+    impl DateTimeRange {
+        pub fn empty() -> Self {
+            DateTimeRange::None
+        }
+        pub fn start(dt: DateTime) -> Self {
+            DateTimeRange::Start(dt)
+        }
+        pub fn update(&mut self, dt: DateTime) {
+            *self = match *self {
+            DateTimeRange::None => DateTimeRange::Start(dt),
+            DateTimeRange::Start(start) => DateTimeRange::Range(start, dt),
+            DateTimeRange::Range(start, _) => DateTimeRange::Range(start, dt),
+            };
+        }
+        pub fn interval(&self) -> TimeInterval {
+
+        }
     }
 }

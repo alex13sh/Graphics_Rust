@@ -105,11 +105,14 @@ enum StateMaterial {
         energy: Energy,
         watt_before: f32,
     },
-    Finish {
-        time_interval: f32,
-        energy_full: f32,
-        energy_delta: f32,
-    }
+    Finish (StateMaterialFinish)
+}
+
+#[derive(Clone)]
+pub struct StateMaterialFinish {
+    time_interval: f32,
+    energy_full: f32,
+    energy_delta: f32,
 }
 
 impl Default for StateMaterial {
@@ -137,11 +140,11 @@ impl StateMaterial {
 
     fn finish(self) -> Self {
         if let StateMaterial::Start { energy, watt_before, time } = self {
-            StateMaterial::Finish {
+            StateMaterial::Finish (StateMaterialFinish {
                 energy_full: energy.energy(),
                 energy_delta: energy.energy_delta(watt_before),
                 time_interval: time.interval(),
-            }
+            })
         } else {
             self
         }
@@ -180,7 +183,7 @@ impl StateMaterial {
         match self {
             Self::Before {..} => {0.0}
             Self::Start {energy, ..} => energy.energy(),
-            Self::Finish {energy_full, ..} => {*energy_full}
+            Self::Finish (stat) => {stat.energy_full}
         }
     }
 
@@ -189,7 +192,15 @@ impl StateMaterial {
         match self {
             Self::Before {..} => {0.0}
             Self::Start {energy, watt_before, ..} => energy.energy_delta(*watt_before),
-            Self::Finish {energy_delta, ..} => {*energy_delta}
+            Self::Finish (stat) => {stat.energy_delta}
+        }
+    }
+
+    pub fn get_stat(&self) -> Option<StateMaterialFinish> {
+        if let Self::Finish(stat) = self {
+            Some(stat.clone())
+        } else {
+            None
         }
     }
 }

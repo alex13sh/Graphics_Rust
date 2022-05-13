@@ -21,7 +21,7 @@ use crate::value::{
 
 use futures::{Stream, StreamExt};
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct StateInfo {
 //     material_time: DateTimeRange,
     max_values: MaxValues,
@@ -30,7 +30,7 @@ pub struct StateInfo {
 }
 
 /// Пиковые значения: мощности, тока и вибрации
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 struct MaxValues {
     /// мощность
     power: f32,
@@ -57,7 +57,7 @@ impl MaxValues {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
@@ -95,7 +95,7 @@ impl Energy {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum StateMaterial {
     Before {
         watt_before: f32,
@@ -108,7 +108,7 @@ enum StateMaterial {
     Finish (StateMaterialFinish)
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct StateMaterialFinish {
     time_interval: f32,
     energy_full: f32,
@@ -154,7 +154,7 @@ impl StateMaterial {
         match self {
         Self::Before {watt_before} => {
             match value.value.as_ref() {
-                ValueStr {sensor_name: "Клапан ШК2 открыт", value: bit} => if bit == 1.0 {
+                ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 1.0 {
                     *self = self.clone().start(value.date_time.clone()); 
                 },
                 ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => {
@@ -168,7 +168,7 @@ impl StateMaterial {
             time.update(value.date_time);
 
             match value.value.as_ref() {
-                ValueStr {sensor_name: "Клапан ШК2 открыт", value: bit} => if bit == 0.0 {
+                ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
                     *self = self.clone().finish();
                 },
                 _ => {}
@@ -207,7 +207,7 @@ impl StateMaterial {
 
 impl StateInfo {
     fn apply_line(&mut self, line: &SimpleValuesLine) {
-
+        // dbg!(&line.date_time);
         for v in line.iter_values_date() {
             self.apply_value(v);
         }
@@ -228,7 +228,7 @@ mod utils {
 
     pub type TimeInterval = f32;
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     pub enum DateTimeRange {
         None,
         Start(DateTime),
@@ -274,4 +274,25 @@ pub fn calc(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=StateIn
 
         stat.clone()
     })
+}
+
+#[test]
+fn test_convert_csv_raw_to_excel() {
+    use crate::convert::{stream::*, iterator::*};
+    use futures::future::join;
+
+    let file_path = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/2022_03_29-13_58_12";
+    if let Some(values) =  crate::files::csv::read_values(&format!("{}.csv", file_path)) {
+        let values = fullvalue_to_elk(values);
+        let lines = values_to_line(futures::stream::iter(values));
+        // let lines = values_line_to_simple(lines);
+        let lines = super::filter_half_low(lines);
+        let stat = 
+            calc(lines)
+                .fold(None, |_, s| async{Some(s)});
+        let stat = futures::executor::block_on(stat);
+        dbg!(&stat);
+        dbg!(stat.unwrap().energy.energy());
+        // assert!(false);
+    }
 }

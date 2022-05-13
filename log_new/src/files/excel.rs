@@ -170,6 +170,7 @@ pub fn filter_half(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=
         "Заданная частота (F)" | "Напряжение на шине DC" | "Наработка двигателя (дни)" | "Наработка двигателя (мин)" => false,
         sensor_name if sensor_name.starts_with("Температура") => true,
         "Разрежение воздуха в системе" => true,
+        "Клапан ШК2 открыт" => true, // Клапан подачи материала
         _ => false,
     };
     if b {

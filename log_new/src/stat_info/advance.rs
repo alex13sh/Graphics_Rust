@@ -27,6 +27,7 @@ pub struct StateInfo {
     max_values: MaxValues,
     energy: Energy,
     material: StateMaterial,
+    
 }
 
 /// Пиковые значения: мощности, тока и вибрации
@@ -104,6 +105,7 @@ enum StateMaterial {
         time: DateTimeRange,
         energy: Energy,
         watt_before: f32,
+        max_values: MaxValues,
     },
     Finish (StateMaterialFinish)
 }
@@ -111,8 +113,12 @@ enum StateMaterial {
 #[derive(Debug, Clone)]
 pub struct StateMaterialFinish {
     time_interval: f32,
+    time_range: DateTimeRange,
+
     energy_full: f32,
     energy_delta: f32,
+
+    watt_before: f32,
 }
 
 impl Default for StateMaterial {
@@ -132,6 +138,7 @@ impl StateMaterial {
                 time: DateTimeRange::start(dt.clone()),
                 energy: Energy::start(dt),
                 watt_before,
+                max_values: MaxValues::default(),
             }
         } else {
             self
@@ -139,11 +146,14 @@ impl StateMaterial {
     }
 
     fn finish(self) -> Self {
-        if let StateMaterial::Start { energy, watt_before, time } = self {
+        if let StateMaterial::Start { energy, watt_before, time, .. } = self {
             StateMaterial::Finish (StateMaterialFinish {
                 energy_full: energy.energy(),
                 energy_delta: energy.energy_delta(watt_before),
                 time_interval: time.interval(),
+                time_range: time,
+
+                watt_before,
             })
         } else {
             self
@@ -163,13 +173,21 @@ impl StateMaterial {
                 _ => {}
             }
         }
-        Self::Start {energy, time, ..} => {
+        Self::Start {energy, time, watt_before, max_values} => {
             energy.apply_value(value);
+            max_values.apply_value(value);
             time.update(value.date_time);
 
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
                     *self = self.clone().finish();
+                },
+                ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => {
+                    let watt_delta = max_values.power - *watt_before;
+                    let watt_cur_proc = (value - *watt_before) / watt_delta;
+                    if watt_delta > 1.0 && watt_cur_proc < 0.1 {
+                        *self = self.clone().finish();
+                    }
                 },
                 _ => {}
             }

@@ -21,15 +21,16 @@ use crate::value::{
 
 use futures::{Stream, StreamExt};
 
-struct StateInfo {
+#[derive(Default, Clone)]
+pub struct StateInfo {
 //     material_time: DateTimeRange,
     max_values: MaxValues,
     energy: Energy,
-    material: Option<StateMaterial>,
+    material: StateMaterial,
 }
 
 /// Пиковые значения: мощности, тока и вибрации
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MaxValues {
     /// мощность
     power: f32,
@@ -50,12 +51,13 @@ impl MaxValues {
         }
         ValueStr {sensor_name: "Выходной ток (A)", value} => if self.amper < value {
             self.amper = value;
-        }
+        },
+         _ => {}
         }
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
@@ -87,44 +89,108 @@ impl Energy {
             self.sum_watt += value;
             self.sum_cnt += 1;
             self.time.update(log_value.date_time.clone());
-        }
+        },
+        _ => {}
         }
     }
 }
 
-struct StateMaterial {
-    time: DateTimeRange,
-    energy: Energy,
-    watt_before: f32,
+#[derive(Clone)]
+enum StateMaterial {
+    Before {
+        watt_before: f32,
+    },
+    Start {
+        time: DateTimeRange,
+        energy: Energy,
+        watt_before: f32,
+    },
+    Finish {
+        time_interval: f32,
+        energy_full: f32,
+        energy_delta: f32,
+    }
+}
+
+impl Default for StateMaterial {
+    fn default() -> Self {
+        StateMaterial::empty()
+    }
 }
 
 impl StateMaterial {
-    fn start(dt: DateTime) -> Self {
-        StateMaterial {
-            time: DateTimeRange::start(dt.clone()),
-            energy: Energy::start(dt),
+    fn empty() -> Self {
+        StateMaterial::Before { watt_before: 0.0 }
+    }
 
-            watt_before: 0.0,
+    fn start(self, dt: DateTime) -> Self {
+        if let StateMaterial::Before { watt_before } = self {
+            StateMaterial::Start {
+                time: DateTimeRange::start(dt.clone()),
+                energy: Energy::start(dt),
+                watt_before,
+            }
+        } else {
+            self
         }
     }
 
-    fn finish(self) {
-
+    fn finish(self) -> Self {
+        if let StateMaterial::Start { energy, watt_before, time } = self {
+            StateMaterial::Finish {
+                energy_full: energy.energy(),
+                energy_delta: energy.energy_delta(watt_before),
+                time_interval: time.interval(),
+            }
+        } else {
+            self
+        }
     }
 
     fn apply_value(&mut self, value: &LogValueSimple) {
-        self.energy.apply_value(value);
-        self.time.update(value.date_time);
+        match self {
+        Self::Before {watt_before} => {
+            match value.value.as_ref() {
+                ValueStr {sensor_name: "Клапан ШК2 открыт", value: bit} => if bit == 1.0 {
+                    *self = self.clone().start(value.date_time.clone()); 
+                },
+                ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => {
+                    *watt_before = value;
+                },
+                _ => {}
+            }
+        }
+        Self::Start {energy, time, ..} => {
+            energy.apply_value(value);
+            time.update(value.date_time);
+
+            match value.value.as_ref() {
+                ValueStr {sensor_name: "Клапан ШК2 открыт", value: bit} => if bit == 0.0 {
+                    *self = self.clone().finish();
+                },
+                _ => {}
+            }
+        },
+        Self::Finish {..} => {}
+        }
     }
 
     /// Подсчёт всей энергии за время подачи материала
     pub fn energy(&self) -> f32 {
-        self.energy.energy()
+        match self {
+            Self::Before {..} => {0.0}
+            Self::Start {energy, ..} => energy.energy(),
+            Self::Finish {energy_full, ..} => {*energy_full}
+        }
     }
 
     /// Подсчёт полезной энергии за время подачи материала
     pub fn energy_delta(&self) -> f32 {
-        self.energy.energy_delta(self.watt_before)
+        match self {
+            Self::Before {..} => {0.0}
+            Self::Start {energy, watt_before, ..} => energy.energy_delta(*watt_before),
+            Self::Finish {energy_delta, ..} => {*energy_delta}
+        }
     }
 }
 
@@ -139,20 +205,7 @@ impl StateInfo {
     fn apply_value(&mut self, value: LogValueSimple) {
         self.max_values.apply_value(&value);
         self.energy.apply_value(&value);
-
-        if let Some(ref mut mat) = self.material {
-            mat.apply_value(&value);
-        }
-
-        match value.value.as_ref() {
-        ValueStr {sensor_name: "Клапан ШК2 открыт", value: bit} => {
-            if bit == 1.0 && self.material.is_none() {
-                self.material = Some(StateMaterial::start(value.date_time.clone()));
-            } else if bit == 0.0 && self.material.is_some() {
-                // self.material.finish();
-            }
-        }
-        }
+        self.material.apply_value(&value);
     }
 }
 
@@ -164,6 +217,7 @@ mod utils {
 
     pub type TimeInterval = f32;
 
+    #[derive(Clone)]
     pub enum DateTimeRange {
         None,
         Start(DateTime),

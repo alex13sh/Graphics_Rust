@@ -22,6 +22,7 @@ use crate::value::{
 use futures::{Stream, StreamExt};
 
 #[derive(Debug, Default, Clone)]
+// #[derive(derive_more::Add)]
 pub struct StateInfo {
 //     material_time: DateTimeRange,
     max_values: MaxValues,
@@ -32,6 +33,7 @@ pub struct StateInfo {
 
 /// Пиковые значения: мощности, тока и вибрации
 #[derive(Debug, Default, Clone)]
+#[derive(derive_more::Add)]
 struct MaxValues {
     /// мощность
     power: f32,
@@ -249,6 +251,7 @@ mod utils {
     pub type TimeInterval = f32;
 
     #[derive(Debug, Clone)]
+    #[derive(PartialEq)]
     pub enum DateTimeRange {
         None,
         Start(DateTime),
@@ -282,6 +285,61 @@ mod utils {
             } else {
                 0.0
             }
+        }
+
+        fn get_start(&self) -> Option<&DateTime> {
+            match self {
+            Self::None => None,
+            Self::Start(dt) => Some(dt),
+            Self::Range(dt, _) => Some(dt),
+            }
+        }
+        fn get_range(&self) -> (Option<&DateTime>, Option<&DateTime>) {
+            match self {
+            Self::None => (None, None),
+            Self::Start(dt) => (Some(dt), None),
+            Self::Range(dt_1, dt_2) => (Some(dt_1), Some(dt_2)),
+            }
+        }
+        fn into_range(self) -> (Option<DateTime>, Option<DateTime>) {
+            match self {
+            Self::None => (None, None),
+            Self::Start(dt) => (Some(dt), None),
+            Self::Range(dt_1, dt_2) => (Some(dt_1), Some(dt_2)),
+            }
+        }
+        fn from_range(range: (Option<DateTime>, Option<DateTime>)) -> Self {
+            match range {
+            (None, None) => Self::None,
+            (Some(dt), None) => Self::Start(dt),
+            (Some(dt_1), Some(dt_2)) => Self::Range(dt_1, dt_2),
+            _ => Self::None,
+            }
+        }
+    }
+
+    impl std::ops::Add for DateTimeRange {
+        type Output = Self;
+
+        fn add(self, rhs: Self) -> Self {
+//             use Self::*;
+//             match (self, rhs) {
+//             (None, None) => None,
+//             (Start(dt), None) | (None, Start(dt)) => Start(dt),
+//             (Range(dt_1, dt_2), None) | (None, Range(dt_1, dt_2)) => Range(dt_1, dt_2),
+//             (
+//             }
+            use std::cmp::{min, max};
+            let range_1 = self.into_range();
+            let range_2 = rhs.into_range();
+            dbg!(&range_1);
+            dbg!(&range_2);
+            let range = (
+                min(range_1.0, range_2.0),
+                max(range_1.1, range_2.1),
+            );
+            dbg!(&range);
+            Self::from_range(range)
         }
     }
 }
@@ -350,3 +408,55 @@ fn test_convert_csv_raw_to_excel() {
         }
     }
 }
+
+#[test]
+fn test_date_range_sum() {
+    // "1983 Apr 13 12:09:14.274 +0000", "%Y %b %d %H:%M:%S%.3f %z"
+    // FixedOffset::east(0).ymd(1983, 4, 13).and_hms_milli(12, 9, 14, 274)
+    pub use chrono::{SecondsFormat, Offset, FixedOffset, Duration};
+    pub type DateTimeFix = chrono::DateTime<chrono::FixedOffset>;
+    let dt_from_str = |s: &str| {
+        let s = s.to_string() +" +0300";
+        let dt = DateTimeFix::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f %z").ok()?;
+        Some(dt-Duration::hours(3))
+    };
+    let dt_1 = dt_from_str("2022-04-27T17:44:35.966").unwrap();
+    let dt_2 = dt_from_str("2022-04-27T17:44:38.355").unwrap();
+    let dt_3 = dt_from_str("2022-04-27T17:44:39.258").unwrap();
+    let dt_4 = dt_from_str("2022-04-27T17:44:40.207").unwrap();
+    let mut dt_range_1 = DateTimeRange::start(dt_1);
+    dt_range_1.update(dt_3);
+    let mut dt_range_2 = DateTimeRange::start(dt_2);
+    dt_range_2.update(dt_4);
+
+    let dt_range_12 = dt_range_1 + dt_range_2;
+    let mut dt_range_3 = DateTimeRange::start(dt_1);
+    dt_range_3.update(dt_4);
+    assert_eq!(dt_range_12, dt_range_3);
+
+    let dt_range_1 = DateTimeRange::start(dt_1);
+    let mut dt_range_2 = DateTimeRange::start(dt_2);
+    dt_range_2.update(dt_4);
+    let dt_range_12 = dt_range_1 + dt_range_2;
+    assert_eq!(dt_range_12, dt_range_3);
+
+    let dt_range_1 = DateTimeRange::start(dt_2);
+    let mut dt_range_2 = DateTimeRange::start(dt_1);
+    dt_range_2.update(dt_4);
+    let dt_range_12 = dt_range_1 + dt_range_2;
+    assert_eq!(dt_range_12, dt_range_3);
+
+    let dt_range_1 = DateTimeRange::empty();
+    let mut dt_range_2 = DateTimeRange::start(dt_1);
+    dt_range_2.update(dt_4);
+    let dt_range_12 = dt_range_1 + dt_range_2;
+    assert_eq!(dt_range_12, dt_range_3);
+}
+
+// impl std::ops::Add for MaxValues {
+//     fn add(self, rhs: Self) -> Self {
+//         Self {
+//             power:
+//         }
+//     }
+// }

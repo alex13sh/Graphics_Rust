@@ -165,7 +165,9 @@ impl StateMaterial {
         Self::Before {watt_before} => {
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 1.0 {
-                    *self = self.clone().start(value.date_time.clone()); 
+                    if *watt_before >= 1.0 {
+                        *self = self.clone().start(value.date_time.clone()); 
+                    }
                 },
                 ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => {
                     *watt_before = value;
@@ -299,18 +301,52 @@ fn test_convert_csv_raw_to_excel() {
     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
 
-    let file_path = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/2022_03_29-13_58_12";
-    if let Some(values) =  crate::files::csv::read_values(&format!("{}.csv", file_path)) {
-        let values = fullvalue_to_elk(values);
-        let lines = values_to_line(futures::stream::iter(values));
-        // let lines = values_line_to_simple(lines);
-        let lines = super::filter_half_low(lines);
-        let stat = 
-            calc(lines)
-                .fold(None, |_, s| async{Some(s)});
-        let stat = futures::executor::block_on(stat);
-        dbg!(&stat);
-        dbg!(stat.unwrap().energy.energy());
-        // assert!(false);
+    let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
+    let file_names = [
+        "2022_04_27-17_44_35",
+
+        // "2022_04_18-16_38_06",
+        // "2022_04_12-18_53_41",
+        // "2022_04_12-18_50_01",
+        // "2022_04_12-18_47_37",
+        // "2022_04_12-18_46_53",
+        // "2022_04_12-18_42_52",
+
+        "2022_04_08-17_37_59",
+        // "2022_04_08-17_32_20",
+
+        "2022_03_29-13_58_12",
+    ];
+
+    for name in file_names {
+        if let Some(values) =  crate::files::csv::read_values(&format!("{}{}.csv", dir, name)) {
+            dbg!(name);
+            let values = fullvalue_to_elk(values);
+            let lines = values_to_line(futures::stream::iter(values));
+            // let lines = values_line_to_simple(lines);
+            let lines = super::filter_half_low(lines);
+            let stat = 
+                calc(lines)
+                    .fold(None, |_, s| async{Some(s)});
+            let stat = futures::executor::block_on(stat);
+            dbg!(&stat);
+            println!("Energy Low: {}", stat.unwrap().energy.energy());
+            // assert!(false);
+        }
+
+        if let Some(values) =  crate::files::csv::read_values(&format!("{}{}.csv", dir, name)) {
+            dbg!(name);
+            let values = fullvalue_to_elk(values);
+            let lines = values_to_line(futures::stream::iter(values));
+            // let lines = values_line_to_simple(lines);
+            let lines = super::filter_half_top(lines);
+            let stat = 
+                calc(lines)
+                    .fold(None, |_, s| async{Some(s)});
+            let stat = futures::executor::block_on(stat);
+            dbg!(&stat);
+            println!("Energy Top: {}", stat.unwrap().energy.energy());
+            // assert!(false);
+        }
     }
 }

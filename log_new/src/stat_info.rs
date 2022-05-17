@@ -25,6 +25,11 @@ pub fn filter_half_top(vin: impl Stream<Item=ElkValuesLine>) -> impl Stream<Item
                     sensor_name: sensor.into(),
                     value: v.value,
                 })
+            } else if v.sensor_name == "Клапан ШК2 открыт" {
+                Some(Value {
+                    sensor_name: "Клапан подачи материала открыт".into(),
+                    value: v.value,
+                })
             } else {
                 None
             }

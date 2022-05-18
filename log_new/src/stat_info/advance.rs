@@ -22,7 +22,7 @@ use crate::value::{
 use futures::{Stream, StreamExt};
 
 #[derive(Debug, Default, Clone)]
-// #[derive(derive_more::Add)]
+#[derive(derive_more::Add)]
 pub struct StateInfo {
 //     material_time: DateTimeRange,
     max_values: MaxValues,
@@ -60,11 +60,21 @@ impl MaxValues {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
+#[derive(derive_more::Add)]
 struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
     time: DateTimeRange,
+}
+
+impl std::fmt::Debug for Energy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Energy")
+            .field("energy", &self.energy())
+            .field("time", &self.time)
+            .finish()
+    }
 }
 
 impl Energy {
@@ -112,7 +122,21 @@ enum StateMaterial {
     Finish (StateMaterialFinish)
 }
 
+impl std::ops::Add for StateMaterial {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Finish(s1), Self::Finish(s2)) => {
+                Self::Finish (s1 + s2)
+            }
+            _ => Self::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
+#[derive(derive_more::Add)]
 pub struct StateMaterialFinish {
     time_interval: f32,
     time_range: DateTimeRange,
@@ -250,13 +274,26 @@ mod utils {
 
     pub type TimeInterval = f32;
 
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     #[derive(PartialEq)]
     pub enum DateTimeRange {
         None,
         Start(DateTime),
         Range(DateTime, DateTime),
     }
+
+impl std::fmt::Debug for DateTimeRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Start(arg0) => f.debug_tuple("Start").field(arg0).finish(),
+            Self::Range(arg0, arg1) => 
+                f.debug_tuple("Range")
+                    .field(&self.interval())
+                    .field(arg0).field(arg1).finish(),
+        }
+    }
+}
 
     impl Default for DateTimeRange {
         fn default() -> Self {
@@ -344,13 +381,13 @@ mod utils {
 
             let range_1 = self.into_range();
             let range_2 = rhs.into_range();
-            dbg!(&range_1);
-            dbg!(&range_2);
+            // dbg!(&range_1);
+            // dbg!(&range_2);
             let range = (
                 min(range_1.0, range_2.0),
                 max(range_1.1, range_2.1),
             );
-            dbg!(&range);
+            // dbg!(&range);
             Self::from_range(range)
         }
     }
@@ -365,6 +402,51 @@ pub fn calc(vin: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=StateIn
         stat.clone()
     })
 }
+
+#[derive(Default, Clone)]
+pub struct StateInfoFull {
+    // sum: StateInfo,
+    pub low: StateInfo,
+    pub top: StateInfo,
+}
+
+impl std::fmt::Debug for StateInfoFull {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let sum = self.sum();
+        f.debug_struct("StateInfoFull")
+            .field("sum", &sum)
+            .field("low", &self.low)
+            .field("top", &self.top)
+            .finish()
+    }
+}
+
+impl StateInfoFull {
+    pub fn sum(&self)-> StateInfo {
+        self.top.clone() + self.low.clone()
+        // StateInfo {
+        //     max_values: self.low.max_values + self.top.max_values,
+        //     energy: self.low.energy + self.top.energy,
+        //     material: 
+        // }
+    }
+}
+
+pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Item=StateInfoFull> {
+    // let mut stat_top = StateInfo::default();
+    // let mut stat_low = StateInfo::default();
+    let mut  state = StateInfoFull::default();
+
+    vin.map(move |line| {
+        let line_top = super::filter_map_half_top_fn(line.clone());
+        state.top.apply_line(&line_top);
+        let line_low = super::filter_map_half_low_fn(line);
+        state.low.apply_line(&line_low);
+
+        state.clone()
+    })
+}
+
 
 #[test]
 fn test_convert_csv_raw_to_excel() {
@@ -394,28 +476,12 @@ fn test_convert_csv_raw_to_excel() {
             let values = fullvalue_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
             // let lines = values_line_to_simple(lines);
-            let lines = super::filter_half_low(lines);
+            // let lines = super::filter_half_low(lines);
             let stat = 
-                calc(lines)
+                calc_full(lines)
                     .fold(None, |_, s| async{Some(s)});
             let stat = futures::executor::block_on(stat);
             dbg!(&stat);
-            println!("Energy Low: {}", stat.unwrap().energy.energy());
-            // assert!(false);
-        }
-
-        if let Some(values) =  crate::files::csv::read_values(&format!("{}{}.csv", dir, name)) {
-            dbg!(name);
-            let values = fullvalue_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values));
-            // let lines = values_line_to_simple(lines);
-            let lines = super::filter_half_top(lines);
-            let stat = 
-                calc(lines)
-                    .fold(None, |_, s| async{Some(s)});
-            let stat = futures::executor::block_on(stat);
-            dbg!(&stat);
-            println!("Energy Top: {}", stat.unwrap().energy.energy());
             // assert!(false);
         }
     }
@@ -465,10 +531,3 @@ fn test_date_range_sum() {
     assert_eq!(dt_range_12, dt_range_3);
 }
 
-// impl std::ops::Add for MaxValues {
-//     fn add(self, rhs: Self) -> Self {
-//         Self {
-//             power:
-//         }
-//     }
-// }

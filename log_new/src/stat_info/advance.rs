@@ -318,6 +318,16 @@ mod utils {
         }
     }
 
+    fn opt_min<T>(lhs: Option<T>, rhs: Option<T>) -> Option<T>
+        where T: Ord
+    {
+        match (lhs, rhs) {
+        (None, Some(v)) | (Some(v), None) => Some(v),
+        (None, None) => None,
+        (Some(lv), Some(rv)) => Some(std::cmp::min(lv, rv)),
+        }
+    }
+
     impl std::ops::Add for DateTimeRange {
         type Output = Self;
 
@@ -329,7 +339,9 @@ mod utils {
 //             (Range(dt_1, dt_2), None) | (None, Range(dt_1, dt_2)) => Range(dt_1, dt_2),
 //             (
 //             }
-            use std::cmp::{min, max};
+            use std::cmp::{max};
+            use opt_min as min;
+
             let range_1 = self.into_range();
             let range_2 = rhs.into_range();
             dbg!(&range_1);

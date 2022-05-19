@@ -119,7 +119,7 @@ async fn lines2series(
     use futures::StreamExt;
     use log_new::convert::{stream::*, iterator::*};
 
-    let lines = values_simple_line_to_hashmap_f32(lines);
+    let lines = values_simple_line_to_vecmap_f32(lines);
     let mut series = LineSeries::new();
     for name in names {
         series.entry(name.to_string()).or_insert(crate::LineSeries::new(name));

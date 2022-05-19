@@ -549,6 +549,17 @@ impl From<&StateInfo> for SimpleValuesLine {
     }
 }
 
+impl From<(&str, &StateInfo)> for crate::value::simple::ValuesMapVec {
+    fn from((name_engine, state): (&str, &StateInfo)) -> Self {
+        use crate::value::simple::Value;
+        let values = SimpleValuesLine::from(state);
+        let mut values = crate::value::simple::ValuesMapVec::from(values);
+        values.values.insert(0, ("Двигатель".to_string(), name_engine.to_string()));
+
+        values
+    }
+}
+
 #[test]
 fn test_date_range_sum() {
     // "1983 Apr 13 12:09:14.274 +0000", "%Y %b %d %H:%M:%S%.3f %z"

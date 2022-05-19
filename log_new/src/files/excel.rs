@@ -94,7 +94,7 @@ impl Sheet <Worksheet> {
 impl <Sh> Sheet <Sh> 
     where Sh: SheetInner
 {
-    pub async fn write_values(&mut self, values: impl Stream<Item=simple::ValuesMap> + std::marker::Unpin) {
+    pub async fn write_values(&mut self, values: impl Stream<Item=simple::ValuesMapVec> + std::marker::Unpin) {
         let pos = (1, 1);
         let mut values = values.enumerate().peekable();
         
@@ -105,7 +105,7 @@ impl <Sh> Sheet <Sh>
                 .set_value("Время");
         let dt_start = l.date_time.clone();
         
-        for (col, name) in l.values.keys().enumerate() {
+        for (col, name) in l.values.iter().map(|v| &v.0).enumerate() {
             self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1).set_value(name);
         }
         // self.rows += 1;
@@ -117,7 +117,7 @@ impl <Sh> Sheet <Sh>
             let time = (time as f32 / 100.0).round() / 10.0;
             self.ws.get_cell_by_column_and_row_mut(pos.0 + 0, pos.1 + row+1)
                 .set_value(time.to_string());
-            for (col, v) in l.values.values().enumerate() {
+            for (col, v) in l.values.iter().map(|v| &v.1).enumerate() {
                 self.ws.get_cell_by_column_and_row_mut(pos.0 + col+1, pos.1 + row+1).set_value(v);
             }
             self.rows += 1;
@@ -231,7 +231,7 @@ fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> 
     let l2 = l1.clone();
     let f_from_channel = async move {
         let l1 = filter_half(l1);
-        let l1 = values_simple_line_to_hashmap(l1);
+        let l1 = values_simple_line_to_vecmap(l1);
 //                 let l2 = crate::stat_info::simple::filter_half_low(l2);
 //                 let l2 = values_line_to_simple(l2);
 
@@ -339,7 +339,7 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
 
         let lines = join_lines_2(lines_top_2, lines_low_2);
 
-        let lines = values_simple_line_to_hashmap(lines);
+        let lines = values_simple_line_to_vecmap(lines);
         // dbg!(Instant::now());
         // let lines = lines.take(1);
 

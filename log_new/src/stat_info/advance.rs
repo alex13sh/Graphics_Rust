@@ -71,7 +71,7 @@ struct Energy {
 impl std::fmt::Debug for Energy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Energy")
-            .field("energy", &self.energy())
+            .field("energy", &self.energy_hour())
             .field("time", &self.time)
             .finish()
     }
@@ -86,14 +86,19 @@ impl Energy {
     }
 
     /// Подсчёт всей энергии за время работы в Ватт*ч
-    pub fn energy(&self) -> f32 {
-        self.sum_watt / self.sum_cnt as f32
-        * self.time.interval() / 60.0 / 60.0
+    pub fn energy_hour(&self) -> f32 {
+        self.energy_sec() / 60.0 / 60.0
     }
-    /// Подсчёт разницы энергии за время работы в Ватт*ч
-    pub fn energy_delta(&self, watt_low: f32) -> f32 {
+
+    /// Подсчёт всей энергии за время работы в Джоулях
+    pub fn energy_sec(&self) -> f32 {
+        self.sum_watt / self.sum_cnt as f32
+        * self.time.interval()
+    }
+    /// Подсчёт разницы энергии за время работы в Джулях
+    pub fn energy_delta_sec(&self, watt_low: f32) -> f32 {
         (self.sum_watt / self.sum_cnt as f32 - watt_low)
-        * self.time.interval() / 60.0 / 60.0
+        * self.time.interval()
     }
 
     fn apply_value(&mut self, log_value: &LogValueSimple) {
@@ -105,6 +110,10 @@ impl Energy {
         },
         _ => {}
         }
+    }
+
+    fn get_start(&self) -> Option<&DateTime> {
+        self.time.get_start()
     }
 }
 
@@ -145,6 +154,7 @@ pub struct StateMaterialFinish {
     energy_delta: f32,
 
     watt_before: f32,
+    max_values: MaxValues,
 }
 
 impl Default for StateMaterial {
@@ -172,14 +182,15 @@ impl StateMaterial {
     }
 
     fn finish(self) -> Self {
-        if let StateMaterial::Start { energy, watt_before, time, .. } = self {
+        if let StateMaterial::Start { energy, time, 
+                watt_before, max_values, .. } = self {
             StateMaterial::Finish (StateMaterialFinish {
-                energy_full: energy.energy(),
-                energy_delta: energy.energy_delta(watt_before),
+                energy_full: energy.energy_sec(),
+                energy_delta: energy.energy_delta_sec(watt_before),
                 time_interval: time.interval(),
                 time_range: time,
 
-                watt_before,
+                watt_before, max_values,
             })
         } else {
             self
@@ -228,7 +239,7 @@ impl StateMaterial {
     pub fn energy(&self) -> f32 {
         match self {
             Self::Before {..} => {0.0}
-            Self::Start {energy, ..} => energy.energy(),
+            Self::Start {energy, ..} => energy.energy_sec(),
             Self::Finish (stat) => {stat.energy_full}
         }
     }
@@ -237,8 +248,32 @@ impl StateMaterial {
     pub fn energy_delta(&self) -> f32 {
         match self {
             Self::Before {..} => {0.0}
-            Self::Start {energy, watt_before, ..} => energy.energy_delta(*watt_before),
+            Self::Start {energy, watt_before, ..} => energy.energy_delta_sec(*watt_before),
             Self::Finish (stat) => {stat.energy_delta}
+        }
+    }
+
+    pub fn get_interval(&self) -> f32 {
+        match self {
+            Self::Before {..} => {0.0}
+            Self::Start {time, ..} => time.interval(),
+            Self::Finish (stat) => stat.time_interval,
+        }
+    }
+
+    pub fn get_watt_before(&self) -> f32 {
+        match self {
+            Self::Before {watt_before} => *watt_before,
+            Self::Start {watt_before, ..} => *watt_before,
+            Self::Finish (stat) => stat.watt_before,
+        }
+    }
+
+    pub fn get_watt_max(&self) -> f32 {
+        match self {
+            Self::Before {..} => 0.0,
+            Self::Start {max_values, ..} => max_values.power,
+            Self::Finish (stat) => stat.max_values.power,
         }
     }
 
@@ -324,14 +359,14 @@ impl std::fmt::Debug for DateTimeRange {
             }
         }
 
-        fn get_start(&self) -> Option<&DateTime> {
+        pub fn get_start(&self) -> Option<&DateTime> {
             match self {
             Self::None => None,
             Self::Start(dt) => Some(dt),
             Self::Range(dt, _) => Some(dt),
             }
         }
-        fn get_range(&self) -> (Option<&DateTime>, Option<&DateTime>) {
+        pub fn get_range(&self) -> (Option<&DateTime>, Option<&DateTime>) {
             match self {
             Self::None => (None, None),
             Self::Start(dt) => (Some(dt), None),
@@ -450,9 +485,6 @@ pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Ite
 
 #[test]
 fn test_convert_csv_raw_to_excel() {
-    use crate::convert::{stream::*, iterator::*};
-    use futures::future::join;
-
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
     let file_names = [
         "2022_04_27-17_44_35",
@@ -471,18 +503,48 @@ fn test_convert_csv_raw_to_excel() {
     ];
 
     for name in file_names {
-        if let Some(values) =  crate::files::csv::read_values(&format!("{}{}.csv", dir, name)) {
-            dbg!(name);
-            let values = fullvalue_to_elk(values);
-            let lines = values_to_line(futures::stream::iter(values));
-            // let lines = values_line_to_simple(lines);
-            // let lines = super::filter_half_low(lines);
-            let stat = 
-                calc_full(lines)
-                    .fold(None, |_, s| async{Some(s)});
-            let stat = futures::executor::block_on(stat);
-            dbg!(&stat);
-            // assert!(false);
+        // dbg!(name);
+        let state = get_state_full_from_file(&format!("{}{}.csv", dir, name));
+        dbg!(&state);
+        // assert!(false);
+    }
+}
+
+pub fn get_state_full_from_file(file_path: impl AsRef<std::path::Path>) -> Option<StateInfoFull> {
+    use crate::convert::{stream::*, iterator::*};
+    use futures::future::join;
+
+    if let Some(values) =  crate::files::csv::read_values(file_path) {
+        let values = fullvalue_to_elk(values);
+        let lines = values_to_line(futures::stream::iter(values));
+        // let lines = values_line_to_simple(lines);
+        // let lines = super::filter_half_low(lines);
+        let stat = 
+            calc_full(lines)
+                .fold(None, |_, s| async{Some(s)});
+        futures::executor::block_on(stat)
+    } else {
+        None
+    }
+}
+
+impl From<&StateInfo> for SimpleValuesLine {
+    fn from(state: &StateInfo) -> Self {
+        use crate::value::simple::Value;
+        let value = |name: &str, value: f32| Value {sensor_name: name.to_string(), value};
+        let fields = [
+            value("Энергия за всё время работы (Дж)", state.energy.energy_sec()),
+            value("Энергия при подачи материала", state.material.energy()),
+            value("Дельта энергии при подачи материала", state.material.energy_delta()),
+            value("Время подачи материала", state.material.get_interval()),
+            value("мощность до падачи материала (холостой ход)", state.material.get_watt_before()),
+            value("максимальная мощность при падачи материала", state.material.get_watt_max()),
+            value("максимальная разница мощности при падачи материала", state.material.get_watt_max() - state.material.get_watt_before()),
+        ];
+
+        SimpleValuesLine {
+            date_time: state.energy.get_start().unwrap().clone(),
+            values: Box::new(fields)
         }
     }
 }

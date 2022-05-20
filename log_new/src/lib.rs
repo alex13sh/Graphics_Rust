@@ -219,6 +219,11 @@ impl LogSession {
         let lines = crate::stat_info::simple::filter_half_top(elk.subscribe());
         Some(stat_info::simple::calc(lines).boxed())
     }
+
+    pub fn get_statistic_advance(&self) -> Option<BoxStream<'static, stat_info::advance::StateInfoFull>>{
+        let elk = self.values_elk.as_ref()?;
+        Some(stat_info::advance::calc_full(elk.subscribe()).boxed())
+    }
 }
 
 use std::path::Path;

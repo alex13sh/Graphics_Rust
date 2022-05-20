@@ -22,13 +22,23 @@ use crate::value::{
 use futures::{Stream, StreamExt};
 
 #[derive(Debug, Default, Clone)]
-#[derive(derive_more::Add)]
 pub struct StateInfo {
-//     material_time: DateTimeRange,
     max_values: MaxValues,
     energy: Energy,
     material: StateMaterial,
     
+}
+
+impl std::ops::Add for StateInfo {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            max_values: self.max_values + rhs.max_values,
+            energy: self.energy + rhs.energy,
+            material: (self.material + rhs.material).unwrap_or_default(),
+        }
+    }
 }
 
 /// Пиковые значения: мощности, тока и вибрации
@@ -132,42 +142,33 @@ impl Energy {
 }
 
 #[derive(Debug, Clone)]
+#[derive(derive_more::Add)]
 enum StateMaterial {
     Before {
         watt_before: f32,
     },
-    Start {
-        time: DateTimeRange,
-        energy: Energy,
-        watt_before: f32,
-        max_values: MaxValues,
-    },
-    Finish (StateMaterialFinish)
+    Start (StateMaterialInner),
+    Finish (StateMaterialInner)
 }
 
-impl std::ops::Add for StateMaterial {
-    type Output = Self;
+// impl std::ops::Add for StateMaterial {
+//     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (Self::Finish(s1), Self::Finish(s2)) => {
-                Self::Finish (s1 + s2)
-            }
-            _ => Self::default(),
-        }
-    }
-}
+//     fn add(self, rhs: Self) -> Self::Output {
+//         match (self, rhs) {
+//             (Self::Finish(s1), Self::Finish(s2)) => {
+//                 Self::Finish (s1 + s2)
+//             },
+//             _ => Self::default(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 #[derive(derive_more::Add)]
-pub struct StateMaterialFinish {
-    time_interval: f32,
-    time_range: DateTimeRange,
-
-    energy_full: f32,
-    energy_delta: f32,
-
+pub struct StateMaterialInner {
     watt_before: f32,
+    energy: Energy,
     max_values: MaxValues,
 }
 
@@ -184,28 +185,19 @@ impl StateMaterial {
 
     fn start(self, dt: DateTime) -> Self {
         if let StateMaterial::Before { watt_before } = self {
-            StateMaterial::Start {
-                time: DateTimeRange::start(dt.clone()),
+            StateMaterial::Start ( StateMaterialInner {
                 energy: Energy::start(dt),
                 watt_before,
                 max_values: MaxValues::default(),
-            }
+            })
         } else {
             self
         }
     }
 
     fn finish(self) -> Self {
-        if let StateMaterial::Start { energy, time, 
-                watt_before, max_values, .. } = self {
-            StateMaterial::Finish (StateMaterialFinish {
-                energy_full: energy.energy_sec(),
-                energy_delta: energy.energy_delta_sec(watt_before),
-                time_interval: time.interval(),
-                time_range: time,
-
-                watt_before, max_values,
-            })
+        if let StateMaterial::Start(inner) = self {
+            StateMaterial::Finish (inner)
         } else {
             self
         }
@@ -226,18 +218,17 @@ impl StateMaterial {
                 _ => {}
             }
         }
-        Self::Start {energy, time, watt_before, max_values} => {
-            energy.apply_value(value);
-            max_values.apply_value(value);
-            time.update(value.date_time);
+        Self::Start (stat) => {
+            stat.energy.apply_value(value);
+            stat.max_values.apply_value(value);
 
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
                     *self = self.clone().finish();
                 },
                 ValueStr {sensor_name: "Индикация текущей выходной мощности (P)", value} => {
-                    let watt_delta = max_values.power - *watt_before;
-                    let watt_cur_proc = (value - *watt_before) / watt_delta;
+                    let watt_delta = stat.max_values.power - stat.watt_before;
+                    let watt_cur_proc = (value - stat.watt_before) / watt_delta;
                     if watt_delta > 1.0 && watt_cur_proc < 0.1 {
                         *self = self.clone().finish();
                     }
@@ -252,9 +243,9 @@ impl StateMaterial {
     /// Подсчёт всей энергии за время подачи материала
     pub fn energy(&self) -> f32 {
         match self {
-            Self::Before {..} => {0.0}
-            Self::Start {energy, ..} => energy.energy_sec(),
-            Self::Finish (stat) => {stat.energy_full}
+            Self::Before {..} => 0.0,
+            Self::Start (stat)
+             | Self::Finish (stat) => stat.energy.energy_sec(),
         }
     }
 
@@ -262,40 +253,39 @@ impl StateMaterial {
     pub fn energy_delta(&self) -> f32 {
         match self {
             Self::Before {..} => {0.0}
-            Self::Start {energy, watt_before, ..} => energy.energy_delta_sec(*watt_before),
-            Self::Finish (stat) => {stat.energy_delta}
+            Self::Start (stat) | Self::Finish (stat) 
+                => stat.energy.energy_delta_sec(stat.watt_before),
         }
     }
 
     pub fn get_interval(&self) -> f32 {
         match self {
             Self::Before {..} => {0.0}
-            Self::Start {time, ..} => time.interval(),
-            Self::Finish (stat) => stat.time_range.interval(),
+            Self::Start (stat) | Self::Finish (stat) 
+                => stat.energy.time.interval(),
         }
     }
 
     pub fn get_watt_before(&self) -> f32 {
         match self {
             Self::Before {watt_before} => *watt_before,
-            Self::Start {watt_before, ..} => *watt_before,
-            Self::Finish (stat) => stat.watt_before,
+            Self::Start (stat) | Self::Finish (stat) => stat.watt_before,
         }
     }
 
     pub fn get_watt_max(&self) -> f32 {
         match self {
             Self::Before {..} => 0.0,
-            Self::Start {max_values, ..} => max_values.power,
-            Self::Finish (stat) => stat.max_values.power,
+            Self::Start(stat) | Self::Finish (stat) 
+                => stat.max_values.power,
         }
     }
 
-    pub fn get_stat(&self) -> Option<StateMaterialFinish> {
-        if let Self::Finish(stat) = self {
-            Some(stat.clone())
-        } else {
-            None
+    pub fn get_stat(&self) -> Option<&StateMaterialInner> {
+        match self {
+            Self::Before {..} => None,
+            Self::Start (stat) | Self::Finish (stat) 
+                => Some(stat),
         }
     }
 }

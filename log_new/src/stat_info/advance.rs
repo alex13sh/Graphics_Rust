@@ -61,11 +61,25 @@ impl MaxValues {
 }
 
 #[derive(Default, Clone)]
-#[derive(derive_more::Add)]
 struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
     time: DateTimeRange,
+}
+
+impl std::ops::Add for Energy {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        // let cnt_sec_1 = self.sum_cnt / self.time.interval();
+        // let cnt_sec_2 = rhs.sum_cnt / rhs.time.interval();
+        let time = self.time + rhs.time;
+        Energy {
+            sum_watt: self.sum_watt + rhs.sum_watt,
+            sum_cnt: (self.sum_cnt + rhs.sum_cnt)/2,
+            time,
+        }
+    }
 }
 
 impl std::fmt::Debug for Energy {

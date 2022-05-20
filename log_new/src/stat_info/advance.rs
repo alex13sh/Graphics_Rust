@@ -565,9 +565,13 @@ impl From<&StateInfo> for SimpleValuesLine {
             value("Энергия при подаче материала", state.material.energy()),
             value("Дельта энергии при подаче материала", state.material.energy_delta()),
             value("Время подачи материала", state.material.get_interval()),
+            
             value("мощность до подачи материала (холостой ход)", state.material.get_watt_before()),
             value("максимальная мощность при подаче материала", state.material.get_watt_max()),
             value("максимальная разница мощности при подаче материала", state.material.get_watt_max() - state.material.get_watt_before()),
+
+            value("максимальный ток за всё время работы", state.max_values.amper),
+            value("максимальная вибрация за всё время работы", state.max_values.vibro),
         ];
 
         SimpleValuesLine {

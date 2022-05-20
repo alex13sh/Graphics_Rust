@@ -271,7 +271,7 @@ impl StateMaterial {
         match self {
             Self::Before {..} => {0.0}
             Self::Start {time, ..} => time.interval(),
-            Self::Finish (stat) => stat.time_interval,
+            Self::Finish (stat) => stat.time_range.interval(),
         }
     }
 

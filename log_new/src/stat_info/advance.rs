@@ -511,7 +511,7 @@ fn test_convert_csv_raw_to_excel() {
         let state = get_state_full_from_file(&format!("{}{}.csv", dir, name));
         // dbg!(&state);
         if let Some(state) = state {
-            state_line.push(("Оба ддвигателя", state.sum()));
+            state_line.push(("Оба двигателя", state.sum()));
             state_line.push(("Верхний двигатель", state.top));
             state_line.push(("Нижний двигатель", state.low));
         }
@@ -548,12 +548,12 @@ impl From<&StateInfo> for SimpleValuesLine {
         let value = |name: &str, value: f32| Value {sensor_name: name.to_string(), value};
         let fields = [
             value("Энергия за всё время работы (Дж)", state.energy.energy_sec()),
-            value("Энергия при подачи материала", state.material.energy()),
-            value("Дельта энергии при подачи материала", state.material.energy_delta()),
+            value("Энергия при подаче материала", state.material.energy()),
+            value("Дельта энергии при подаче материала", state.material.energy_delta()),
             value("Время подачи материала", state.material.get_interval()),
-            value("мощность до падачи материала (холостой ход)", state.material.get_watt_before()),
-            value("максимальная мощность при падачи материала", state.material.get_watt_max()),
-            value("максимальная разница мощности при падачи материала", state.material.get_watt_max() - state.material.get_watt_before()),
+            value("мощность до подачи материала (холостой ход)", state.material.get_watt_before()),
+            value("максимальная мощность при подаче материала", state.material.get_watt_max()),
+            value("максимальная разница мощности при подаче материала", state.material.get_watt_max() - state.material.get_watt_before()),
         ];
 
         SimpleValuesLine {

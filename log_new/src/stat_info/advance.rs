@@ -485,8 +485,11 @@ pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Ite
 
 #[test]
 fn test_convert_csv_raw_to_excel() {
+    use futures::stream::{self, StreamExt};
+
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
     let file_names = [
+        "2022_04_29-12_46_28",
         "2022_04_27-17_44_35",
 
         // "2022_04_18-16_38_06",
@@ -502,12 +505,23 @@ fn test_convert_csv_raw_to_excel() {
         "2022_03_29-13_58_12",
     ];
 
+    let mut state_line = Vec::new();
     for name in file_names {
         // dbg!(name);
         let state = get_state_full_from_file(&format!("{}{}.csv", dir, name));
-        dbg!(&state);
-        // assert!(false);
+        // dbg!(&state);
+        if let Some(state) = state {
+            state_line.push(("Оба ддвигателя", state.sum()));
+            state_line.push(("Верхний двигатель", state.top));
+            state_line.push(("Нижний двигатель", state.low));
+        }
     }
+
+    let mut f = crate::files::excel::File::create("./state.xlsx");
+    let mut s = f.open_sheet("Sheet1");
+    let stat = s.write_values(stream::iter(state_line).map(|s| s.into()));
+    futures::executor::block_on(stat);
+    f.save()
 }
 
 pub fn get_state_full_from_file(file_path: impl AsRef<std::path::Path>) -> Option<StateInfoFull> {
@@ -549,12 +563,13 @@ impl From<&StateInfo> for SimpleValuesLine {
     }
 }
 
-impl From<(&str, &StateInfo)> for crate::value::simple::ValuesMapVec {
-    fn from((name_engine, state): (&str, &StateInfo)) -> Self {
+impl From<(&'static str, StateInfo)> for crate::value::simple::ValuesMapVec {
+    fn from((name_engine, state): (&str, StateInfo)) -> Self {
         use crate::value::simple::Value;
-        let values = SimpleValuesLine::from(state);
+        let values = SimpleValuesLine::from(&state);
         let mut values = crate::value::simple::ValuesMapVec::from(values);
-        values.values.insert(0, ("Двигатель".to_string(), name_engine.to_string()));
+        values.values.insert(0, ("Дата".to_string(), values.date_time.format("%d.%m").to_string()));
+        values.values.insert(1, ("Двигатель".to_string(), name_engine.to_string()));
 
         values
     }

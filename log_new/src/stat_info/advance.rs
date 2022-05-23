@@ -144,6 +144,7 @@ impl Energy {
 #[derive(Debug, Clone)]
 #[derive(derive_more::Add)]
 enum StateMaterial {
+    None,
     Before {
         watt_before: f32,
     },
@@ -180,7 +181,10 @@ impl Default for StateMaterial {
 
 impl StateMaterial {
     fn empty() -> Self {
-        StateMaterial::Before { watt_before: 0.0 }
+        StateMaterial::None
+    }
+    fn before() -> Self {
+        StateMaterial::Before {watt_before: 0.0}
     }
 
     fn start(self, dt: DateTime) -> Self {
@@ -205,6 +209,14 @@ impl StateMaterial {
 
     fn apply_value(&mut self, value: &LogValueSimple) {
         match self {
+        Self::None => {
+            match value.value.as_ref() {
+                ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
+                    *self = Self::before();
+                },
+                _ => {}
+            }
+        }
         Self::Before {watt_before} => {
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 1.0 {
@@ -243,7 +255,7 @@ impl StateMaterial {
     /// Подсчёт всей энергии за время подачи материала
     pub fn energy(&self) -> f32 {
         match self {
-            Self::Before {..} => 0.0,
+            Self::Before {..} | Self::None => 0.0,
             Self::Start (stat)
              | Self::Finish (stat) => stat.energy.energy_sec(),
         }
@@ -252,7 +264,7 @@ impl StateMaterial {
     /// Подсчёт полезной энергии за время подачи материала
     pub fn energy_delta(&self) -> f32 {
         match self {
-            Self::Before {..} => {0.0}
+            Self::Before {..} | Self::None  => 0.0,
             Self::Start (stat) | Self::Finish (stat) 
                 => stat.energy.energy_delta_sec(stat.watt_before),
         }
@@ -260,7 +272,7 @@ impl StateMaterial {
 
     pub fn get_interval(&self) -> f32 {
         match self {
-            Self::Before {..} => {0.0}
+            Self::Before {..} | Self::None => 0.0,
             Self::Start (stat) | Self::Finish (stat) 
                 => stat.energy.time.interval(),
         }
@@ -275,7 +287,7 @@ impl StateMaterial {
 
     pub fn get_watt_max(&self) -> f32 {
         match self {
-            Self::Before {..} => 0.0,
+            Self::Before {..} | Self::None => 0.0,
             Self::Start(stat) | Self::Finish (stat) 
                 => stat.max_values.power,
         }
@@ -283,7 +295,7 @@ impl StateMaterial {
 
     pub fn get_stat(&self) -> Option<&StateMaterialInner> {
         match self {
-            Self::Before {..} => None,
+            Self::Before {..} | Self::None => None,
             Self::Start (stat) | Self::Finish (stat) 
                 => Some(stat),
         }
@@ -486,13 +498,23 @@ pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Ite
     })
 }
 
+#[test]
+fn test_state() {
+    let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
+    let file_name = "2022_05_23-16_08_17";
+
+    let state = get_state_full_from_file(&format!("{}{}.csv", dir, file_name));
+    dbg!(&state);
+    assert!(false);
+}
 
 #[test]
-fn test_convert_csv_raw_to_excel() {
+fn test_table() {
     use futures::stream::{self, StreamExt};
 
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
     let file_names = [
+        "2022_05_23-16_08_17",
         "2022_04_29-12_46_28",
         "2022_04_27-17_44_35",
 

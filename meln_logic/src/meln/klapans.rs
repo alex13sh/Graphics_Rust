@@ -80,6 +80,7 @@ pub mod watcher {
         }
     }
 
+    #[derive(Debug)]
     pub struct Klapans {
         pub давление_воздуха: Property<f32>,
         

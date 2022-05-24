@@ -132,7 +132,7 @@ pub mod watcher {
 //     #[macro_use]
     use crate::watcher::{Property, changed_any};
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct HalfMeln {
         pub invertor: Invertor,
         pub motor: Motor,
@@ -178,7 +178,7 @@ pub mod watcher {
         }
     }
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct Invertor {
         pub hz: Property<u32>,
         pub speed: Property<u32>,
@@ -202,7 +202,7 @@ pub mod watcher {
         }
     }
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct Motor {
         pub speed: Property<u32>,
         

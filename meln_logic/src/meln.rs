@@ -70,7 +70,7 @@ pub mod watcher {
             Material, Dozator, Klapans,
     };
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct Meln {
         pub material: Material,
         
@@ -117,6 +117,8 @@ pub mod watcher {
                     if start_top || start_bottom {
                         if !MelnStep::check_step_work(self) {
                             self.is_start_err.set(true);
+                            log::trace!("Meln is start error: {:?}", self.is_start_err.get());
+                            log::trace!("Meln is {:#?}", self);
                         }
                     } else {
                         self.is_start_err.set(false);
@@ -202,7 +204,8 @@ pub mod watcher {
         fn check_step_3(meln: &Meln) -> bool {
             true == meln.material.клапан_помольной_камеры.get() &&
             true == meln.material.клапан_верхнего_контейнера.get() &&
-            true == meln.material.клапан_нижнего_контейнера.get()
+            true == meln.material.клапан_нижнего_контейнера.get() &&
+            false == meln.material.клапан_подачи_материала.get()
         }
         fn check_step_work(meln: &Meln) -> bool {
             meln.is_started.get() && meln.oil.motor.get() &&

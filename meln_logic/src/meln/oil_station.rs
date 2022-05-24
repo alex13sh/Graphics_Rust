@@ -53,7 +53,7 @@ pub mod watcher {
         }
     }
 
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct OilStation {
         pub температура: Property<f32>,
         pub давление_масла: Property<f32>,

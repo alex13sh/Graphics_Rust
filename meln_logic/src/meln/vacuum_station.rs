@@ -60,7 +60,7 @@ impl VacuumStation {
 pub mod watcher {
     use crate::watcher::{Property, /*changed_any*/};
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct VacuumStation {
         pub vacuum: Property<f32>,
         

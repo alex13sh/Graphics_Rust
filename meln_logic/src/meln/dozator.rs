@@ -101,7 +101,7 @@ impl From<&ModbusValues> for Dozator {
 pub mod watcher {
     use crate::watcher::Property;
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct Dozator {
         pub speed: Property<i32>,
         pub motor: Property<bool>,

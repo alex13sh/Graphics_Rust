@@ -36,7 +36,7 @@ impl Material {
 pub mod watcher {
     use crate::watcher::{Property, Dozator};
     
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct Material {
         pub dozator: Dozator,
     

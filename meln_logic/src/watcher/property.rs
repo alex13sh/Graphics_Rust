@@ -6,6 +6,14 @@ pub struct Property<T> {
     sender: watch::Sender<T>
 }
 
+impl<T> Debug for Property<T> 
+    where T: Debug
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Property").field(&self.sender.borrow()).finish()
+    }
+}
+
 impl <T: Default> Default for Property <T> {
     fn default() -> Self {
         Property::new(T::default())
@@ -37,6 +45,10 @@ impl <T> Property<T> {
     {
         self.sender.borrow().clone()
     }
+    // pub fn get_ref(&self) -> &T
+    // {
+    //     &**self.sender.borrow()
+    // }
     pub fn subscribe(&self) -> watch::Receiver<T> {
         self.sender.subscribe()
     }

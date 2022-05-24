@@ -25,7 +25,7 @@ use futures::{Stream, StreamExt};
 pub struct StateInfo {
     max_values: MaxValues,
     energy: Energy,
-    material: StateMaterial,
+    material: Stages,
     
 }
 
@@ -141,15 +141,20 @@ impl Energy {
     }
 }
 
+/// Сдадии работы
 #[derive(Debug, Clone)]
 #[derive(derive_more::Add)]
-enum StateMaterial {
-    None,
-    Before {
+enum Stages {
+    /// Разгон двигателей
+    Accel,
+    /// Оба двигателя разогнаны и работают в холостую
+    BeforeMaterial {
         watt_before: f32,
     },
-    Start (StateMaterialInner),
-    Finish (StateMaterialInner)
+    /// Проесс подачи материала
+    StartMaterial (StateMaterialInner),
+    /// Материал закончился
+    FinishMaterial (StateMaterialInner)
 }
 
 // impl std::ops::Add for StateMaterial {
@@ -173,23 +178,23 @@ pub struct StateMaterialInner {
     max_values: MaxValues,
 }
 
-impl Default for StateMaterial {
+impl Default for Stages {
     fn default() -> Self {
-        StateMaterial::empty()
+        Stages::empty()
     }
 }
 
-impl StateMaterial {
+impl Stages {
     fn empty() -> Self {
-        StateMaterial::None
+        Stages::Accel
     }
     fn before() -> Self {
-        StateMaterial::Before {watt_before: 0.0}
+        Stages::BeforeMaterial {watt_before: 0.0}
     }
 
     fn start(self, dt: DateTime) -> Self {
-        if let StateMaterial::Before { watt_before } = self {
-            StateMaterial::Start ( StateMaterialInner {
+        if let Stages::BeforeMaterial { watt_before } = self {
+            Stages::StartMaterial ( StateMaterialInner {
                 energy: Energy::start(dt),
                 watt_before,
                 max_values: MaxValues::default(),
@@ -200,8 +205,8 @@ impl StateMaterial {
     }
 
     fn finish(self) -> Self {
-        if let StateMaterial::Start(inner) = self {
-            StateMaterial::Finish (inner)
+        if let Stages::StartMaterial(inner) = self {
+            Stages::FinishMaterial (inner)
         } else {
             self
         }
@@ -209,7 +214,7 @@ impl StateMaterial {
 
     fn apply_value(&mut self, value: &LogValueSimple) {
         match self {
-        Self::None => {
+        Self::Accel => {
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
                     *self = Self::before();
@@ -217,7 +222,7 @@ impl StateMaterial {
                 _ => {}
             }
         }
-        Self::Before {watt_before} => {
+        Self::BeforeMaterial {watt_before} => {
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 1.0 {
                     if *watt_before >= 1.0 {
@@ -230,7 +235,7 @@ impl StateMaterial {
                 _ => {}
             }
         }
-        Self::Start (stat) => {
+        Self::StartMaterial (stat) => {
             stat.energy.apply_value(value);
             stat.max_values.apply_value(value);
 
@@ -248,55 +253,56 @@ impl StateMaterial {
                 _ => {}
             }
         },
-        Self::Finish {..} => {}
+        Self::FinishMaterial {..} => {}
         }
     }
 
     /// Подсчёт всей энергии за время подачи материала
     pub fn energy(&self) -> f32 {
         match self {
-            Self::Before {..} | Self::None => 0.0,
-            Self::Start (stat)
-             | Self::Finish (stat) => stat.energy.energy_sec(),
+            Self::BeforeMaterial {..} | Self::Accel => 0.0,
+            Self::StartMaterial (stat)
+             | Self::FinishMaterial (stat) => stat.energy.energy_sec(),
         }
     }
 
     /// Подсчёт полезной энергии за время подачи материала
     pub fn energy_delta(&self) -> f32 {
         match self {
-            Self::Before {..} | Self::None  => 0.0,
-            Self::Start (stat) | Self::Finish (stat) 
+            Self::BeforeMaterial {..} | Self::Accel  => 0.0,
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
                 => stat.energy.energy_delta_sec(stat.watt_before),
         }
     }
 
     pub fn get_interval(&self) -> f32 {
         match self {
-            Self::Before {..} | Self::None => 0.0,
-            Self::Start (stat) | Self::Finish (stat) 
+            Self::BeforeMaterial {..} | Self::Accel => 0.0,
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
                 => stat.energy.time.interval(),
         }
     }
 
     pub fn get_watt_before(&self) -> f32 {
         match self {
-            Self::Before {watt_before} => *watt_before,
-            Self::Start (stat) | Self::Finish (stat) => stat.watt_before,
+            Self::Accel => 0.0,
+            Self::BeforeMaterial {watt_before} => *watt_before,
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) => stat.watt_before,
         }
     }
 
     pub fn get_watt_max(&self) -> f32 {
         match self {
-            Self::Before {..} | Self::None => 0.0,
-            Self::Start(stat) | Self::Finish (stat) 
+            Self::BeforeMaterial {..} | Self::Accel => 0.0,
+            Self::StartMaterial(stat) | Self::FinishMaterial (stat) 
                 => stat.max_values.power,
         }
     }
 
     pub fn get_stat(&self) -> Option<&StateMaterialInner> {
         match self {
-            Self::Before {..} | Self::None => None,
-            Self::Start (stat) | Self::Finish (stat) 
+            Self::BeforeMaterial {..} | Self::Accel => None,
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
                 => Some(stat),
         }
     }

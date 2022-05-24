@@ -284,6 +284,9 @@ pub fn make_invertor(ip_address: String) -> Device {
             let add_float_invertor_value = |name: &str, p: u16, adr: u16, dot|
                 add_invertor_value(name, p, adr)
                 .size(ValueSize::UInt16Dot(dot));
+            let _add_float_invertor_ivalue = |name: &str, p: u16, adr: u16, dot|
+                add_invertor_value(name, p, adr)
+                .size(ValueSize::Int16Dot(dot));
             let add_simple_invertor_value = |name: &str, p: u16, adr: u16|
                 add_float_invertor_value(name, p, adr, 1);
             let add_simple_value_read = |_value: &str, p: u16, adr: u16, name: &str|
@@ -689,6 +692,9 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_float_invertor_value_read(name, adr, 2);
             let add_simple_value_read_10 = |value: &str, adr: u16, name: &str|
                 add_float_invertor_value_read(name, adr, 1);
+            let add_simple_value_read_10_watt = |value: &str, adr: u16, name: &str|
+                add_float_invertor_value_read(name, adr, 1)
+                .size(ValueSize::Int16Dot(1));
             // Part 21 ReadOnly
             reg.append(&mut vec![
                 Value::new(0x2100, "Код ошибки") // Pr.06-17 - 06.22
@@ -712,7 +718,7 @@ pub fn make_invertor(ip_address: String) -> Device {
                 add_simple_value_read_100("5146ba6795", 0x2104, "Выходной ток (A)").with_suffix("А"),
                 add_simple_value_read_10("Напряжение на шине DC", 0x2105, "Напряжение на шине DC"),
                 add_simple_value_read_10("5369886757", 0x2106, "Выходное напряжение (E)"),
-                add_simple_value_read_10("2206H", 0x2206, "Индикация текущей выходной мощности (P)").with_suffix("кВт"),
+                add_simple_value_read_10_watt("2206H", 0x2206, "Индикация текущей выходной мощности (P)").with_suffix("кВт"),
                 add_simple_value_read("2207H", 0x2207, "Индикация рассчитанной (с PG) скорости").with_suffix("об./мин"),
 //                 add_simple_value_read(0x2109, "Значение счётчика"),
 //                 add_simple_value_read(0x211B, "Максимальная установленная частота"),

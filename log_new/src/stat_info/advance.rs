@@ -71,6 +71,67 @@ impl MaxValues {
 }
 
 #[derive(Default, Clone)]
+struct MinMaxSpeed(Option<(u32, u32)>);
+
+impl std::fmt::Debug for MinMaxSpeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (min, max) = self.min_max();
+        let delta = self.delta();
+        f.debug_tuple("MinMaxSpeed")
+            .field(&min).field(&delta).field(&max)
+            .finish()
+    }
+}
+
+impl std::ops::Add for MinMaxSpeed {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self.0, rhs.0) {
+        (None, None) => Self(None),
+        (Some(values), None)
+        | (None, Some(values)) => Self(Some(values)),
+        (Some(values_1), Some(values_2)) =>
+            Self(Some((
+                values_1.0 + values_2.0,
+                values_1.1 + values_2.1
+            )))
+        }
+    }
+}
+
+impl MinMaxSpeed {
+    fn apply_value(&mut self, value: &LogValueSimple) {
+        match value.value.as_ref() {
+        ValueStr {sensor_name: "Скорость двигателя", value} => {
+            let value = value as u32;
+            if let Some((ref mut min, ref mut max)) = self.0 {
+                *max = value.max(*max);
+                *min = value.min(*min);
+            } else {
+                self.0 = Some((value, value));
+            }
+        }
+         _ => {}
+        }
+    }
+    pub fn min_max(&self) -> (u32, u32) {
+        if let Some((ref min, ref max)) = self.0 {
+            (*min, *max)
+        } else {
+            (0, 0)
+        }
+    }
+    pub fn delta(&self) -> u32 {
+        if let Some((ref min, ref max)) = self.0 {
+            *max - *min
+        } else {
+            0
+        }
+    }
+}
+
+#[derive(Default, Clone)]
 struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
@@ -176,6 +237,7 @@ pub struct StateMaterialInner {
     watt_before: f32,
     energy: Energy,
     max_values: MaxValues,
+    speed: MinMaxSpeed,
 }
 
 impl Default for Stages {
@@ -198,6 +260,7 @@ impl Stages {
                 energy: Energy::start(dt),
                 watt_before,
                 max_values: MaxValues::default(),
+                speed: MinMaxSpeed::default(),
             })
         } else {
             self
@@ -238,6 +301,7 @@ impl Stages {
         Self::StartMaterial (stat) => {
             stat.energy.apply_value(value);
             stat.max_values.apply_value(value);
+            stat.speed.apply_value(value);
 
             match value.value.as_ref() {
                 ValueStr {sensor_name: "Клапан подачи материала открыт", value: bit} => if bit == 0.0 {
@@ -304,6 +368,21 @@ impl Stages {
             Self::BeforeMaterial {..} | Self::Accel => None,
             Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
                 => Some(stat),
+        }
+    }
+
+    pub fn get_min_max_speed(&self) -> (u32, u32) {
+        match self {
+            Self::BeforeMaterial {..} | Self::Accel => (0,0),
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
+                => stat.speed.min_max(),
+        }
+    }
+    pub fn get_delta_speed(&self) -> u32 {
+        match self {
+            Self::BeforeMaterial {..} | Self::Accel => 0,
+            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
+                => stat.speed.delta(),
         }
     }
 }
@@ -590,6 +669,10 @@ impl From<&StateInfo> for SimpleValuesLine {
 
             value("максимальный ток за всё время работы", state.max_values.amper),
             value("максимальная вибрация за всё время работы", state.max_values.vibro),
+
+            value("максимальная вибрация за всё время работы", state.max_values.vibro),
+            value("максимальная скорость двигателя", state.material.get_min_max_speed().1 as f32),
+            value("Просадка скорости в момент подачи материала", state.material.get_delta_speed() as f32),
         ];
 
         SimpleValuesLine {

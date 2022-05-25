@@ -23,9 +23,9 @@ use futures::{Stream, StreamExt};
 
 #[derive(Debug, Default, Clone)]
 pub struct StateInfo {
-    max_values: MaxValues,
-    energy: Energy,
-    material: Stages,
+    pub max_values: MaxValues,
+    pub energy: Energy,
+    pub material: Stages,
     
 }
 
@@ -44,13 +44,13 @@ impl std::ops::Add for StateInfo {
 /// Пиковые значения: мощности, тока и вибрации
 #[derive(Debug, Default, Clone)]
 #[derive(derive_more::Add)]
-struct MaxValues {
+pub struct MaxValues {
     /// мощность
-    power: f32,
+    pub power: f32,
     /// ток
-    amper: f32,
+    pub amper: f32,
     /// вибрация
-    vibro: f32,
+    pub vibro: f32,
 }
 
 impl MaxValues {
@@ -71,7 +71,7 @@ impl MaxValues {
 }
 
 #[derive(Default, Clone)]
-struct MinMaxSpeed(Option<(u32, u32)>);
+pub struct MinMaxSpeed(Option<(u32, u32)>);
 
 impl std::fmt::Debug for MinMaxSpeed {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -132,10 +132,10 @@ impl MinMaxSpeed {
 }
 
 #[derive(Default, Clone)]
-struct Energy {
+pub struct Energy {
     sum_watt: f32,
     sum_cnt: u32,
-    time: DateTimeRange,
+    pub time: DateTimeRange,
 }
 
 impl std::ops::Add for Energy {
@@ -205,7 +205,7 @@ impl Energy {
 /// Сдадии работы
 #[derive(Debug, Clone)]
 #[derive(derive_more::Add)]
-enum Stages {
+pub enum Stages {
     /// Разгон двигателей
     Accel,
     /// Оба двигателя разогнаны и работают в холостую
@@ -234,10 +234,10 @@ enum Stages {
 #[derive(Debug, Clone, Default)]
 #[derive(derive_more::Add)]
 pub struct StateMaterialInner {
-    watt_before: f32,
-    energy: Energy,
-    max_values: MaxValues,
-    speed: MinMaxSpeed,
+    pub watt_before: f32,
+    pub energy: Energy,
+    pub max_values: MaxValues,
+    pub speed: MinMaxSpeed,
 }
 
 impl StateMaterialInner {

@@ -231,13 +231,31 @@ enum Stages {
 //     }
 // }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[derive(derive_more::Add)]
 pub struct StateMaterialInner {
     watt_before: f32,
     energy: Energy,
     max_values: MaxValues,
     speed: MinMaxSpeed,
+}
+
+impl StateMaterialInner {
+    /// Подсчёт всей энергии за время подачи материала
+    pub fn energy(&self) -> f32 {
+        self.energy.energy_sec()
+    }
+    /// Подсчёт полезной энергии за время подачи материала
+    pub fn energy_delta(&self) -> f32 {
+        self.energy.energy_delta_sec(self.watt_before)
+    }
+
+    pub fn get_watt_max(&self) -> f32 {
+        self.max_values.power
+    }
+    pub fn get_watt_delta(&self) -> f32 {
+        self.max_values.power - self.watt_before
+    }
 }
 
 impl Default for Stages {
@@ -259,8 +277,7 @@ impl Stages {
             Stages::StartMaterial ( StateMaterialInner {
                 energy: Energy::start(dt),
                 watt_before,
-                max_values: MaxValues::default(),
-                speed: MinMaxSpeed::default(),
+                .. Default::default()
             })
         } else {
             self
@@ -321,48 +338,6 @@ impl Stages {
         }
     }
 
-    /// Подсчёт всей энергии за время подачи материала
-    pub fn energy(&self) -> f32 {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel => 0.0,
-            Self::StartMaterial (stat)
-             | Self::FinishMaterial (stat) => stat.energy.energy_sec(),
-        }
-    }
-
-    /// Подсчёт полезной энергии за время подачи материала
-    pub fn energy_delta(&self) -> f32 {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel  => 0.0,
-            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
-                => stat.energy.energy_delta_sec(stat.watt_before),
-        }
-    }
-
-    pub fn get_interval(&self) -> f32 {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel => 0.0,
-            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
-                => stat.energy.time.interval(),
-        }
-    }
-
-    pub fn get_watt_before(&self) -> f32 {
-        match self {
-            Self::Accel => 0.0,
-            Self::BeforeMaterial {watt_before} => *watt_before,
-            Self::StartMaterial (stat) | Self::FinishMaterial (stat) => stat.watt_before,
-        }
-    }
-
-    pub fn get_watt_max(&self) -> f32 {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel => 0.0,
-            Self::StartMaterial(stat) | Self::FinishMaterial (stat) 
-                => stat.max_values.power,
-        }
-    }
-
     pub fn get_stat(&self) -> Option<&StateMaterialInner> {
         match self {
             Self::BeforeMaterial {..} | Self::Accel => None,
@@ -371,20 +346,6 @@ impl Stages {
         }
     }
 
-    pub fn get_min_max_speed(&self) -> (u32, u32) {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel => (0,0),
-            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
-                => stat.speed.min_max(),
-        }
-    }
-    pub fn get_delta_speed(&self) -> u32 {
-        match self {
-            Self::BeforeMaterial {..} | Self::Accel => 0,
-            Self::StartMaterial (stat) | Self::FinishMaterial (stat) 
-                => stat.speed.delta(),
-        }
-    }
 }
 
 impl StateInfo {
@@ -657,22 +618,25 @@ impl From<&StateInfo> for SimpleValuesLine {
     fn from(state: &StateInfo) -> Self {
         use crate::value::simple::Value;
         let value = |name: &str, value: f32| Value {sensor_name: name.to_string(), value};
+        let state_material = StateMaterialInner::default();
+        let state_material = state.material.get_stat().unwrap_or(&state_material);
+
         let fields = [
             value("Энергия за всё время работы (Дж)", state.energy.energy_sec()),
-            value("Энергия при подаче материала", state.material.energy()),
-            value("Дельта энергии при подаче материала", state.material.energy_delta()),
-            value("Время подачи материала", state.material.get_interval()),
+            value("Энергия при подаче материала", state_material.energy()),
+            value("Дельта энергии при подаче материала", state_material.energy_delta()),
+            value("Время подачи материала", state_material.energy.time.interval()),
             
-            value("мощность до подачи материала (холостой ход)", state.material.get_watt_before()),
-            value("максимальная мощность при подаче материала", state.material.get_watt_max()),
-            value("максимальная разница мощности при подаче материала", state.material.get_watt_max() - state.material.get_watt_before()),
+            value("мощность до подачи материала (холостой ход)", state_material.watt_before),
+            value("максимальная мощность при подаче материала", state_material.get_watt_max()),
+            value("максимальная разница мощности при подаче материала", state_material.get_watt_delta()),
 
             value("максимальный ток за всё время работы", state.max_values.amper),
             value("максимальная вибрация за всё время работы", state.max_values.vibro),
 
             value("максимальная вибрация за всё время работы", state.max_values.vibro),
-            value("максимальная скорость двигателя", state.material.get_min_max_speed().1 as f32),
-            value("Просадка скорости в момент подачи материала", state.material.get_delta_speed() as f32),
+            value("максимальная скорость двигателя", state_material.speed.min_max().1 as f32),
+            value("Просадка скорости в момент подачи материала", state_material.speed.delta() as f32),
         ];
 
         SimpleValuesLine {

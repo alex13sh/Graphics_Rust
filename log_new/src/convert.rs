@@ -224,15 +224,15 @@ pub mod stream {
         })
     }
     
-    pub fn values_simple_line_to_hashmap(lines: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=simple::ValuesMap<String>> {
+    pub fn values_simple_line_to_vecmap(lines: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=simple::ValuesMapVec<String>> {
         lines.map(|l| {
-            simple::ValuesMap::from(l)
+            simple::ValuesMapVec::from(l)
         })
     }
 
-    pub fn values_simple_line_to_hashmap_f32(lines: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=simple::ValuesMap<f32>> {
+    pub fn values_simple_line_to_vecmap_f32(lines: impl Stream<Item=SimpleValuesLine>) -> impl Stream<Item=simple::ValuesMapVec<f32>> {
         lines.map(|l| {
-            simple::ValuesMap::from(l)
+            simple::ValuesMapVec::from(l)
         })
     }
 

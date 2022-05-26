@@ -140,7 +140,6 @@ pub enum Message {
     DozatorUI(ui::dozator::Message),
     KlapansUI(ui::klapans::Message),
     InfoPane(ui::info_pane::Message),
-//     InfoPaneUpdate(Option<(logger::structs::TableState, PathBuf)>),
     
     LoggingTurn(bool),
     DevicesReconnect,
@@ -248,10 +247,10 @@ impl Application for App {
             self.klapans.subscription_vacuum(&props.vacuum).map(Message::KlapansUI),
             self.oil_station.subscription(&props.oil).map(Message::OilStation),
 
-            if let Some(stream) = self.log_session.get_statistic_low() {
+            if let Some(stream) = self.log_session.get_statistic_advance() {
                 Subscription::from_recipe(
                     ui::animations::MyStream{name: "statistic_low".into(), stream: stream}
-                ).map(ui::info_pane::Message::UpdateInfo)
+                ).map(ui::info_pane::Message::UpdateInfoAdvant)
                 .map(Message::InfoPane)
             } else {Subscription::none()},
         ])

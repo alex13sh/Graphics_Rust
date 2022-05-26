@@ -50,10 +50,17 @@ pub mod watcher {
         pub(crate) fn update_property(&self, values: &super::Material) {
             self.dozator.update_property(&values.dozator);
             
+            dbg!(values.клапан_верхнего_контейнера.get_bit());
+            dbg!(values.клапан_верхнего_контейнера.id());
+
             self.клапан_подачи_материала.set(values.клапан_подачи_материала.get_bit());
             self.клапан_верхнего_контейнера.set(values.клапан_верхнего_контейнера.get_bit());
             self.клапан_помольной_камеры.set(values.клапан_помольной_камеры.get_bit());
             self.клапан_нижнего_контейнера.set(values.клапан_нижнего_контейнера.get_bit());
+
+            dbg!(self.клапан_верхнего_контейнера.get());
+
+            dbg!(self);
         }
     }
 }

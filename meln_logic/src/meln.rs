@@ -135,9 +135,19 @@ pub mod watcher {
                     self.step.set(next_step);
                 }
             };
+            let f_check = async {
+                use tokio::time::{sleep, Duration};
+                loop {
+                    dbg!("loop f_check");
+                    sleep(Duration::from_millis(1_000)).await;
+                    dbg!(MelnStep::check_step_work(self));
+                }
+            };
             tokio::join!(
                 f_is_started,
 //                 f_step,
+                f_check,
+
                 self.half_top.automation(),
                 self.half_bottom.automation(),
                 self.klapans.automation(),
@@ -202,10 +212,10 @@ pub mod watcher {
     
     impl MelnStep {
         fn check_step_3(meln: &Meln) -> bool {
-            true == meln.material.клапан_помольной_камеры.get() &&
-            true == meln.material.клапан_верхнего_контейнера.get() &&
-            true == meln.material.клапан_нижнего_контейнера.get() &&
-            false == meln.material.клапан_подачи_материала.get()
+            true == meln.material.клапан_помольной_камеры.get_opt().unwrap() &&
+            true == meln.material.клапан_верхнего_контейнера.get_opt().unwrap() &&
+            true == meln.material.клапан_нижнего_контейнера.get_opt().unwrap() &&
+            false == meln.material.клапан_подачи_материала.get_opt().unwrap()
         }
         fn check_step_work(meln: &Meln) -> bool {
             meln.is_started.get() && meln.oil.motor.get() &&

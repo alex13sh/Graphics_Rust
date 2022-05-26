@@ -10,7 +10,7 @@ impl<T> Debug for Property<T>
     where T: Debug
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Property").field(&self.sender.borrow()).finish()
+        f.debug_tuple("Property").field(&*self.sender.borrow()).finish()
     }
 }
 
@@ -26,10 +26,15 @@ impl <T> Property<T> {
             sender: watch::channel(value).0
         }
     }
+
+    #[track_caller]
     pub(crate) fn set(&self, value: T) 
     where T: PartialEq + Debug
     {
-        if self.sender.is_closed() {return;}
+        if self.sender.is_closed() {
+            println!("[{}] Property dont set {:?}", core::panic::Location::caller(), value);
+            return;
+        }
         if self.sender.borrow().ne(&value) {
             self.sender.send(value).unwrap();
         }
@@ -45,6 +50,17 @@ impl <T> Property<T> {
     {
         self.sender.borrow().clone()
     }
+
+    pub fn get_opt(&self) -> Option<T>
+    where T: Clone
+    {
+        if self.sender.is_closed() {
+            println!("[{}] Property dont get", core::panic::Location::caller());
+            return None;
+        }
+        Some(self.sender.borrow().clone())
+    }
+
     // pub fn get_ref(&self) -> &T
     // {
     //     &**self.sender.borrow()

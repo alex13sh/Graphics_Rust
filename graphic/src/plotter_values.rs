@@ -69,6 +69,7 @@ where
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(c)));;
     }
     cc_speed.configure_series_labels()
+    .position(SeriesLabelPosition::MiddleLeft)
     .background_style(&WHITE.mix(0.8))
     .border_style(&BLACK)
     .draw().unwrap();

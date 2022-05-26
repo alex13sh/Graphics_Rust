@@ -237,10 +237,10 @@ impl TryFrom<&Value> for f32 {
         ValueSize::UInt16Dot(dot) =>
             if let Some(err) = ValueFloatError::new_u16(val.value()) {
                 Err(err)
-            } else {Ok(val.value() as i16 as f32 / fdot[dot as usize] )},
+            } else {Ok(val.value() as f32 / fdot[dot as usize] )},
         ValueSize::Int16Dot(dot) => if let Some(err) = ValueFloatError::new_u16(val.value()) {
             Err(err)
-        } else {Ok(val.value() as f32 / fdot[dot as usize] )},
+        } else {Ok(val.value() as i16 as f32 / fdot[dot as usize] )},
         ValueSize::Bit(_pin) => Ok(if val.get_bit() {1.0} else {0.0}),
         ValueSize::BitMap(_) => Err(ValueFloatError::ValueFalse),
         };

@@ -544,7 +544,7 @@ pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Ite
     })
 }
 
-#[cfg(feature = "file")]
+#[cfg(feature = "csv")]
 #[test]
 fn test_state() {
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
@@ -555,13 +555,14 @@ fn test_state() {
     assert!(false);
 }
 
-#[cfg(feature = "file")]
+#[cfg(feature = "excel")]
 #[test]
 fn test_table() {
     use futures::stream::{self, StreamExt};
 
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
     let file_names = [
+        "2022_05_26-13_01_10",
         "2022_05_23-16_08_17",
         "2022_04_29-12_46_28",
         "2022_04_27-17_44_35",
@@ -598,7 +599,7 @@ fn test_table() {
     f.save()
 }
 
-#[cfg(feature = "file")]
+#[cfg(feature = "csv")]
 pub fn get_state_full_from_file(file_path: impl AsRef<std::path::Path>) -> Option<StateInfoFull> {
     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;

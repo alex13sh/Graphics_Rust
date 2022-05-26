@@ -382,13 +382,15 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
 #[cfg(feature = "csv")]
 #[cfg(test)]
 mod test {
+    use super::*;
+    use super::super::csv;
     #[test]
     fn test_convert_csv_raw_to_excel() {
         use crate::convert::{stream::*, iterator::*};
         use futures::future::join;
 
         let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
-        if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
+        if let Some(values) = csv::read_values(&format!("{}.csv", file_path)) {
             let values = raw_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
             let lines = values_line_to_simple(lines);
@@ -414,7 +416,7 @@ mod test {
 
             dbg!(format!("{}.csv", file_path));
 
-            if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
+            if let Some(values) = csv::read_values(&format!("{}.csv", file_path)) {
                 let values = fullvalue_to_elk(values);
 
                 let lines = values_to_line(futures::stream::iter(values));

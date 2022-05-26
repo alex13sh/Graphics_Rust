@@ -15,7 +15,7 @@ futures = "0.3.12"
 
 coarse-prof = {version = "0.2.4"} #, path = "../coarse-prof-0.2.4"}
 
-log_new = {path = "../log_new"}
+log_new = {path = "../log_new", features = ["csv"]}
 
 [dependencies.plotters]
 #path = "../plotters"

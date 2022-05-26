@@ -544,6 +544,7 @@ pub fn calc_full(vin: impl Stream<Item=super::ElkValuesLine>) -> impl Stream<Ite
     })
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_state() {
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw/";
@@ -554,6 +555,7 @@ fn test_state() {
     assert!(false);
 }
 
+#[cfg(feature = "file")]
 #[test]
 fn test_table() {
     use futures::stream::{self, StreamExt};
@@ -596,6 +598,7 @@ fn test_table() {
     f.save()
 }
 
+#[cfg(feature = "file")]
 pub fn get_state_full_from_file(file_path: impl AsRef<std::path::Path>) -> Option<StateInfoFull> {
     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
@@ -659,6 +662,7 @@ impl From<(&'static str, StateInfo)> for crate::value::simple::ValuesMapVec {
 }
 
 #[test]
+#[cfg(feature = "file")]
 fn test_date_range_sum() {
     // "1983 Apr 13 12:09:14.274 +0000", "%Y %b %d %H:%M:%S%.3f %z"
     // FixedOffset::east(0).ymd(1983, 4, 13).and_hms_milli(12, 9, 14, 274)

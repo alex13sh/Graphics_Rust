@@ -5,12 +5,17 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+#default = ["csv"]
+# csv = ["csv"]
+excel = ["umya-spreadsheet"]
+
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"]}
 #csv = "1.1.5"
 # umya-spreadsheet = "0.5.2"
-umya-spreadsheet = {path = "../../libs/umya-spreadsheet"}
-spreadsheet-ods = "0.9"
+umya-spreadsheet = {path = "../../libs/umya-spreadsheet", optional=true}
+spreadsheet-ods = {version = "0.9", optional=true}
 
 directories = "2.0"
 chrono = "0.4"
@@ -27,6 +32,7 @@ postage = { version = "*", default-features = false, features=["futures-traits"]
 version = "1.1.5"
 git = "https://github.com/gootorov/rust-csv"
 branch = "serde-flatten"
+optional=true
 
 [patch.crates-io]
 csv = {version = "1.1.6", git = "https://github.com/gootorov/rust-csv", branch ="serde-flatten"}

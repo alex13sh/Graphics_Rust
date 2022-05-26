@@ -100,6 +100,75 @@ impl LogSession {
         .join("excel").join(&name)
         .with_extension("xlsx")
     }
+    
+    pub fn write_full(&self) -> impl Future<Output=()> + Send {
+
+        #[cfg(feature = "csv")]
+        let f_csv = {
+            let (f_csv_1, f_csv_2, f_csv_3) = (
+                self.write_csv_elk(), self.write_csv_raw(),
+                self.write_csv_raw_diff()
+            );
+            async move {
+                futures::join!(
+                    f_csv_1, f_csv_2, f_csv_3,
+                );
+            }
+        };
+        #[cfg(not(feature = "csv"))]
+        let f_csv = async {};
+
+        #[cfg(feature = "excel")]
+        let f_excel_tl = self.write_excel_3();
+        #[cfg(not(feature = "excel"))]
+        let f_excel_tl = async {};
+
+        async move {
+            futures::join!(
+                f_csv,
+                f_excel_tl
+            );
+        }
+    }
+
+    pub fn get_statistic_low(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
+        let elk = self.values_elk.as_ref()?;
+        let lines = crate::stat_info::simple::filter_half_low(elk.subscribe());
+        Some(stat_info::simple::calc(lines).boxed())
+    }
+    pub fn get_statistic_top(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
+        let elk = self.values_elk.as_ref()?;
+        let lines = crate::stat_info::simple::filter_half_top(elk.subscribe());
+        Some(stat_info::simple::calc(lines).boxed())
+    }
+
+    pub fn get_statistic_advance(&self) -> Option<BoxStream<'static, stat_info::advance::StateInfoFull>>{
+        let elk = self.values_elk.as_ref()?;
+        Some(stat_info::advance::calc_full(elk.subscribe()).boxed())
+    }
+}
+
+use std::path::Path;
+pub type DeviceID = u8;
+#[cfg(feature = "csv")]
+impl LogSession {
+    pub fn save_invertor(&self, id: DeviceID, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
+        let dir = self.log_dir.join("invertor");
+        let file_name = format!("{} ({}).csv", self.date_time_str(), id);
+        let params = crate::convert::iterator::invertor_parametrs_sort(params);
+        files::csv::write_values(dir.join(file_name), params) ;
+    }
+}
+
+#[cfg(feature = "csv")]
+pub fn save_invertor(path: impl AsRef<Path>, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
+    let params = crate::convert::iterator::invertor_parametrs_sort(params);
+    files::csv::write_values(path, params);
+}
+
+// #[cfg(feature = "file")]
+#[cfg(feature = "excel")]
+impl LogSession {
     pub fn write_excel_low(&self) -> impl Future<Output=()> {
         let elk = self.values_elk.as_ref().unwrap();
         let file_path = self.make_path_excel("low");
@@ -138,7 +207,10 @@ impl LogSession {
 
         files::excel::write_file_3(file_path, values_line)
     }
+}
 
+#[cfg(feature = "csv")]
+impl LogSession {
     pub fn write_csv_elk(&self) -> impl Future<Output=()> {
         use convert::stream::*;
         use files::csv::*;
@@ -177,72 +249,10 @@ impl LogSession {
         write_values_async(file_path, 
             values).unwrap()
     }
-
-    pub fn write_full(&self) -> impl Future<Output=()> + Send {
-//         let f = futures::future::join_all(vec![
-//             self.write_csv_elk(),
-//             self.write_excel(),
-//             self.write_csv_raw(),
-//             self.write_csv_raw_diff(),
-//         ]);
-//         async {
-//             let _ = f.await;
-//         }
-        let f1 = self.write_csv_elk();
-//         let f2l = self.write_excel_low();
-//         let f2t = self.write_excel_top();
-        let f2tl = self.write_excel_3();
-        let f3 = self.write_csv_raw();
-//         let f2tl = self.write_excel_2();
-        let f3 = async move {
-            f3.await;
-//             f2tl.await;
-        };
-        let f4 = self.write_csv_raw_diff();
-        async move {
-            futures::join!(
-                f1,
-//                 f2l, f2t,
-                f2tl,
-                f3, f4
-            );
-        }
-    }
-
-    pub fn get_statistic_low(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
-        let elk = self.values_elk.as_ref()?;
-        let lines = crate::stat_info::simple::filter_half_low(elk.subscribe());
-        Some(stat_info::simple::calc(lines).boxed())
-    }
-    pub fn get_statistic_top(&self) -> Option<BoxStream<'static, stat_info::simple::LogState>>{
-        let elk = self.values_elk.as_ref()?;
-        let lines = crate::stat_info::simple::filter_half_top(elk.subscribe());
-        Some(stat_info::simple::calc(lines).boxed())
-    }
-
-    pub fn get_statistic_advance(&self) -> Option<BoxStream<'static, stat_info::advance::StateInfoFull>>{
-        let elk = self.values_elk.as_ref()?;
-        Some(stat_info::advance::calc_full(elk.subscribe()).boxed())
-    }
-}
-
-use std::path::Path;
-pub type DeviceID = u8;
-impl LogSession {
-    pub fn save_invertor(&self, id: DeviceID, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
-        let dir = self.log_dir.join("invertor");
-        let file_name = format!("{} ({}).csv", self.date_time_str(), id);
-        let params = crate::convert::iterator::invertor_parametrs_sort(params);
-        files::csv::write_values(dir.join(file_name), params) ;
-    }
-}
-
-pub fn save_invertor(path: impl AsRef<Path>, params: impl Iterator<Item=value::invertor::InvertorParametr>) {
-    let params = crate::convert::iterator::invertor_parametrs_sort(params);
-    files::csv::write_values(path, params);
 }
 
 pub mod test {
 
+    #[cfg(feature = "file")]
     pub use crate::files::excel::convert_csv_to_excel_2;
 }

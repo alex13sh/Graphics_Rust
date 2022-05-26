@@ -379,108 +379,111 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
     f.await;
 }
 
+#[cfg(feature = "csv")]
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_convert_csv_raw_to_excel() {
+        use crate::convert::{stream::*, iterator::*};
+        use futures::future::join;
 
-#[test]
-fn test_convert_csv_raw_to_excel() {
-    use crate::convert::{stream::*, iterator::*};
-    use futures::future::join;
-
-    let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
-    if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
-        let values = raw_to_elk(values);
-        let lines = values_to_line(futures::stream::iter(values));
-        let lines = values_line_to_simple(lines);
-        let f = write_file(file_path, lines);
-        futures::executor::block_on(f);
-    }
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn convert_csv_to_excel() {
-    use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
-    use futures::join;
-
-    let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
-    let files = [
-        "2022_03_22-17_17_18",
-//             "2022_02_24-17_01_08",
-    ];
-
-    for name in files {
-        let file_path = format!("{}/{}", dir, name);
-
-        dbg!(format!("{}.csv", file_path));
-
+        let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
-            let values = fullvalue_to_elk(values);
-
+            let values = raw_to_elk(values);
             let lines = values_to_line(futures::stream::iter(values));
+            let lines = values_line_to_simple(lines);
+            let f = write_file(file_path, lines);
+            futures::executor::block_on(f);
+        }
+    }
 
-            let (s, l_top) = broadcast(500);
-            let f_to_channel = lines.map(|l| Ok(l)).forward(s);
-            let l_low = l_top.clone();
-//                 let l_low = lines;
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn convert_csv_to_excel() {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use futures::join;
 
-            let l_top = crate::stat_info::simple::filter_half_top(l_top);
-            let l_low = crate::stat_info::simple::filter_half_low(l_low);
+        let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
+        let files = [
+            "2022_03_22-17_17_18",
+    //             "2022_02_24-17_01_08",
+        ];
 
-            let f_top = write_file(file_path.clone() + "_top.xlsx", l_top);
-            let f_low = write_file(file_path + "_low.xlsx", l_low);
+        for name in files {
+            let file_path = format!("{}/{}", dir, name);
 
-            let f = async {
-                let _ = join!(
-                    f_to_channel,
-                    f_top,
-                    f_low
-                );
+            dbg!(format!("{}.csv", file_path));
+
+            if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
+                let values = fullvalue_to_elk(values);
+
+                let lines = values_to_line(futures::stream::iter(values));
+
+                let (s, l_top) = broadcast(500);
+                let f_to_channel = lines.map(|l| Ok(l)).forward(s);
+                let l_low = l_top.clone();
+    //                 let l_low = lines;
+
+                let l_top = crate::stat_info::simple::filter_half_top(l_top);
+                let l_low = crate::stat_info::simple::filter_half_low(l_low);
+
+                let f_top = write_file(file_path.clone() + "_top.xlsx", l_top);
+                let f_low = write_file(file_path + "_low.xlsx", l_low);
+
+                let f = async {
+                    let _ = join!(
+                        f_to_channel,
+                        f_top,
+                        f_low
+                    );
+                };
+
+                // futures::executor::block_on(f);
+                f.await;
+            }
+        }
+        // assert!(false);
+    }
+
+    pub async fn convert_csv_to_excel_2() {
+        use crate::async_channel::*;
+        use crate::convert::{stream::*, iterator::*};
+        use crate::stat_info::simple::*;
+        use futures::join;
+
+        let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
+        let files = [
+            // "2022_03_22-17_17_18",
+            // "2022_03_22-17_05_31",
+            "2022_03_29-13_58_12",
+    //             "2022_02_24-17_01_08",
+        ];
+
+        for name in files {
+            let file_path_ = format!("{}/{}", dir, name);
+            let file_path = format!("{}.csv", file_path_);
+
+    //             dbg!(format!("{}.csv", file_path));
+
+            let half = |path| {
+                dbg!(&path);
+                let values = crate::files::csv::read_values(path).unwrap();
+                let values = fullvalue_to_elk(values);
+                values_to_line(futures::stream::iter(values))
             };
-
+            let f = write_file_3(file_path.clone(), half(file_path.clone()));
             // futures::executor::block_on(f);
             f.await;
         }
+        // assert!(false);
     }
-    // assert!(false);
-}
 
-pub async fn convert_csv_to_excel_2() {
-    use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
-    use crate::stat_info::simple::*;
-    use futures::join;
-
-    let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
-    let files = [
-        // "2022_03_22-17_17_18",
-        // "2022_03_22-17_05_31",
-        "2022_03_29-13_58_12",
-//             "2022_02_24-17_01_08",
-    ];
-
-    for name in files {
-        let file_path_ = format!("{}/{}", dir, name);
-        let file_path = format!("{}.csv", file_path_);
-
-//             dbg!(format!("{}.csv", file_path));
-
-        let half = |path| {
-            dbg!(&path);
-            let values = crate::files::csv::read_values(path).unwrap();
-            let values = fullvalue_to_elk(values);
-            values_to_line(futures::stream::iter(values))
-        };
-        let f = write_file_3(file_path.clone(), half(file_path.clone()));
-        // futures::executor::block_on(f);
-        f.await;
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_convert_csv_to_excel_2() {
+        convert_csv_to_excel_2().await;
     }
-    // assert!(false);
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn test_convert_csv_to_excel_2() {
-    convert_csv_to_excel_2().await;
-}
-#[test]
-fn test_block_convert_csv_to_excel_2() {
-    futures::executor::block_on(convert_csv_to_excel_2());
+    #[test]
+    fn test_block_convert_csv_to_excel_2() {
+        futures::executor::block_on(convert_csv_to_excel_2());
+    }
 }

@@ -53,7 +53,7 @@ coarse-prof = {version = "0.2.4"}
 log = "0.4.14"
 simplelog = "0.10"
 
-logger = {path = "./log_new", package = "log_new"}
+logger = {path = "./log_new", package = "log_new", features = ["csv", "excel"]}
 modbus = {path = "./modbus"}
 meln_logic = {path = "./meln_logic"}
 graphic = {path = "./graphic"}

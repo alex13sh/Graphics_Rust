@@ -1,9 +1,12 @@
+#[cfg(feature = "csv")]
 pub mod csv;
+#[cfg(feature = "excel")]
 pub mod excel;
 
 pub mod invertor {
 
     #[test]
+    #[cfg(feature = "csv")]
     fn config_csv_sort() {
         use crate::files::csv;
         let dir = "/home/user/.local/share/graphicmodbus/tables/save_invertor_top";

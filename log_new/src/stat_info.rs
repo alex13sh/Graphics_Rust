@@ -37,6 +37,13 @@ pub fn filter_map_half_top_fn(line: ElkValuesLine) -> SimpleValuesLine {
                 sensor_name: "Клапан подачи материала открыт".into(),
                 value: v.value,
             })
+        } else if v.sensor_name == "Двигатель подачи материала в камеру"
+            // && v.value_name == "Частота высокочастотного ШИМ"
+            {
+            Some(Value {
+                sensor_name: "Скорость подачи материала".into(),
+                value: v.value,
+            })
         } else {
             None
         }
@@ -74,6 +81,13 @@ pub fn filter_map_half_low_fn(line: ElkValuesLine) -> SimpleValuesLine {
         } else if v.sensor_name == "Клапан ШК2 открыт" {
             Some(Value {
                 sensor_name: "Клапан подачи материала открыт".into(),
+                value: v.value,
+            })
+        } else if v.sensor_name == "Двигатель подачи материала в камеру"
+            // && v.value_name == "Частота высокочастотного ШИМ"
+            {
+            Some(Value {
+                sensor_name: "Скорость подачи материала".into(),
                 value: v.value,
             })
         }

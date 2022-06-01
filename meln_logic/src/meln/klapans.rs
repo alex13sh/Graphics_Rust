@@ -95,7 +95,7 @@ pub mod watcher {
     impl Klapans {
         pub(crate) fn update_property(&self, values: &super::Klapans) {
             for (n, p) in &self.klapans {
-                values.klapans.get_value_arc(n).unwrap().set_bit(true);
+//                 values.klapans.get_value_arc(n).unwrap().set_bit(true);
                 p.set(values.klapans.get_value_arc(n).unwrap().get_bit());
             }
             for ((шк, _n), p) in &self.klapans_шк {

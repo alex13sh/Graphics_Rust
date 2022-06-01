@@ -42,11 +42,11 @@ fn log_init() {
     CombinedLogger::init(
         vec![
 //             TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
-                File::create(logger::utils::get_file_path(
-                    &format!("simplelog/[{}]/modbus_update.log", dt)
-                )).unwrap()
-            ),
+//             WriteLogger::new(LevelFilter::Trace, conf_modbus_update,
+//                 File::create(logger::utils::get_file_path(
+//                     &format!("simplelog/[{}]/modbus_update.log", dt)
+//                 )).unwrap()
+//             ),
             WriteLogger::new(LevelFilter::Trace, conf_meln_logic,
                 File::create(logger::utils::get_file_path(
                     &format!("simplelog/[{}]/meln_logic.log", dt)
@@ -67,11 +67,11 @@ fn log_init() {
                     &format!("simplelog/[{}]/dozator.log", dt)
                 )).unwrap()
             ),
-            WriteLogger::new(LevelFilter::Trace, conf_modbus_update_ok,
-                File::create(logger::get_file_path(
-                    &format!("simplelog/[{}]/modbus_update_ok.log", dt)
-                )).unwrap()
-            ),
+//             WriteLogger::new(LevelFilter::Trace, conf_modbus_update_ok,
+//                 File::create(logger::get_file_path(
+//                     &format!("simplelog/[{}]/modbus_update_ok.log", dt)
+//                 )).unwrap()
+//             ),
         ]
     ).unwrap();
 }
@@ -259,6 +259,7 @@ impl Application for App {
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Self::Message> {
         match &message {
         Message::MessageUpdate(_) => {},
+        Message::InfoPane(_) => {},
         Message::DozatorUI(_) => {
             log::trace!(target: "dozator", "update message:\n\t{:?}", &message);
         }

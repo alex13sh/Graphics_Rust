@@ -18,5 +18,8 @@ bitflags = "1"
 
 modbus = {path = "../modbus"}
 
+# Для анимации дозатора
+keyframe = "1.0.4"
+
 [features]
 default = []

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod animation;
 use modbus::{ValueArc, ModbusValues};
 // use tokio::sync::Mutex;
 use std::sync::Mutex;
@@ -114,7 +115,7 @@ pub mod watcher {
         }
         
         pub(crate) async fn automation_mut(values: &super::Dozator, properties: &Dozator) {
-            values.animation().await;
+            values.animation().await; // Анимация ручного управления.
         }
     }
 }

@@ -222,7 +222,7 @@ pub fn write_file(file_path: impl AsRef<Path> + 'static, values_line: impl Strea
 
 fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> , mut sheet: Sheet<Sh>) -> impl Future<Output=()> {
     use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
+//     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
 
     let (s, l1) = broadcast(500);
@@ -231,9 +231,9 @@ fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> 
     let l2 = l1.clone();
     let f_from_channel = async move {
         let l1 = filter_half(l1);
-        let l1 = values_simple_line_to_vecmap(l1);
+        let l1 = crate::convert::stream::values_simple_line_to_vecmap(l1);
 //                 let l2 = crate::stat_info::simple::filter_half_low(l2);
-//                 let l2 = values_line_to_simple(l2);
+//                 let l2 = crate::convert::stream::values_line_to_simple(l2);
 
         let (_, stat) = join(
             sheet.write_values(l1),
@@ -258,7 +258,7 @@ fn write_file_inner< Sh: SheetInner >(lines: impl Stream<Item=SimpleValuesLine> 
 pub async fn write_file_2(file_path: impl AsRef<Path> + 'static, vl_top: impl Stream<Item=SimpleValuesLine>, vl_low: impl Stream<Item=SimpleValuesLine>)
 {
     use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
+//     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
     use futures::executor::block_on;
 
@@ -339,7 +339,7 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
 
         let lines = join_lines_2(lines_top_2, lines_low_2);
 
-        let lines = values_simple_line_to_vecmap(lines);
+        let lines = crate::convert::stream::values_simple_line_to_vecmap(lines);
         // dbg!(Instant::now());
         // let lines = lines.take(1);
 
@@ -382,14 +382,13 @@ pub async fn write_file_3(file_path: impl AsRef<Path> + 'static, lines: impl Str
 
 #[test]
 fn test_convert_csv_raw_to_excel() {
-    use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
 
     let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
     if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
-        let values = raw_to_elk(values);
-        let lines = values_to_line(futures::stream::iter(values));
-        let lines = values_line_to_simple(lines);
+        let values = crate::convert::iterator::raw_to_elk(values);
+        let lines = crate::convert::stream::values_to_line(futures::stream::iter(values));
+        let lines = crate::convert::stream::values_line_to_simple(lines);
         let f = write_file(file_path, lines);
         futures::executor::block_on(f);
     }
@@ -398,7 +397,7 @@ fn test_convert_csv_raw_to_excel() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn convert_csv_to_excel() {
     use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
+//     use crate::convert::{stream::*, iterator::*};
     use futures::join;
 
     let dir = "/home/user/.local/share/graphicmodbus/log/values/csv_raw";
@@ -413,9 +412,9 @@ async fn convert_csv_to_excel() {
         dbg!(format!("{}.csv", file_path));
 
         if let Some(values) = super::csv::read_values(&format!("{}.csv", file_path)) {
-            let values = fullvalue_to_elk(values);
+            let values = crate::convert::iterator::fullvalue_to_elk(values);
 
-            let lines = values_to_line(futures::stream::iter(values));
+            let lines = crate::convert::stream::values_to_line(futures::stream::iter(values));
 
             let (s, l_top) = broadcast(500);
             let f_to_channel = lines.map(|l| Ok(l)).forward(s);
@@ -445,7 +444,6 @@ async fn convert_csv_to_excel() {
 
 pub async fn convert_csv_to_excel_2() {
     use crate::async_channel::*;
-    use crate::convert::{stream::*, iterator::*};
     use crate::stat_info::simple::*;
     use futures::join;
 
@@ -466,8 +464,8 @@ pub async fn convert_csv_to_excel_2() {
         let half = |path| {
             dbg!(&path);
             let values = crate::files::csv::read_values(path).unwrap();
-            let values = fullvalue_to_elk(values);
-            values_to_line(futures::stream::iter(values))
+            let values = crate::convert::iterator::fullvalue_to_elk(values);
+            crate::convert::stream::values_to_line(futures::stream::iter(values))
         };
         let f = write_file_3(file_path.clone(), half(file_path.clone()));
         // futures::executor::block_on(f);

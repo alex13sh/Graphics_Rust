@@ -118,13 +118,13 @@ impl LogSession {
     }
     pub fn write_excel_2(&self) -> impl Future<Output=()> {
         // use crate::async_channel::*;
-        use crate::convert::{stream::*, iterator::*};
+//         use crate::convert::{stream::*, iterator::*};
         use crate::stat_info::simple::*;
         let file_path = self.make_path_raw();
         let half = |path| {
             let values = crate::files::csv::read_values(path).unwrap();
-            let values = fullvalue_to_elk(values);
-            values_to_line(futures::stream::iter(values))
+            let values = crate::convert::iterator::fullvalue_to_elk(values);
+            crate::convert::stream::values_to_line(futures::stream::iter(values))
         };
         let values_top = filter_half_top(half(file_path.clone()));
         let values_low = filter_half_low(half(file_path.clone()));

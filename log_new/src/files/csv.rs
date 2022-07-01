@@ -111,6 +111,11 @@ fn file_name2date_time(file_name: &str) -> Option<DateTimeFix> {
     let file_name = &format!("{} +0300", file_name);
     let res = DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y %H_%M_%S.csv %z")
     .or_else(|_|
+        DateTimeFix::parse_from_str(file_name, "%Y_%m_%d-%H_%M_%S.csv %z")
+    ).or_else(|_|
+        DateTimeFix::parse_from_str(file_name, "%d_%m_%Y-%H_%M_%S.csv %z")
+    )
+    .or_else(|_|
         DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y__%H_%M_%S.csv %z")
     ).or_else(|_|
         DateTimeFix::parse_from_str(file_name, "value_%d_%m_%Y__%H_%M_%S_%.f.csv %z")
@@ -167,7 +172,7 @@ fn test_converts_raw_to_elk() {
 }
 
 #[test]
-fn test_convert_to_table() {
+fn test_convert_to_table_1() {
     let file_path = "/home/alex13sh/Документы/Программирование/rust_2/Graphics_Rust/log_new/test/value_03_09_2021 11_58_30";
     if let Some(values) = read_values(&format!("{}.csv", file_path)) {
         use crate::convert::stream::*;
@@ -177,6 +182,41 @@ fn test_convert_to_table() {
         futures::executor::block_on( write_values_async(format!("{}_table.csv", file_path), lines).unwrap() );
 //             assert!(false);
     }
+}
+
+#[test]
+fn test_converts_to_table_2() {
+    use crate::value::raw::*;
+    use crate::value::ValueDate;
+    use rayon::prelude::*;
+    use rayon::iter::ParallelBridge;
+    use rayon::prelude::ParallelIterator;
+
+    let dir_table = get_file_path("log/values/csv_table/");
+    // for file_path in  {
+    get_raw_files_iter("log/values/csv/")
+        // .par_bridge()
+
+    .filter_map(|file_path| {
+        Some((
+            file_name2date_time(file_path.file_name().unwrap().to_str().unwrap())?,
+            read_values(file_path)?
+        ))
+    })
+    .map(|(dt, values)| (dt, crate::convert::iterator::value_date_shift_time(values, 3)) )
+    .map(|(dt, values)| (dt, crate::convert::iterator::values_to_line::<crate::value::elk::Value>(values)))
+    .map(|(dt, lines)| (dt, crate::convert::iterator::values_line_to_simple(lines)))
+    .map(|(dt, lines)| (dt, crate::convert::iterator::values_simple_line_to_hashmap(lines)))
+    .for_each(
+        |(dt, lines)| {
+            if let Err(err) = write_values(dir_table
+                .join(date_time_to_string_name_short(&dt)).with_extension("csv"),
+                lines) {
+                dbg!(err);
+            }
+        }
+    );
+    assert!(false);
 }
 
 #[test]

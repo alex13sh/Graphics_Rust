@@ -151,6 +151,60 @@ pub mod iterator {
         arr.sort_by_key(|p| p.address);
         arr.into_iter()
     }
+
+    pub fn values_to_line<V>(values: impl Iterator<Item=ValueDate<V>>) -> impl Iterator<Item=ValuesLine<V>> {
+        use crate::utils::{DateTime, date_time_now};
+        let dlt_ms = 40;
+        let mut dt: DateTime = date_time_now();
+        let mut vs = Vec::new();
+
+        values.filter_map(move |v| {
+            if dt > v.date_time {dt = v.date_time};
+            let _dlt_ms = v.date_time.timestamp_millis() - dt.timestamp_millis();
+            let res = if _dlt_ms < dlt_ms {
+                vs.push(v.value);
+                None
+            } else {
+                let vl = ValuesLine {
+                    date_time: dt,
+                    values: std::mem::take(&mut vs).into_boxed_slice(),
+                };
+                dt = v.date_time;
+                vs.push(v.value);
+                Some(vl)
+            };
+            res
+        })
+    }
+
+    pub fn values_line_to_simple(lines: impl Iterator<Item=ElkValuesLine>) -> impl Iterator<Item=SimpleValuesLine> {
+        lines.map(|l| {
+            SimpleValuesLine {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter().map(|v| simple::Value{
+                    sensor_name: v.sensor_name, value: v.value}
+                ).collect::<Vec<_>>().into_boxed_slice(),
+            }
+        })
+    }
+
+    pub fn values_simple_line_to_vecmap(lines: impl Iterator<Item=SimpleValuesLine>) -> impl Iterator<Item=simple::ValuesMapVec<String>> {
+        lines.map(|l| {
+            simple::ValuesMapVec::from(l)
+        })
+    }
+
+    pub fn values_simple_line_to_vecmap_f32(lines: impl Iterator<Item=SimpleValuesLine>) -> impl Iterator<Item=simple::ValuesMapVec<f32>> {
+        lines.map(|l| {
+            simple::ValuesMapVec::from(l)
+        })
+    }
+
+    pub fn values_simple_line_to_hashmap(lines: impl Iterator<Item=SimpleValuesLine>) -> impl Iterator<Item=simple::ValuesMap<String>> {
+        lines.map(|l| {
+            simple::ValuesMap::from(l)
+        })
+    }
 }
 
 pub mod stream {

@@ -597,12 +597,12 @@ fn test_table() {
 }
 
 pub fn get_state_full_from_file(file_path: impl AsRef<std::path::Path>) -> Option<StateInfoFull> {
-    use crate::convert::{stream::*, iterator::*};
+//     use crate::convert::{stream::*, iterator::*};
     use futures::future::join;
 
     if let Some(values) =  crate::files::csv::read_values(file_path) {
-        let values = fullvalue_to_elk(values);
-        let lines = values_to_line(futures::stream::iter(values));
+        let values = crate::convert::iterator::fullvalue_to_elk(values);
+        let lines = crate::convert::stream::values_to_line(futures::stream::iter(values));
         // let lines = values_line_to_simple(lines);
         // let lines = super::filter_half_low(lines);
         let stat = 

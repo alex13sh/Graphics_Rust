@@ -188,6 +188,20 @@ pub mod iterator {
         })
     }
 
+    pub fn values_line_to_simple_with_id_device(lines: impl Iterator<Item=ElkValuesLine>) -> impl Iterator<Item=SimpleValuesLine> {
+        lines
+        .map(|l| {
+            SimpleValuesLine {
+                date_time: l.date_time,
+                values: l.values.into_vec().into_iter()
+                .filter(|v| format!("{}) {}", v.device_id, v.device_name) != v.sensor_name)
+                .map(|v| simple::Value{
+                    sensor_name: format!("{}) {}", v.device_id, v.sensor_name), value: v.value}
+                ).collect::<Vec<_>>().into_boxed_slice(),
+            }
+        })
+    }
+
     pub fn values_simple_line_to_vecmap(lines: impl Iterator<Item=SimpleValuesLine>) -> impl Iterator<Item=simple::ValuesMapVec<String>> {
         lines.map(|l| {
             simple::ValuesMapVec::from(l)

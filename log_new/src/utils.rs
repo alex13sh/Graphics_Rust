@@ -18,10 +18,14 @@ pub fn date_time_to_string_name(dt: &DateTime) -> String {
         .to_string().replace("_.", "_")
 }
 
+pub fn date_time_to_string_name_short3(dt: &DateTime) -> String {
+    date_time_to_string_name_short(&(*dt+Duration::hours(3)))
+}
 pub fn date_time_to_string_name_short(dt: &DateTime) -> String {
-    (*dt+Duration::hours(3)).format("%Y_%m_%d-%H_%M_%S")
+    (*dt).format("%Y_%m_%d-%H_%M_%S")
         .to_string()
 }
+
 pub fn date_time_to_string_name_hum(dt: &DateTime) -> String {
     (*dt+Duration::hours(3)).format("%d.%m.%Y-%H:%M:%S")
         .to_string()

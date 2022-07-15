@@ -203,14 +203,14 @@ fn test_converts_to_table_2() {
             read_values(file_path)?
         ))
     })
-    .map(|(dt, values)| (dt, crate::convert::iterator::value_date_shift_time(values, 3)) )
+//     .map(|(dt, values)| (dt, crate::convert::iterator::value_date_shift_time(values, 3)) )
     .map(|(dt, values)| (dt, crate::convert::iterator::values_to_line::<crate::value::elk::Value>(values)))
-    .map(|(dt, lines)| (dt, crate::convert::iterator::values_line_to_simple(lines)))
+    .map(|(dt, lines)| (dt, crate::convert::iterator::values_line_to_simple_with_id_device(lines)))
     .map(|(dt, lines)| (dt, crate::convert::iterator::values_simple_line_to_hashmap(lines)))
     .for_each(
         |(dt, lines)| {
             if let Err(err) = write_values(dir_table
-                .join(date_time_to_string_name_short(&dt)).with_extension("csv"),
+                .join(crate::utils::date_time_to_string_name_short(&dt)).with_extension("csv"),
                 lines) {
                 dbg!(err);
             }
